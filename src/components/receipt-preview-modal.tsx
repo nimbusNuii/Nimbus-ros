@@ -313,7 +313,9 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
         </div>
 
         <div className="hide-print" style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-          <button onClick={() => window.print()}>พิมพ์จาก Browser</button>
+          <a className="nav-link" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
+            ดาวน์โหลด PDF
+          </a>
           <div style={{ display: "grid", gap: 6 }}>
             <label style={{ color: "var(--muted)" }}>เครื่องพิมพ์ใบเสร็จ</label>
             <select value={cashierPrinter} onChange={(event) => setCashierPrinter(event.target.value)}>

@@ -43,9 +43,9 @@ export function ReceiptActions({ orderId }: ReceiptActionsProps) {
   return (
     <div className="hide-print" style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button type="button" onClick={() => window.print()}>
-          พิมพ์จาก Browser
-        </button>
+        <Link href={`/api/receipts/${orderId}/pdf`} target="_blank" className="nav-link">
+          ดาวน์โหลด PDF
+        </Link>
         <input
           value={printerTarget}
           onChange={(event) => setPrinterTarget(event.target.value)}

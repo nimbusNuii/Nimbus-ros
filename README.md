@@ -100,18 +100,22 @@ npm run dev
 - `{{total}}`
 
 ## 7) การพิมพ์ใบเสร็จ
-1. Browser print:
-- หลังชำระเงิน POS จะเปิด `Receipt Modal` ในหน้าเดิม และกด `พิมพ์จาก Browser` ได้ทันที (ไม่เปิดแท็บใหม่)
+1. Receipt Modal:
+- หลังชำระเงิน POS จะเปิด `Receipt Modal` ในหน้าเดิม และดาวน์โหลดใบเสร็จ PDF ได้ทันที
 - หน้า `receipts` ใช้ดูใบเสร็จย้อนหลังและเปิดพิมพ์ผ่าน modal แบบเดียวกัน
 - ใน modal มีรายการเครื่องปริ้นให้เลือกก่อนกดส่งคิวพิมพ์ (ทั้งใบเสร็จและบิลครัว)
   - รายการเครื่องปริ้นดึงจากระบบปฏิบัติการของเครื่องนั้นโดยตรง (Linux/macOS ผ่าน `lpstat`, Windows ผ่าน `Get-Printer`)
 
-2. ESC/POS text (direct download):
+2. Receipt PDF:
+- ใช้ endpoint: `/api/receipts/:id/pdf`
+- ระบบจะสร้างไฟล์ PDF จากข้อมูลใบเสร็จและ template ปัจจุบัน
+
+3. ESC/POS text (direct download):
 - ใช้ endpoint: `/api/print/receipt/:id`
 - endpoint จะคืน text command สำหรับเครื่องพิมพ์ที่รองรับ ESC/POS
 - สามารถนำไปส่งผ่าน local print bridge (USB/LAN) ได้
 
-3. Print Queue:
+4. Print Queue:
 - ปุ่มคิวพิมพ์ที่หน้าใบเสร็จส่งงานได้ 2 แบบ:
   - `CASHIER_RECEIPT` (ใบเสร็จ)
   - `KITCHEN_TICKET` (บิลครัว)
@@ -119,7 +123,7 @@ npm run dev
 - หน้า `manage/print-jobs` ใช้ติดตามและอัปเดตสถานะคิว
 - ถ้ามี printer agent ให้ส่ง header `x-printer-token: <PRINTER_AGENT_TOKEN>` เพื่อดึง/อัปเดตคิวพิมพ์ผ่าน API
 
-4. Printer Agent (ตัวอย่างในโปรเจกต์):
+5. Printer Agent (ตัวอย่างในโปรเจกต์):
 ```bash
 POS_APP_URL=http://localhost:3000 \
 PRINTER_AGENT_TOKEN=optional-printer-token \
@@ -159,6 +163,7 @@ PRINTER_CHANNEL=KITCHEN_TICKET PRINTER_TARGET=kitchen npm run print:agent
 - Receipts
   - `GET /api/receipts`
   - `GET /api/receipts/:id`
+  - `GET /api/receipts/:id/pdf`
 - Audit
   - `GET /api/audit-logs`
   - `GET /api/audit-logs/export`
