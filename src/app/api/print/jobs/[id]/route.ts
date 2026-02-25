@@ -3,8 +3,57 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { toNumber } from "@/lib/format";
 
 const VALID_STATUS: PrintJobStatus[] = ["PENDING", "PRINTED", "FAILED"];
+
+function isPrinterAgentRequest(request: Request) {
+  const configuredPrinterToken = process.env.PRINTER_AGENT_TOKEN;
+  const printerToken = request.headers.get("x-printer-token");
+  return Boolean(configuredPrinterToken) && printerToken === configuredPrinterToken;
+}
+
+export async function GET(
+  request: Request,
+  context: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const { id } = await context.params;
+  const isPrinterAgent = isPrinterAgentRequest(request);
+
+  if (!isPrinterAgent) {
+    const auth = requireApiRole(request, ["CASHIER", "MANAGER", "ADMIN"]);
+    if (auth.response) return auth.response;
+  }
+
+  const job = await prisma.printJob.findUnique({
+    where: { id },
+    include: {
+      order: true
+    }
+  });
+
+  if (!job) {
+    return NextResponse.json({ error: "Print job not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    id: job.id,
+    orderId: job.orderId,
+    status: job.status,
+    channel: job.channel,
+    payload: job.payload,
+    printerTarget: job.printerTarget,
+    errorMessage: job.errorMessage,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    order: {
+      orderNumber: job.order.orderNumber,
+      total: toNumber(job.order.total)
+    }
+  });
+}
 
 export async function PATCH(
   request: Request,
@@ -21,9 +70,7 @@ export async function PATCH(
       }
     | null = null;
 
-  const configuredPrinterToken = process.env.PRINTER_AGENT_TOKEN;
-  const printerToken = request.headers.get("x-printer-token");
-  const isPrinterAgent = Boolean(configuredPrinterToken) && printerToken === configuredPrinterToken;
+  const isPrinterAgent = isPrinterAgentRequest(request);
 
   if (!isPrinterAgent) {
     const auth = requireApiRole(request, ["MANAGER", "ADMIN"]);

@@ -104,6 +104,7 @@ npm run dev
 - หลังชำระเงิน POS จะเปิด `Receipt Modal` ในหน้าเดิม และกด `พิมพ์จาก Browser` ได้ทันที (ไม่เปิดแท็บใหม่)
 - หน้า `receipts` ใช้ดูใบเสร็จย้อนหลังและเปิดพิมพ์ผ่าน modal แบบเดียวกัน
 - ใน modal มีรายการเครื่องปริ้นให้เลือกก่อนกดส่งคิวพิมพ์ (ทั้งใบเสร็จและบิลครัว)
+  - รายการเครื่องปริ้นดึงจากระบบปฏิบัติการของเครื่องนั้นโดยตรง (Linux/macOS ผ่าน `lpstat`, Windows ผ่าน `Get-Printer`)
 
 2. ESC/POS text (direct download):
 - ใช้ endpoint: `/api/print/receipt/:id`
@@ -132,6 +133,7 @@ npm run print:agent
 - ถ้าไม่กำหนด `PRINT_COMMAND` agent จะพิมพ์ payload ออก console (เหมาะสำหรับ debug)
 - ตัว agent จะ poll งานสถานะ `PENDING` ตาม `PRINTER_CHANNEL`/`PRINTER_TARGET` และอัปเดตเป็น `PRINTED` หรือ `FAILED`
 - ถ้าพิมพ์ล้มเหลว agent จะ retry ตาม `PRINTER_RETRY_ATTEMPTS`
+- ใน Receipt Modal จะเห็นสถานะ job แบบ realtime หลังส่งคิว (`รอพิมพ์`, `พิมพ์เสร็จแล้ว`, `พิมพ์ไม่สำเร็จ`)
 
 ตัวอย่างรัน 2 agent แยกเครื่อง:
 ```bash

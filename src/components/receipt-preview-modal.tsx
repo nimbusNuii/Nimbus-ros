@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
 
 type PrintChannel = "CASHIER_RECEIPT" | "KITCHEN_TICKET";
+type PrintJobStatus = "PENDING" | "PRINTED" | "FAILED";
 
 type PrinterOption = {
   target: string;
@@ -13,6 +14,13 @@ type PrinterOption = {
   source: "system" | "history";
   state?: "idle" | "printing" | "disabled" | "unknown";
   rawStatus?: string;
+};
+
+type PrintJobLive = {
+  id: string;
+  status: PrintJobStatus;
+  errorMessage: string | null;
+  updatedAt: string;
 };
 
 type ReceiptPayload = {
@@ -63,10 +71,11 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [queueing, setQueueing] = useState(false);
+  const [queueingChannel, setQueueingChannel] = useState<PrintChannel | null>(null);
   const [printers, setPrinters] = useState<PrinterOption[]>([]);
   const [cashierPrinter, setCashierPrinter] = useState("");
   const [kitchenPrinter, setKitchenPrinter] = useState("");
+  const [printJobs, setPrintJobs] = useState<Partial<Record<PrintChannel, PrintJobLive>>>({});
 
   function isPrinterAvailable(item: PrinterOption) {
     return item.state !== "disabled";
@@ -89,6 +98,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
       setLoading(true);
       setError("");
       setMessage("");
+      setPrintJobs({});
 
       try {
         const [receiptResponse, printersResponse] = await Promise.all([
@@ -148,6 +158,101 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     };
   }, [orderId]);
 
+  useEffect(() => {
+    const pendingEntries = Object.entries(printJobs).filter((entry) => entry[1]?.status === "PENDING");
+    if (pendingEntries.length === 0) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      const updates = await Promise.all(
+        pendingEntries.map(async ([channel, job]) => {
+          if (!job?.id) return null;
+
+          try {
+            const response = await fetch(`/api/print/jobs/${job.id}`, { cache: "no-store" });
+            if (!response.ok) return null;
+
+            const payload = (await response.json()) as {
+              id: string;
+              status: PrintJobStatus;
+              errorMessage: string | null;
+              updatedAt: string;
+            };
+
+            return {
+              channel: channel as PrintChannel,
+              id: payload.id,
+              status: payload.status,
+              errorMessage: payload.errorMessage,
+              updatedAt: payload.updatedAt
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+      const validUpdates = updates.filter((item): item is NonNullable<typeof item> => Boolean(item));
+      if (validUpdates.length === 0) return;
+
+      setPrintJobs((prev) => {
+        const next = { ...prev };
+        let changed = false;
+
+        for (const update of validUpdates) {
+          const current = prev[update.channel];
+          if (
+            current &&
+            current.id === update.id &&
+            current.status === update.status &&
+            current.errorMessage === update.errorMessage &&
+            current.updatedAt === update.updatedAt
+          ) {
+            continue;
+          }
+
+          next[update.channel] = {
+            id: update.id,
+            status: update.status,
+            errorMessage: update.errorMessage,
+            updatedAt: update.updatedAt
+          };
+          changed = true;
+        }
+
+        return changed ? next : prev;
+      });
+    };
+
+    void poll();
+    const timer = window.setInterval(() => {
+      void poll();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [printJobs]);
+
+  function jobStatusText(channel: PrintChannel) {
+    const job = printJobs[channel];
+    if (!job) return "";
+
+    if (job.status === "PENDING") {
+      return `กำลังรอพิมพ์... (job: ${job.id})`;
+    }
+
+    if (job.status === "PRINTED") {
+      return `พิมพ์เสร็จแล้ว (job: ${job.id})`;
+    }
+
+    return `พิมพ์ไม่สำเร็จ (job: ${job.id})${job.errorMessage ? ` - ${job.errorMessage}` : ""}`;
+  }
+
   async function enqueue(channel: PrintChannel) {
     if (!orderId) return;
     const selectedPrinter = channel === "CASHIER_RECEIPT" ? cashierPrinter : kitchenPrinter;
@@ -156,7 +261,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
       return;
     }
 
-    setQueueing(true);
+    setQueueingChannel(channel);
     setError("");
     setMessage("");
 
@@ -178,11 +283,20 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
         throw new Error(payload.error || "Cannot enqueue print");
       }
 
+      setPrintJobs((prev) => ({
+        ...prev,
+        [channel]: {
+          id: payload.id,
+          status: (payload.status as PrintJobStatus) || "PENDING",
+          errorMessage: payload.errorMessage || null,
+          updatedAt: payload.updatedAt || new Date().toISOString()
+        }
+      }));
       setMessage(`ส่งคิวแล้ว (${payload.id})`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot enqueue print");
     } finally {
-      setQueueing(false);
+      setQueueingChannel(null);
     }
   }
 
@@ -226,13 +340,31 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
                 ))}
             </select>
           </div>
-          <button className="secondary" disabled={queueing} onClick={() => void enqueue("CASHIER_RECEIPT")}>
-            {queueing ? "กำลังส่ง..." : "คิวใบเสร็จ"}
+          <button
+            className="secondary"
+            disabled={queueingChannel !== null}
+            onClick={() => void enqueue("CASHIER_RECEIPT")}
+          >
+            {queueingChannel === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
           </button>
-          <button className="secondary" disabled={queueing} onClick={() => void enqueue("KITCHEN_TICKET")}>
-            {queueing ? "กำลังส่ง..." : "คิวบิลครัว"}
+          <button
+            className="secondary"
+            disabled={queueingChannel !== null}
+            onClick={() => void enqueue("KITCHEN_TICKET")}
+          >
+            {queueingChannel === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
           </button>
         </div>
+        {printJobs.CASHIER_RECEIPT ? (
+          <p className="hide-print" style={{ marginTop: 0, color: printJobs.CASHIER_RECEIPT.status === "FAILED" ? "crimson" : "var(--muted)" }}>
+            สถานะใบเสร็จ: {jobStatusText("CASHIER_RECEIPT")}
+          </p>
+        ) : null}
+        {printJobs.KITCHEN_TICKET ? (
+          <p className="hide-print" style={{ marginTop: 0, color: printJobs.KITCHEN_TICKET.status === "FAILED" ? "crimson" : "var(--muted)" }}>
+            สถานะบิลครัว: {jobStatusText("KITCHEN_TICKET")}
+          </p>
+        ) : null}
 
         {message ? <p className="hide-print" style={{ color: "var(--ok)", marginTop: 0 }}>{message}</p> : null}
         {error ? <p className="hide-print" style={{ color: "crimson", marginTop: 0 }}>{error}</p> : null}
