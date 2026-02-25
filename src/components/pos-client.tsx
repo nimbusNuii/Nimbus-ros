@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
 
 type Product = {
@@ -17,11 +17,19 @@ type PosClientProps = {
   products: Product[];
   taxRate: number;
   currency: string;
+  initialRecentReceipts: Array<{
+    id: string;
+    orderNumber: string;
+    createdAt: string;
+    paymentMethod: string;
+    itemCount: number;
+    total: number;
+  }>;
 };
 
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
 
-export function PosClient({ products, taxRate, currency }: PosClientProps) {
+export function PosClient({ products, taxRate, currency, initialRecentReceipts }: PosClientProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -29,6 +37,7 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
+  const [recentReceipts, setRecentReceipts] = useState(initialRecentReceipts);
 
   const cartItems = useMemo(
     () =>
@@ -107,6 +116,19 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
       setDiscount(0);
       setMessage(`สร้างบิล ${data.orderNumber} แล้ว`);
       setReceiptOrderId(data.id);
+      setRecentReceipts((prev) =>
+        [
+          {
+            id: data.id,
+            orderNumber: data.orderNumber,
+            createdAt: data.createdAt,
+            paymentMethod: data.paymentMethod,
+            itemCount: data.itemCount,
+            total: data.total
+          },
+          ...prev
+        ].slice(0, 10)
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot checkout");
     } finally {
@@ -225,6 +247,45 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
         {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
         </section>
       </div>
+
+      <section className="card" style={{ marginTop: 14 }}>
+        <h2 style={{ marginTop: 0 }}>ใบเสร็จย้อนหลังล่าสุด (10 รายการ)</h2>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>เวลา</th>
+              <th>เลขที่บิล</th>
+              <th>จำนวน</th>
+              <th>ชำระ</th>
+              <th>ยอดสุทธิ</th>
+              <th>ดู/พิมพ์</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentReceipts.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDateTime(row.createdAt)}</td>
+                <td>{row.orderNumber}</td>
+                <td>{row.itemCount}</td>
+                <td>{row.paymentMethod}</td>
+                <td>{formatCurrency(row.total, currency)}</td>
+                <td>
+                  <button className="secondary" type="button" onClick={() => setReceiptOrderId(row.id)}>
+                    เปิด Modal
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {recentReceipts.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>
+                  ยังไม่มีใบเสร็จ
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </section>
 
       <ReceiptPreviewModal orderId={receiptOrderId} onClose={() => setReceiptOrderId(null)} />
     </>

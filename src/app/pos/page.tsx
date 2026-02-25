@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function PosPage() {
   await requirePageRole(["CASHIER", "MANAGER", "ADMIN"]);
 
-  const [products, setting] = await Promise.all([
+  const [products, setting, recentOrders] = await Promise.all([
     prisma.product.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
     prisma.storeSetting.upsert({
       where: { id: 1 },
@@ -18,6 +18,22 @@ export default async function PosPage() {
         businessName: "POS Shop",
         taxRate: 7,
         currency: "THB"
+      }
+    }),
+    prisma.order.findMany({
+      where: {
+        status: "PAID"
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 10,
+      include: {
+        items: {
+          select: {
+            qty: true
+          }
+        }
       }
     })
   ]);
@@ -38,6 +54,14 @@ export default async function PosPage() {
         }))}
         taxRate={toNumber(setting.taxRate)}
         currency={setting.currency}
+        initialRecentReceipts={recentOrders.map((order) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          createdAt: order.createdAt.toISOString(),
+          paymentMethod: order.paymentMethod,
+          itemCount: order.items.reduce((sum, item) => sum + item.qty, 0),
+          total: toNumber(order.total)
+        }))}
       />
     </div>
   );

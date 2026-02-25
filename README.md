@@ -5,6 +5,7 @@
 - หน้าคนในครัว (Kitchen Board)
 - หน้าสรุป (ยอดขาย + ต้นทุน + กำไร)
 - หน้าใบเสร็จย้อนหลัง (ค้นหา/พิมพ์ซ้ำ)
+- หน้า POS แสดงใบเสร็จย้อนหลังล่าสุด 10 ใบในหน้าเดียว
 - หน้าจัดการ (ข้อมูลร้าน, สินค้า, ค่าใช้จ่าย)
 - RBAC + Login (Cashier/Kitchen/Manager/Admin)
 - ตัดสต็อกอัตโนมัติเมื่อขาย + ปรับสต็อก + inventory log
@@ -102,6 +103,7 @@ npm run dev
 1. Browser print:
 - หลังชำระเงิน POS จะเปิด `Receipt Modal` ในหน้าเดิม และกด `พิมพ์จาก Browser` ได้ทันที (ไม่เปิดแท็บใหม่)
 - หน้า `receipts` ใช้ดูใบเสร็จย้อนหลังและเปิดพิมพ์ผ่าน modal แบบเดียวกัน
+- ใน modal มีรายการเครื่องปริ้นให้เลือกก่อนกดส่งคิวพิมพ์ (ทั้งใบเสร็จและบิลครัว)
 
 2. ESC/POS text (direct download):
 - ใช้ endpoint: `/api/print/receipt/:id`
@@ -171,6 +173,7 @@ PRINTER_CHANNEL=KITCHEN_TICKET PRINTER_TARGET=kitchen npm run print:agent
 - `GET/POST /api/print/jobs`
   - `channel` และ `printerTarget` ใช้แยกคิวพิมพ์หลายเครื่อง
 - `PATCH /api/print/jobs/:id`
+- `GET /api/printers` ดึงรายการเครื่องปริ้นสำหรับ dropdown
 
 ## หมายเหตุ
 ถ้าต้องการต่อเครื่องปริ้นแบบอัตโนมัติ (กดแล้วพิมพ์ทันทีไม่ผ่าน dialog browser) ควรเพิ่ม service กลางในเครื่องร้าน เช่น:

@@ -267,6 +267,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: order.id,
       orderNumber: order.orderNumber,
+      createdAt: order.createdAt,
+      paymentMethod: order.paymentMethod,
+      itemCount: normalizedItems.reduce((sum, item) => sum + item.qty, 0),
       subtotal: toNumber(order.subtotal),
       discount: toNumber(order.discount),
       tax: toNumber(order.tax),
