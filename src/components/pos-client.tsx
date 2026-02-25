@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
 
 type Product = {
   id: string;
@@ -27,6 +28,7 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
 
   const cartItems = useMemo(
     () =>
@@ -103,9 +105,8 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
 
       setCart({});
       setDiscount(0);
-      setMessage(`เปิดใบเสร็จ ${data.orderNumber} แล้ว`);
-
-      window.open(`/receipt/${data.id}`, "_blank", "noopener,noreferrer");
+      setMessage(`สร้างบิล ${data.orderNumber} แล้ว`);
+      setReceiptOrderId(data.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot checkout");
     } finally {
@@ -114,8 +115,9 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-      <section className="card">
+    <>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+        <section className="card">
         <h2 style={{ marginTop: 0 }}>เมนูขาย</h2>
         <div className="grid grid-3">
           {products.map((product) => (
@@ -135,9 +137,9 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
             </button>
           ))}
         </div>
-      </section>
+        </section>
 
-      <section className="card">
+        <section className="card">
         <h2 style={{ marginTop: 0 }}>ตะกร้า</h2>
 
         {cartItems.length === 0 ? <p style={{ color: "var(--muted)" }}>ยังไม่มีรายการ</p> : null}
@@ -221,7 +223,10 @@ export function PosClient({ products, taxRate, currency }: PosClientProps) {
 
         {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
         {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
-      </section>
-    </div>
+        </section>
+      </div>
+
+      <ReceiptPreviewModal orderId={receiptOrderId} onClose={() => setReceiptOrderId(null)} />
+    </>
   );
 }

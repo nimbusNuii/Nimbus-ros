@@ -4,8 +4,13 @@ import { requirePageRole } from "@/lib/auth";
 const modules = [
   {
     title: "หน้าร้าน (POS)",
-    desc: "เปิดบิล คิดเงิน และออกใบเสร็จ",
+    desc: "เปิดบิล คิดเงิน และพรีวิวใบเสร็จแบบ Modal",
     href: "/pos"
+  },
+  {
+    title: "ใบเสร็จย้อนหลัง",
+    desc: "ค้นหาและพิมพ์ซ้ำจากประวัติได้ทันที",
+    href: "/receipts"
   },
   {
     title: "หน้าคนในครัว",

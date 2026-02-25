@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/", label: "ภาพรวม" },
   { href: "/pos", label: "หน้าร้าน" },
+  { href: "/receipts", label: "ใบเสร็จย้อนหลัง" },
   { href: "/kitchen", label: "หน้าครัว" },
   { href: "/summary", label: "หน้าสรุป" },
   { href: "/manage", label: "หน้าจัดการ" },
