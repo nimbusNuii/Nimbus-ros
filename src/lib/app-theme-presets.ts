@@ -1,4 +1,5 @@
 export type AppThemeKey =
+  | "brand"
   | "sandstone"
   | "ocean-ink"
   | "matcha-paper"
@@ -15,6 +16,11 @@ export const APP_THEME_STORAGE_KEY = "pos_app_theme";
 export const DEFAULT_APP_THEME: AppThemeKey = "sandstone";
 
 export const APP_THEME_PRESETS: AppThemePreset[] = [
+  {
+    key: "brand",
+    label: "Brand Theme",
+    description: "ใช้สีแบรนด์จากหน้าจัดการร้าน และใช้ร่วมกับโลโก้ใบเสร็จ"
+  },
   {
     key: "sandstone",
     label: "Sandstone",

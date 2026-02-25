@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --bg: #f4f4ef;
   --surface: #fffef8;
@@ -7,6 +11,8 @@
   --muted: #6d6655;
   --brand: #b24a2b;
   --brand-dark: #8f381f;
+  --brand-primary: #b24a2b;
+  --brand-accent: #8f381f;
   --ok: #1f6f3f;
   --warn: #a55a12;
   --input-bg: #ffffff;
@@ -19,6 +25,29 @@
   --bg-pattern: radial-gradient(circle at 15% 10%, #fff4dd 0%, #f4f4ef 40%, #f1ede3 100%);
   --modal-overlay-bg: rgba(21, 17, 10, 0.62);
   --shadow-rgb: 31, 24, 16;
+}
+
+html[data-theme="brand"] {
+  --bg: #f6efe9;
+  --surface: #fff9f4;
+  --surface-strong: #ffffff;
+  --line: #dfcabf;
+  --text: #34231c;
+  --muted: #6f5146;
+  --brand: var(--brand-primary);
+  --brand-dark: var(--brand-accent);
+  --ok: #2e7a52;
+  --warn: #b86a14;
+  --input-bg: #ffffff;
+  --secondary-bg: #fff3eb;
+  --secondary-text: #34231c;
+  --nav-bg: color-mix(in srgb, var(--brand-primary) 10%, white);
+  --nav-link-bg: #ffffff;
+  --nav-active-bg: var(--brand-primary);
+  --nav-active-text: #ffffff;
+  --bg-pattern: radial-gradient(circle at 14% 10%, #fff7ef 0%, #f6efe9 42%, #efdfd5 100%);
+  --modal-overlay-bg: rgba(33, 18, 14, 0.58);
+  --shadow-rgb: 45, 30, 23;
 }
 
 html[data-theme="ocean-ink"] {

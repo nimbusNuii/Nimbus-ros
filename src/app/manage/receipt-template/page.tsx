@@ -47,6 +47,7 @@ export default async function ReceiptTemplatePage() {
           address: safeStore.address,
           phone: safeStore.phone,
           vatNumber: safeStore.vatNumber,
+          receiptLogoUrl: safeStore.receiptLogoUrl,
           currency: safeStore.currency
         }}
       />

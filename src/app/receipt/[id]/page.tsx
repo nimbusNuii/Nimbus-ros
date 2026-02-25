@@ -80,6 +80,7 @@ export default async function ReceiptPage({
           address: finalStore.address,
           phone: finalStore.phone,
           vatNumber: finalStore.vatNumber,
+          receiptLogoUrl: finalStore.receiptLogoUrl,
           currency: finalStore.currency
         }}
         template={{

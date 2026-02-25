@@ -103,6 +103,10 @@ export default async function ManagePage() {
           address: settings.address,
           phone: settings.phone,
           vatNumber: settings.vatNumber,
+          appThemeKey: settings.appThemeKey,
+          brandPrimary: settings.brandPrimary,
+          brandAccent: settings.brandAccent,
+          receiptLogoUrl: settings.receiptLogoUrl,
           taxRate: toNumber(settings.taxRate),
           currency: settings.currency
         }}

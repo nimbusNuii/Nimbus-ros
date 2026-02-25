@@ -10,7 +10,7 @@
 - RBAC + Login (Cashier/Kitchen/Manager/Admin)
 - ตัดสต็อกอัตโนมัติเมื่อขาย + ปรับสต็อก + inventory log
 - Template ใบเสร็จแก้ไขได้ + หน้าใบเสร็จพิมพ์ได้
-- ธีมระบบทั้งแอปสลับได้จาก Navbar (`Sandstone`, `Ocean Ink`, `Matcha Paper`, `Sunset Ledger`, `Graphite Night`)
+- ธีมระบบทั้งแอปสลับได้จาก Navbar (`Brand Theme`, `Sandstone`, `Ocean Ink`, `Matcha Paper`, `Sunset Ledger`, `Graphite Night`)
 - API สำหรับดาวน์โหลดคำสั่ง ESC/POS + คิวพิมพ์ (Print Queue)
 - จัดการผู้ใช้งานและสิทธิ์จากหน้าแอดมิน
 - แจ้งเตือนสินค้าสต็อกต่ำในหน้าจัดการ
@@ -23,6 +23,7 @@
 
 ## Tech Stack
 - Next.js (App Router + TypeScript)
+- Tailwind CSS (utility styling)
 - Prisma ORM
 - PostgreSQL
 
@@ -56,7 +57,7 @@ npm run dev
   - `ELECTRICITY` (ค่าไฟ)
   - `OTHER`
 - `ReceiptTemplate`: เทมเพลตใบเสร็จ
-- `StoreSetting`: ข้อมูลร้าน/ภาษี/สกุลเงิน
+- `StoreSetting`: ข้อมูลร้าน/ภาษี/สกุลเงิน + Brand Theme + สีแบรนด์ + โลโก้ใบเสร็จ
 - `PrintJob`: คิวงานพิมพ์สำหรับ printer bridge
 - `AuditLog`: เก็บกิจกรรมสำคัญของผู้ใช้และระบบ
 
@@ -90,6 +91,7 @@ npm run dev
 - แสดงต้นทุนประมาณการ
 - ใส่ custom CSS
 - เลือก Theme Presets พร้อมดูตัวอย่างก่อน apply (`Classic Thermal`, `Modern Cafe`, `Compact Fast`, `VAT Formal`)
+- แสดงโลโก้ด้านบนใบเสร็จจาก `receiptLogoUrl` (ตั้งค่าที่หน้า `manage`)
 
 รองรับ placeholders:
 - `{{businessName}}`
@@ -179,6 +181,7 @@ PRINTER_CHANNEL=KITCHEN_TICKET PRINTER_TARGET=kitchen npm run print:agent
 - `PATCH /api/products/:id/stock`
 - `GET/POST /api/expenses`
 - `GET/PUT /api/store-settings`
+- `GET /api/brand-theme` (public brand style config for navbar/theme runtime)
 - `GET /api/print/receipt/:id`
 - `GET/POST /api/print/jobs`
   - `channel` และ `printerTarget` ใช้แยกคิวพิมพ์หลายเครื่อง

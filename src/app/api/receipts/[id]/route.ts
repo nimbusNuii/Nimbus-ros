@@ -55,6 +55,7 @@ export async function GET(
       address: store?.address || null,
       phone: store?.phone || null,
       vatNumber: store?.vatNumber || null,
+      receiptLogoUrl: store?.receiptLogoUrl || null,
       currency: store?.currency || "THB"
     },
     template: {

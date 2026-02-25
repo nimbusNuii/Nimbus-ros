@@ -3,6 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { isAppThemeKey, type AppThemeKey } from "@/lib/app-theme-presets";
+
+function normalizeHexColor(value: string | undefined, fallback: string) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return fallback;
+  return /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : fallback;
+}
+
+function normalizeLogoUrl(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  if (normalized.startsWith("data:image/")) return normalized;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  return null;
+}
 
 async function getOrCreate() {
   return prisma.storeSetting.upsert({
@@ -11,6 +26,9 @@ async function getOrCreate() {
     create: {
       id: 1,
       businessName: "POS Shop",
+      appThemeKey: "sandstone",
+      brandPrimary: "#b24a2b",
+      brandAccent: "#8f381f",
       taxRate: 7,
       currency: "THB"
     }
@@ -39,9 +57,19 @@ export async function PUT(request: Request) {
       address?: string;
       phone?: string;
       vatNumber?: string;
+      appThemeKey?: string;
+      brandPrimary?: string;
+      brandAccent?: string;
+      receiptLogoUrl?: string;
       taxRate?: number;
       currency?: string;
     };
+
+    const requestedTheme = body.appThemeKey || "";
+    const appThemeKey: AppThemeKey = isAppThemeKey(requestedTheme) ? requestedTheme : "sandstone";
+    const brandPrimary = normalizeHexColor(body.brandPrimary, "#b24a2b");
+    const brandAccent = normalizeHexColor(body.brandAccent, "#8f381f");
+    const receiptLogoUrl = normalizeLogoUrl(body.receiptLogoUrl);
 
     const updated = await prisma.storeSetting.upsert({
       where: { id: 1 },
@@ -51,6 +79,10 @@ export async function PUT(request: Request) {
         address: body.address?.trim() || null,
         phone: body.phone?.trim() || null,
         vatNumber: body.vatNumber?.trim() || null,
+        appThemeKey,
+        brandPrimary,
+        brandAccent,
+        receiptLogoUrl,
         taxRate: Number(body.taxRate ?? 7),
         currency: body.currency?.trim() || "THB"
       },
@@ -61,6 +93,10 @@ export async function PUT(request: Request) {
         address: body.address?.trim() || null,
         phone: body.phone?.trim() || null,
         vatNumber: body.vatNumber?.trim() || null,
+        appThemeKey,
+        brandPrimary,
+        brandAccent,
+        receiptLogoUrl,
         taxRate: Number(body.taxRate ?? 7),
         currency: body.currency?.trim() || "THB"
       }
@@ -77,6 +113,10 @@ export async function PUT(request: Request) {
       },
       metadata: {
         businessName: updated.businessName,
+        appThemeKey: updated.appThemeKey,
+        brandPrimary: updated.brandPrimary,
+        brandAccent: updated.brandAccent,
+        receiptLogoUrl: updated.receiptLogoUrl,
         taxRate: toNumber(updated.taxRate),
         currency: updated.currency
       }

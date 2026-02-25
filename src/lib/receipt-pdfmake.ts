@@ -25,6 +25,7 @@ type ReceiptPdfPayload = {
     address?: string | null;
     phone?: string | null;
     vatNumber?: string | null;
+    receiptLogoUrl?: string | null;
     currency?: string | null;
   };
   template: {
@@ -71,6 +72,37 @@ function nonEmptyLines(value: string) {
     .filter(Boolean);
 }
 
+function toDataUri(bytes: Uint8Array, mimeType: string) {
+  return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+async function resolveLogoDataUri(logoUrl?: string | null) {
+  const value = logoUrl?.trim();
+  if (!value) return null;
+
+  if (value.startsWith("data:image/")) {
+    return value;
+  }
+
+  if (!/^https?:\/\//i.test(value)) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(value, { cache: "no-store" });
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type") || "";
+    const mime = contentType.split(";")[0].toLowerCase();
+    if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(mime)) return null;
+
+    const buffer = new Uint8Array(await response.arrayBuffer());
+    return toDataUri(buffer, mime || "image/png");
+  } catch {
+    return null;
+  }
+}
+
 async function resolveFontDescriptors(): Promise<Record<string, Record<string, string>>> {
   const hasThaiFont = await fs
     .access(FONT_PATHS.normal)
@@ -93,9 +125,18 @@ async function resolveFontDescriptors(): Promise<Record<string, Record<string, s
   };
 }
 
-function buildContent(payload: ReceiptPdfPayload) {
+function buildContent(payload: ReceiptPdfPayload, logoDataUri: string | null) {
   const currency = payload.store.currency || "THB";
   const content: Content[] = [];
+
+  if (logoDataUri) {
+    content.push({
+      image: logoDataUri,
+      fit: [120, 60],
+      alignment: "center",
+      margin: [0, 0, 0, 8]
+    });
+  }
 
   const headerLines = nonEmptyLines(payload.template.headerText);
   if (headerLines.length > 0) {
@@ -236,6 +277,7 @@ export async function buildReceiptPdfWithPdfmake(payload: ReceiptPdfPayload) {
   const fonts = await resolveFontDescriptors();
   const fontFamily = "Sarabun" in fonts ? "Sarabun" : "Roboto";
   const printer = new PdfPrinter(fonts);
+  const logoDataUri = await resolveLogoDataUri(payload.store.receiptLogoUrl);
 
   const docDefinition: TDocumentDefinitions = {
     pageSize: {
@@ -258,7 +300,7 @@ export async function buildReceiptPdfWithPdfmake(payload: ReceiptPdfPayload) {
       tableHeader: { bold: true, fontSize: 9, color: "#222222" },
       tableCell: { fontSize: 8.8, color: "#111111" }
     },
-    content: buildContent(payload)
+    content: buildContent(payload, logoDataUri)
   };
 
   const pdfDoc = printer.createPdfKitDocument(docDefinition);

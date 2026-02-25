@@ -27,6 +27,7 @@ export type ReceiptDocumentProps = {
     address?: string | null;
     phone?: string | null;
     vatNumber?: string | null;
+    receiptLogoUrl?: string | null;
     currency?: string | null;
   };
   template: {
@@ -60,23 +61,30 @@ export function ReceiptDocument({ order, store, template }: ReceiptDocumentProps
 
   return (
     <div
-      className="receipt-document"
+      className="receipt-document rounded-xl border border-[var(--line)] bg-white p-4 text-[var(--text)] shadow-md"
       style={{
         width: template.paperWidth === 58 ? 260 : 340,
-        margin: "0 auto",
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: 12,
-        padding: 16
+        margin: "0 auto"
       }}
     >
       <style>{template.customCss || ""}</style>
-      <div style={{ textAlign: "center", marginBottom: 10, whiteSpace: "pre-line" }}>
+      {store.receiptLogoUrl ? (
+        <div className="mb-3 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={store.receiptLogoUrl}
+            alt="Receipt logo"
+            className="max-h-16 w-auto object-contain"
+          />
+        </div>
+      ) : null}
+
+      <div className="mb-2 text-center whitespace-pre-line text-sm font-medium">
         {applyReceiptTemplate(template.headerText, context)}
       </div>
 
       {template.showStoreInfo ? (
-        <div style={{ fontSize: 13, color: "#555", marginBottom: 8 }}>
+        <div className="mb-2 text-[12px] text-[var(--muted)]">
           <div>{store.businessName}</div>
           {store.branchName ? <div>สาขา: {store.branchName}</div> : null}
           {store.address ? <div>{store.address}</div> : null}
@@ -85,17 +93,17 @@ export function ReceiptDocument({ order, store, template }: ReceiptDocumentProps
         </div>
       ) : null}
 
-      <div style={{ borderTop: "1px dashed #333", borderBottom: "1px dashed #333", padding: "8px 0", marginBottom: 8 }}>
+      <div className="mb-2 border-y border-dashed border-neutral-500 py-2 text-[13px]">
         <div>เลขที่: {order.orderNumber}</div>
         <div>เวลา: {formatDateTime(order.createdAt)}</div>
         <div>ชำระ: {order.paymentMethod}</div>
       </div>
 
-      <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+      <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr>
-            <th style={{ textAlign: "left" }}>รายการ</th>
-            <th style={{ textAlign: "right" }}>รวม</th>
+            <th className="text-left">รายการ</th>
+            <th className="text-right">รวม</th>
           </tr>
         </thead>
         <tbody>
@@ -104,44 +112,44 @@ export function ReceiptDocument({ order, store, template }: ReceiptDocumentProps
               <td>
                 {item.name} x{item.qty}
               </td>
-              <td style={{ textAlign: "right" }}>{formatCurrency(item.lineTotal, currency)}</td>
+              <td className="text-right">{formatCurrency(item.lineTotal, currency)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <table style={{ width: "100%", marginTop: 8, fontSize: 13 }}>
+      <table className="mt-2 w-full text-[13px]">
         <tbody>
           <tr>
             <td>ยอดรวม</td>
-            <td style={{ textAlign: "right" }}>{formatCurrency(order.subtotal, currency)}</td>
+            <td className="text-right">{formatCurrency(order.subtotal, currency)}</td>
           </tr>
           <tr>
             <td>ส่วนลด</td>
-            <td style={{ textAlign: "right" }}>{formatCurrency(order.discount, currency)}</td>
+            <td className="text-right">{formatCurrency(order.discount, currency)}</td>
           </tr>
           <tr>
             <td>ภาษี</td>
-            <td style={{ textAlign: "right" }}>{formatCurrency(order.tax, currency)}</td>
+            <td className="text-right">{formatCurrency(order.tax, currency)}</td>
           </tr>
           <tr>
             <td>
               <strong>สุทธิ</strong>
             </td>
-            <td style={{ textAlign: "right" }}>
+            <td className="text-right">
               <strong>{formatCurrency(order.total, currency)}</strong>
             </td>
           </tr>
           {template.showCostBreakdown ? (
             <tr>
               <td>ประมาณค่าของ</td>
-              <td style={{ textAlign: "right" }}>{formatCurrency(estimatedCost, currency)}</td>
+              <td className="text-right">{formatCurrency(estimatedCost, currency)}</td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      <div style={{ marginTop: 10, textAlign: "center", whiteSpace: "pre-line", fontSize: 13 }}>
+      <div className="mt-3 text-center text-[13px] whitespace-pre-line">
         {applyReceiptTemplate(template.footerText, context)}
       </div>
     </div>

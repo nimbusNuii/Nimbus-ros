@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { APP_THEME_PRESETS } from "@/lib/app-theme-presets";
 
 type StoreSettings = {
   businessName: string;
@@ -8,6 +9,10 @@ type StoreSettings = {
   address: string | null;
   phone: string | null;
   vatNumber: string | null;
+  appThemeKey: string;
+  brandPrimary: string;
+  brandAccent: string;
+  receiptLogoUrl: string | null;
   taxRate: number;
   currency: string;
 };
@@ -36,6 +41,10 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
       address: String(form.get("address") || ""),
       phone: String(form.get("phone") || ""),
       vatNumber: String(form.get("vatNumber") || ""),
+      appThemeKey: String(form.get("appThemeKey") || "sandstone"),
+      brandPrimary: String(form.get("brandPrimary") || "#b24a2b"),
+      brandAccent: String(form.get("brandAccent") || "#8f381f"),
+      receiptLogoUrl: String(form.get("receiptLogoUrl") || ""),
       taxRate: Number(form.get("taxRate") || "0"),
       currency: String(form.get("currency") || "THB")
     };
@@ -64,10 +73,10 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
   }
 
   return (
-    <section className="card">
-      <h2 style={{ marginTop: 0 }}>ข้อมูลร้าน</h2>
+    <section className="card space-y-4">
+      <h2 className="mt-0 text-xl font-semibold">ข้อมูลร้าน</h2>
       <form onSubmit={onSubmit}>
-        <div className="grid grid-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="field">
             <label htmlFor="businessName">ชื่อร้าน *</label>
             <input id="businessName" name="businessName" defaultValue={state.businessName} required />
@@ -92,6 +101,69 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             <label htmlFor="currency">สกุลเงิน</label>
             <input id="currency" name="currency" defaultValue={state.currency} />
           </div>
+          <div className="field">
+            <label htmlFor="appThemeKey">ธีมหลักของระบบ</label>
+            <select
+              id="appThemeKey"
+              name="appThemeKey"
+              value={state.appThemeKey}
+              onChange={(event) => setState((prev) => ({ ...prev, appThemeKey: event.target.value }))}
+            >
+              {APP_THEME_PRESETS.map((theme) => (
+                <option key={theme.key} value={theme.key}>
+                  {theme.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="receiptLogoUrl">โลโก้ใบเสร็จ (URL รูป)</label>
+            <input
+              id="receiptLogoUrl"
+              name="receiptLogoUrl"
+              value={state.receiptLogoUrl || ""}
+              onChange={(event) => setState((prev) => ({ ...prev, receiptLogoUrl: event.target.value }))}
+              placeholder="https://example.com/logo.png"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="brandPrimary">สีหลักแบรนด์</label>
+            <div className="flex items-center gap-2">
+              <input
+                id="brandPrimary"
+                type="color"
+                value={state.brandPrimary}
+                onChange={(event) => setState((prev) => ({ ...prev, brandPrimary: event.target.value }))}
+                className="h-10 w-14 cursor-pointer rounded-lg border"
+              />
+              <input type="hidden" name="brandPrimary" value={state.brandPrimary} />
+              <input
+                aria-label="Brand primary hex"
+                value={state.brandPrimary}
+                onChange={(event) => setState((prev) => ({ ...prev, brandPrimary: event.target.value }))}
+                className="flex-1"
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="brandAccent">สีรองแบรนด์</label>
+            <div className="flex items-center gap-2">
+              <input
+                id="brandAccent"
+                type="color"
+                value={state.brandAccent}
+                onChange={(event) => setState((prev) => ({ ...prev, brandAccent: event.target.value }))}
+                className="h-10 w-14 cursor-pointer rounded-lg border"
+              />
+              <input type="hidden" name="brandAccent" value={state.brandAccent} />
+              <input
+                aria-label="Brand accent hex"
+                value={state.brandAccent}
+                onChange={(event) => setState((prev) => ({ ...prev, brandAccent: event.target.value }))}
+                className="flex-1"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="field">
@@ -101,6 +173,18 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
 
         <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูลร้าน"}</button>
       </form>
+      {state.receiptLogoUrl ? (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+          <p className="mb-2 text-sm text-[var(--muted)]">ตัวอย่างโลโก้บนใบเสร็จ</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={state.receiptLogoUrl}
+            alt="Receipt logo preview"
+            className="mx-auto max-h-20 w-auto object-contain"
+            onError={() => setError("โหลดรูปโลโก้ไม่สำเร็จ กรุณาตรวจสอบ URL")}
+          />
+        </div>
+      ) : null}
       {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
       {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
     </section>

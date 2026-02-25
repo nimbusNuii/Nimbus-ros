@@ -31,6 +31,11 @@ export function MainNav() {
     document.documentElement.setAttribute("data-theme", themeKey);
   }
 
+  function applyBrandColors(brandPrimary: string, brandAccent: string) {
+    document.documentElement.style.setProperty("--brand-primary", brandPrimary);
+    document.documentElement.style.setProperty("--brand-accent", brandAccent);
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -55,14 +60,44 @@ export function MainNav() {
   }, [pathname]);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(APP_THEME_STORAGE_KEY);
-    if (storedTheme && isAppThemeKey(storedTheme)) {
-      setTheme(storedTheme);
-      applyTheme(storedTheme);
-      return;
-    }
+    let cancelled = false;
 
-    applyTheme(DEFAULT_APP_THEME);
+    const loadTheme = async () => {
+      let defaultTheme = DEFAULT_APP_THEME;
+
+      try {
+        const response = await fetch("/api/brand-theme", { cache: "no-store" });
+        const payload = (await response.json()) as {
+          appThemeKey?: string;
+          brandPrimary?: string;
+          brandAccent?: string;
+        };
+
+        if (!cancelled) {
+          if (payload.brandPrimary && payload.brandAccent) {
+            applyBrandColors(payload.brandPrimary, payload.brandAccent);
+          }
+          if (payload.appThemeKey && isAppThemeKey(payload.appThemeKey)) {
+            defaultTheme = payload.appThemeKey;
+          }
+        }
+      } catch {
+        // keep fallback theme when API is not available
+      }
+
+      if (cancelled) return;
+
+      const storedTheme = window.localStorage.getItem(APP_THEME_STORAGE_KEY);
+      const selected = storedTheme && isAppThemeKey(storedTheme) ? storedTheme : defaultTheme;
+      setTheme(selected);
+      applyTheme(selected);
+    };
+
+    void loadTheme();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function onThemeChange(nextTheme: AppThemeKey) {
@@ -78,8 +113,8 @@ export function MainNav() {
 
   return (
     <nav className="nav">
-      <div className="nav-inner" style={{ justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div className="nav-inner justify-between">
+        <div className="flex flex-wrap gap-2">
           {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
 
@@ -91,9 +126,9 @@ export function MainNav() {
           })}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 220 }}>
-            <label htmlFor="systemTheme" style={{ marginBottom: 4 }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-[220px]">
+            <label htmlFor="systemTheme" className="mb-1 block text-sm">
               ธีมระบบ
             </label>
             <select
@@ -107,7 +142,7 @@ export function MainNav() {
                 </option>
               ))}
             </select>
-            <p style={{ margin: "4px 2px 0", color: "var(--muted)", fontSize: 12 }}>
+            <p className="mx-1 mt-1 text-xs text-[var(--muted)]">
               {selectedTheme.description}
             </p>
           </div>

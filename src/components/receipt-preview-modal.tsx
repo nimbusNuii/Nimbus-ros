@@ -48,6 +48,7 @@ type ReceiptPayload = {
     address: string | null;
     phone: string | null;
     vatNumber: string | null;
+    receiptLogoUrl: string | null;
     currency: string;
   };
   template: {
