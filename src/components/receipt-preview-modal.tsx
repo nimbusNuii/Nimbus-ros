@@ -10,6 +10,9 @@ type PrinterOption = {
   label: string;
   channels: PrintChannel[];
   isDefault: boolean;
+  source: "system" | "history";
+  state?: "idle" | "printing" | "disabled" | "unknown";
+  rawStatus?: string;
 };
 
 type ReceiptPayload = {
@@ -65,6 +68,18 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [cashierPrinter, setCashierPrinter] = useState("");
   const [kitchenPrinter, setKitchenPrinter] = useState("");
 
+  function isPrinterAvailable(item: PrinterOption) {
+    return item.state !== "disabled";
+  }
+
+  function formatPrinterLabel(item: PrinterOption) {
+    const badges: string[] = [];
+    if (item.isDefault) badges.push("default");
+    if (item.state && item.source === "system") badges.push(item.state);
+    if (item.source === "history") badges.push("history");
+    return badges.length ? `${item.label} (${badges.join(", ")})` : item.label;
+  }
+
   useEffect(() => {
     if (!orderId) return;
 
@@ -95,12 +110,16 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
             setPrinters(list);
 
             const cashierDefault =
-              list.find((item) => item.channels.includes("CASHIER_RECEIPT") && item.isDefault)?.target ||
-              list.find((item) => item.channels.includes("CASHIER_RECEIPT"))?.target ||
+              list.find(
+                (item) => item.channels.includes("CASHIER_RECEIPT") && item.isDefault && isPrinterAvailable(item)
+              )?.target ||
+              list.find((item) => item.channels.includes("CASHIER_RECEIPT") && isPrinterAvailable(item))?.target ||
               "";
             const kitchenDefault =
-              list.find((item) => item.channels.includes("KITCHEN_TICKET") && item.isDefault)?.target ||
-              list.find((item) => item.channels.includes("KITCHEN_TICKET"))?.target ||
+              list.find(
+                (item) => item.channels.includes("KITCHEN_TICKET") && item.isDefault && isPrinterAvailable(item)
+              )?.target ||
+              list.find((item) => item.channels.includes("KITCHEN_TICKET") && isPrinterAvailable(item))?.target ||
               "";
 
             setCashierPrinter(cashierDefault);
@@ -188,8 +207,8 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
               {printers
                 .filter((item) => item.channels.includes("CASHIER_RECEIPT"))
                 .map((item) => (
-                  <option key={`cashier-${item.target}`} value={item.target}>
-                    {item.label}
+                  <option key={`cashier-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
+                    {formatPrinterLabel(item)}
                   </option>
                 ))}
             </select>
@@ -201,8 +220,8 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
               {printers
                 .filter((item) => item.channels.includes("KITCHEN_TICKET"))
                 .map((item) => (
-                  <option key={`kitchen-${item.target}`} value={item.target}>
-                    {item.label}
+                  <option key={`kitchen-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
+                    {formatPrinterLabel(item)}
                   </option>
                 ))}
             </select>

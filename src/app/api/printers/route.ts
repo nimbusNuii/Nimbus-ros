@@ -2,28 +2,17 @@ import { PrintChannel } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
+import { detectSystemPrinters } from "@/lib/system-printers";
 
 type PrinterInfo = {
   target: string;
   label: string;
   channels: PrintChannel[];
   isDefault: boolean;
+  source: "system" | "history";
+  state?: "idle" | "printing" | "disabled" | "unknown";
+  rawStatus?: string;
 };
-
-const BASE_PRINTERS: PrinterInfo[] = [
-  {
-    target: "cashier",
-    label: "เครื่องแคชเชียร์",
-    channels: ["CASHIER_RECEIPT"],
-    isDefault: true
-  },
-  {
-    target: "kitchen",
-    label: "เครื่องครัว",
-    channels: ["KITCHEN_TICKET"],
-    isDefault: true
-  }
-];
 
 function inferChannels(target: string): PrintChannel[] {
   const lower = target.toLowerCase();
@@ -40,6 +29,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const channelFilter = searchParams.get("channel") as PrintChannel | null;
+  const systemPrinters = await detectSystemPrinters();
 
   const jobs = await prisma.printJob.findMany({
     where: {
@@ -58,9 +48,16 @@ export async function GET(request: Request) {
   });
 
   const map = new Map<string, PrinterInfo>();
-
-  for (const base of BASE_PRINTERS) {
-    map.set(base.target, { ...base, channels: [...base.channels] });
+  for (const printer of systemPrinters) {
+    map.set(printer.target, {
+      target: printer.target,
+      label: printer.label,
+      channels: inferChannels(printer.target),
+      isDefault: printer.isDefault,
+      source: "system",
+      state: printer.state,
+      rawStatus: printer.rawStatus
+    });
   }
 
   for (const job of jobs) {
@@ -79,12 +76,15 @@ export async function GET(request: Request) {
       target,
       label: `เครื่อง ${target}`,
       channels: inferChannels(target),
-      isDefault: false
+      isDefault: false,
+      source: "history"
     });
   }
 
   let printers = Array.from(map.values()).sort((a, b) => {
     if (a.isDefault && !b.isDefault) return -1;
+    if (a.source === "system" && b.source !== "system") return -1;
+    if (a.source !== "system" && b.source === "system") return 1;
     if (!a.isDefault && b.isDefault) return 1;
     return a.label.localeCompare(b.label, "th");
   });
