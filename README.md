@@ -10,6 +10,7 @@
 - RBAC + Login (Cashier/Kitchen/Manager/Admin)
 - ตัดสต็อกอัตโนมัติเมื่อขาย + ปรับสต็อก + inventory log
 - Template ใบเสร็จแก้ไขได้ + หน้าใบเสร็จพิมพ์ได้
+- ธีมระบบทั้งแอปสลับได้จาก Navbar (`Sandstone`, `Ocean Ink`, `Matcha Paper`, `Sunset Ledger`, `Graphite Night`)
 - API สำหรับดาวน์โหลดคำสั่ง ESC/POS + คิวพิมพ์ (Print Queue)
 - จัดการผู้ใช้งานและสิทธิ์จากหน้าแอดมิน
 - แจ้งเตือนสินค้าสต็อกต่ำในหน้าจัดการ
