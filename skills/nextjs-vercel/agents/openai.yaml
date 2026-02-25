@@ -1,0 +1,4 @@
+interface:
+  display_name: "Next.js + Vercel"
+  short_description: "Create Next.js apps and deploy to Vercel."
+  default_prompt: "Create a Next.js app and deploy it to Vercel, including environment variables and build settings."

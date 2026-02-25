@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  OPEN
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  QR
+}
+
+enum KitchenStatus {
+  NEW
+  PREPARING
+  READY
+  SERVED
+}
+
+enum ExpenseType {
+  INGREDIENT
+  STAFF
+  ELECTRICITY
+  OTHER
+}
+
+enum UserRole {
+  CASHIER
+  KITCHEN
+  MANAGER
+  ADMIN
+}
+
+enum InventoryReason {
+  SALE
+  ADJUST
+  RESTOCK
+}
+
+enum PrintJobStatus {
+  PENDING
+  PRINTED
+  FAILED
+}
+
+enum PrintChannel {
+  CASHIER_RECEIPT
+  KITCHEN_TICKET
+}
+
+model StoreSetting {
+  id            Int      @id
+  businessName  String
+  branchName    String?
+  address       String?
+  phone         String?
+  vatNumber     String?
+  taxRate       Decimal  @db.Decimal(5, 2)
+  currency      String   @default("THB")
+  updatedAt     DateTime @updatedAt
+}
+
+model ReceiptTemplate {
+  id                String   @id @default(cuid())
+  name              String
+  isDefault         Boolean  @default(false)
+  headerText        String   @default("ขอบคุณที่ใช้บริการ")
+  footerText        String   @default("ขอบคุณที่อุดหนุน")
+  showStoreInfo     Boolean  @default(true)
+  showVatNumber     Boolean  @default(true)
+  showCostBreakdown Boolean  @default(false)
+  paperWidth        Int      @default(80)
+  customCss         String?
+  updatedAt         DateTime @updatedAt
+}
+
+model Product {
+  id            String         @id @default(cuid())
+  sku           String?        @unique
+  name          String
+  category      String?
+  price         Decimal        @db.Decimal(10, 2)
+  cost          Decimal        @db.Decimal(10, 2)
+  stockQty      Int            @default(0)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  orderItems    OrderItem[]
+  inventoryLogs InventoryLog[]
+
+  @@index([name])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  status        OrderStatus   @default(PAID)
+  paymentMethod PaymentMethod
+  note          String?
+  subtotal      Decimal       @db.Decimal(10, 2)
+  discount      Decimal       @db.Decimal(10, 2)
+  tax           Decimal       @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         OrderItem[]
+  inventoryLogs InventoryLog[]
+  printJobs     PrintJob[]
+
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id           String       @id @default(cuid())
+  orderId      String
+  productId    String
+  nameSnapshot String
+  qty          Int
+  unitPrice    Decimal      @db.Decimal(10, 2)
+  unitCost     Decimal      @db.Decimal(10, 2)
+  lineTotal    Decimal      @db.Decimal(10, 2)
+  note         String?
+  kitchenState KitchenStatus @default(NEW)
+  createdAt    DateTime     @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([kitchenState])
+}
+
+model Expense {
+  id         String      @id @default(cuid())
+  type       ExpenseType
+  amount     Decimal     @db.Decimal(10, 2)
+  note       String?
+  incurredOn DateTime
+  createdAt  DateTime    @default(now())
+
+  @@index([incurredOn])
+  @@index([type])
+}
+
+model AppUser {
+  id        String     @id @default(cuid())
+  username  String     @unique
+  pinHash   String
+  fullName  String
+  role      UserRole
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
+}
+
+model InventoryLog {
+  id         String          @id @default(cuid())
+  productId  String
+  orderId    String?
+  deltaQty   Int
+  reason     InventoryReason
+  note       String?
+  actor      String?
+  createdAt  DateTime        @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model PrintJob {
+  id            String         @id @default(cuid())
+  orderId       String
+  status        PrintJobStatus @default(PENDING)
+  channel       PrintChannel   @default(CASHIER_RECEIPT)
+  payload       String
+  printerTarget String?
+  errorMessage  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status, channel, printerTarget, createdAt])
+  @@index([orderId])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  action        String
+  entity        String
+  entityId      String?
+  actorUserId   String?
+  actorUsername String?
+  actorRole     UserRole?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  actor AppUser? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([entity, createdAt])
+  @@index([actorUserId, createdAt])
+}
