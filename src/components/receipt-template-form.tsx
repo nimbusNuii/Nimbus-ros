@@ -2,6 +2,11 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
+import {
+  getReceiptThemePreset,
+  RECEIPT_THEME_PRESETS,
+  type ReceiptThemePreset
+} from "@/lib/receipt-theme-presets";
 
 type Template = {
   id: string;
@@ -32,6 +37,7 @@ type ReceiptTemplateFormProps = {
 
 export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateFormProps) {
   const [template, setTemplate] = useState(initialTemplate);
+  const [previewThemeKey, setPreviewThemeKey] = useState(RECEIPT_THEME_PRESETS[0].key);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -53,6 +59,32 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     }),
     []
   );
+
+  const previewTheme = useMemo(
+    () => getReceiptThemePreset(previewThemeKey),
+    [previewThemeKey]
+  );
+
+  function mergeTemplateWithTheme(current: Template, preset: ReceiptThemePreset): Template {
+    return {
+      ...current,
+      name: preset.template.name,
+      headerText: preset.template.headerText,
+      footerText: preset.template.footerText,
+      showStoreInfo: preset.template.showStoreInfo,
+      showVatNumber: preset.template.showVatNumber,
+      showCostBreakdown: preset.template.showCostBreakdown,
+      paperWidth: preset.template.paperWidth,
+      customCss: preset.template.customCss
+    };
+  }
+
+  function applyThemePreset(preset: ReceiptThemePreset) {
+    setTemplate((current) => mergeTemplateWithTheme(current, preset));
+    setPreviewThemeKey(preset.key);
+    setMessage(`โหลดธีม ${preset.label} แล้ว กดบันทึกเพื่อใช้งานจริง`);
+    setError("");
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,8 +131,80 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+    <div className="grid">
       <section className="card">
+        <h2 style={{ marginTop: 0 }}>Theme Presets</h2>
+        <p className="page-subtitle" style={{ marginTop: 0 }}>
+          ดูตัวอย่างแต่ละธีมก่อน แล้วค่อยกดใช้งานกับ template ปัจจุบัน
+        </p>
+
+        <div className="grid grid-2">
+          {RECEIPT_THEME_PRESETS.map((preset) => (
+            <article
+              key={preset.key}
+              style={{
+                border: "1px solid var(--line)",
+                borderRadius: 12,
+                padding: 12,
+                background: previewThemeKey === preset.key ? "#fff4de" : "#fff"
+              }}
+            >
+              <h3 style={{ margin: "0 0 6px" }}>{preset.label}</h3>
+              <p style={{ margin: "0 0 10px", color: "var(--muted)" }}>{preset.description}</p>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                {preset.tags.map((tag) => (
+                  <span key={`${preset.key}-${tag}`} className="pill">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--muted)" }}>Header</p>
+              <pre
+                style={{
+                  margin: "0 0 8px",
+                  padding: 8,
+                  borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "#fffdf8",
+                  whiteSpace: "pre-wrap",
+                  fontSize: 12
+                }}
+              >
+                {preset.template.headerText}
+              </pre>
+              <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--muted)" }}>Footer</p>
+              <pre
+                style={{
+                  margin: "0 0 10px",
+                  padding: 8,
+                  borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "#fffdf8",
+                  whiteSpace: "pre-wrap",
+                  fontSize: 12
+                }}
+              >
+                {preset.template.footerText}
+              </pre>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setPreviewThemeKey(preset.key)}
+                >
+                  ดูตัวอย่าง
+                </button>
+                <button type="button" onClick={() => applyThemePreset(preset)}>
+                  ใช้ธีมนี้
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+        <section className="card">
         <h2 style={{ marginTop: 0 }}>ตั้งค่า Template ใบเสร็จ</h2>
         <p className="page-subtitle" style={{ marginTop: 0 }}>
           ใช้ตัวแปร: {"{{businessName}}"}, {"{{orderNumber}}"}, {"{{date}}"}, {"{{total}}"}
@@ -200,12 +304,25 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
 
         {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
         {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
-      </section>
+        </section>
 
-      <section className="card">
-        <h2 style={{ marginTop: 0 }}>ตัวอย่างใบเสร็จ</h2>
-        <ReceiptDocument order={previewOrder} store={store} template={template} />
-      </section>
+        <section className="card">
+          <h2 style={{ marginTop: 0 }}>ตัวอย่างธีม: {previewTheme.label}</h2>
+          <p className="page-subtitle" style={{ marginTop: 0 }}>
+            นี่คือตัวอย่างก่อน apply เข้า template ปัจจุบัน
+          </p>
+          <ReceiptDocument
+            order={previewOrder}
+            store={store}
+            template={mergeTemplateWithTheme(template, previewTheme)}
+          />
+
+          <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "18px 0" }} />
+
+          <h2 style={{ marginTop: 0 }}>ตัวอย่างใบเสร็จ (ค่าปัจจุบัน)</h2>
+          <ReceiptDocument order={previewOrder} store={store} template={template} />
+        </section>
+      </div>
     </div>
   );
 }

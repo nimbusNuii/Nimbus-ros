@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { toNumber } from "@/lib/format";
-import { buildReceiptPdf } from "@/lib/receipt-pdf";
+import { buildReceiptPdfWithPdfmake } from "@/lib/receipt-pdfmake";
+
+export const runtime = "nodejs";
 
 export async function GET(
   request: Request,
@@ -30,7 +32,7 @@ export async function GET(
     prisma.receiptTemplate.findFirst({ where: { isDefault: true } })
   ]);
 
-  const pdf = buildReceiptPdf({
+  const pdf = await buildReceiptPdfWithPdfmake({
     order: {
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
@@ -56,7 +58,7 @@ export async function GET(
     },
     template: {
       headerText: template?.headerText || "{{businessName}}",
-      footerText: template?.footerText || "Thank you",
+      footerText: template?.footerText || "ขอบคุณที่อุดหนุน",
       showStoreInfo: template?.showStoreInfo ?? true,
       showVatNumber: template?.showVatNumber ?? true,
       showCostBreakdown: template?.showCostBreakdown ?? false,
@@ -64,7 +66,7 @@ export async function GET(
     }
   });
 
-  return new NextResponse(pdf, {
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "content-type": "application/pdf",
       "content-disposition": `attachment; filename="receipt-${order.orderNumber}.pdf"`,

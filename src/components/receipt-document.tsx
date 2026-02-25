@@ -60,6 +60,7 @@ export function ReceiptDocument({ order, store, template }: ReceiptDocumentProps
 
   return (
     <div
+      className="receipt-document"
       style={{
         width: template.paperWidth === 58 ? 260 : 340,
         margin: "0 auto",

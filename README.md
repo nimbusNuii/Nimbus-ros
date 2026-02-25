@@ -88,6 +88,7 @@ npm run dev
 - แสดงข้อมูลร้าน/เลขภาษี
 - แสดงต้นทุนประมาณการ
 - ใส่ custom CSS
+- เลือก Theme Presets พร้อมดูตัวอย่างก่อน apply (`Classic Thermal`, `Modern Cafe`, `Compact Fast`, `VAT Formal`)
 
 รองรับ placeholders:
 - `{{businessName}}`
@@ -108,7 +109,8 @@ npm run dev
 
 2. Receipt PDF:
 - ใช้ endpoint: `/api/receipts/:id/pdf`
-- ระบบจะสร้างไฟล์ PDF จากข้อมูลใบเสร็จและ template ปัจจุบัน
+- ระบบสร้างไฟล์ด้วย `pdfmake` และฟอนต์ `Sarabun` ใน `assets/fonts`
+- รองรับข้อความภาษาไทยในใบเสร็จ
 
 3. ESC/POS text (direct download):
 - ใช้ endpoint: `/api/print/receipt/:id`
