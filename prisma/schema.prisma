@@ -89,6 +89,7 @@ model ReceiptTemplate {
   id                String   @id @default(cuid())
   name              String
   isDefault         Boolean  @default(false)
+  selectedPresetKey String?
   headerText        String   @default("ขอบคุณที่ใช้บริการ")
   footerText        String   @default("ขอบคุณที่อุดหนุน")
   showStoreInfo     Boolean  @default(true)

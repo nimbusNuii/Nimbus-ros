@@ -11,6 +11,7 @@ import {
 type Template = {
   id: string;
   name: string;
+  selectedPresetKey: string | null;
   headerText: string;
   footerText: string;
   showStoreInfo: boolean;
@@ -40,7 +41,11 @@ const RECEIPT_PRESET_STORAGE_KEY = "receipt_template_selected_preset";
 
 export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateFormProps) {
   const [template, setTemplate] = useState(initialTemplate);
-  const [previewThemeKey, setPreviewThemeKey] = useState(RECEIPT_THEME_PRESETS[0].key);
+  const [previewThemeKey, setPreviewThemeKey] = useState(() => {
+    const initial = initialTemplate.selectedPresetKey;
+    const exists = RECEIPT_THEME_PRESETS.some((item) => item.key === initial);
+    return exists && initial ? initial : RECEIPT_THEME_PRESETS[0].key;
+  });
   const [themePresetModalOpen, setThemePresetModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -73,6 +78,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     return {
       ...current,
       name: preset.template.name,
+      selectedPresetKey: preset.key,
       headerText: preset.template.headerText,
       footerText: preset.template.footerText,
       showStoreInfo: preset.template.showStoreInfo,
@@ -83,9 +89,35 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     };
   }
 
+  async function persistSelectedPresetKey(nextKey: string) {
+    try {
+      const response = await fetch("/api/receipt-template", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          selectedPresetKey: nextKey
+        })
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "Cannot persist selected preset");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot persist selected preset");
+    }
+  }
+
+  function selectPresetKey(nextKey: string) {
+    setPreviewThemeKey(nextKey);
+    setTemplate((prev) => ({ ...prev, selectedPresetKey: nextKey }));
+    void persistSelectedPresetKey(nextKey);
+  }
+
   function applyThemePreset(preset: ReceiptThemePreset) {
     setTemplate((current) => mergeTemplateWithTheme(current, preset));
-    setPreviewThemeKey(preset.key);
+    selectPresetKey(preset.key);
     setThemePresetModalOpen(false);
     setMessage(`โหลดธีม ${preset.label} แล้ว กดบันทึกเพื่อใช้งานจริง`);
     setError("");
@@ -96,6 +128,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     const exists = RECEIPT_THEME_PRESETS.some((item) => item.key === stored);
     if (stored && exists) {
       setPreviewThemeKey(stored);
+      setTemplate((prev) => ({ ...prev, selectedPresetKey: stored }));
     }
   }, []);
 
@@ -129,6 +162,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     const payload = {
       id: template.id,
       name: String(form.get("name") || "Default Receipt"),
+      selectedPresetKey: previewThemeKey,
       headerText: String(form.get("headerText") || ""),
       footerText: String(form.get("footerText") || ""),
       showStoreInfo: Boolean(form.get("showStoreInfo")),
@@ -351,7 +385,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
                       ))}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" className="secondary" onClick={() => setPreviewThemeKey(preset.key)}>
+                      <button type="button" className="secondary" onClick={() => selectPresetKey(preset.key)}>
                         ดูตัวอย่าง
                       </button>
                       <button type="button" onClick={() => applyThemePreset(preset)}>

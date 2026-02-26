@@ -33,6 +33,7 @@ export async function PUT(request: Request) {
     const body = (await request.json()) as {
       id?: string;
       name?: string;
+      selectedPresetKey?: string;
       headerText?: string;
       footerText?: string;
       showStoreInfo?: boolean;
@@ -56,6 +57,7 @@ export async function PUT(request: Request) {
 
     const payload = {
       name: body.name?.trim() || "Default Receipt",
+      selectedPresetKey: body.selectedPresetKey?.trim() || null,
       headerText: body.headerText ?? "ขอบคุณที่ใช้บริการ",
       footerText: body.footerText ?? "ขอบคุณที่อุดหนุน",
       showStoreInfo: body.showStoreInfo ?? true,
@@ -86,6 +88,7 @@ export async function PUT(request: Request) {
       },
       metadata: {
         name: updated.name,
+        selectedPresetKey: updated.selectedPresetKey,
         paperWidth: updated.paperWidth,
         showStoreInfo: updated.showStoreInfo,
         showVatNumber: updated.showVatNumber,
@@ -96,5 +99,57 @@ export async function PUT(request: Request) {
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json({ error: "Cannot save receipt template" }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = requireApiRole(request, ["MANAGER", "ADMIN"]);
+  if (auth.response) return auth.response;
+
+  try {
+    const body = (await request.json()) as {
+      selectedPresetKey?: string;
+    };
+
+    let template = await prisma.receiptTemplate.findFirst({ where: { isDefault: true } });
+    if (!template) {
+      template = await prisma.receiptTemplate.findFirst();
+    }
+    if (!template) {
+      template = await prisma.receiptTemplate.create({
+        data: {
+          name: "Default Receipt",
+          isDefault: true
+        }
+      });
+    }
+
+    const selectedPresetKey = body.selectedPresetKey?.trim() || null;
+    const updated = await prisma.receiptTemplate.update({
+      where: {
+        id: template.id
+      },
+      data: {
+        selectedPresetKey
+      }
+    });
+
+    await writeAuditLog({
+      action: "RECEIPT_TEMPLATE_PRESET_SELECTED",
+      entity: "ReceiptTemplate",
+      entityId: updated.id,
+      actor: {
+        userId: auth.session?.userId,
+        username: auth.session?.username,
+        role: auth.session?.role
+      },
+      metadata: {
+        selectedPresetKey: updated.selectedPresetKey
+      }
+    });
+
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: "Cannot update selected preset" }, { status: 400 });
   }
 }
