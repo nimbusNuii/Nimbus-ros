@@ -23,6 +23,13 @@ type PrintJobLive = {
   updatedAt: string;
 };
 
+type EnqueueResponse = {
+  id: string;
+  status: PrintJobStatus;
+  errorMessage: string | null;
+  updatedAt: string;
+};
+
 type ReceiptPayload = {
   order: {
     id: string;
@@ -98,7 +105,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [queueingChannel, setQueueingChannel] = useState<PrintChannel | null>(null);
+  const [queueingAction, setQueueingAction] = useState<PrintChannel | "BOTH" | null>(null);
   const [printers, setPrinters] = useState<PrinterOption[]>([]);
   const [cashierPrinter, setCashierPrinter] = useState("");
   const [kitchenPrinter, setKitchenPrinter] = useState("");
@@ -275,6 +282,32 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     return `พิมพ์ไม่สำเร็จ (job: ${job.id})${job.errorMessage ? ` - ${job.errorMessage}` : ""}`;
   }
 
+  async function enqueueOne(channel: PrintChannel, printerTarget: string) {
+    const response = await fetch("/api/print/jobs", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        orderId,
+        channel,
+        printerTarget
+      })
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Cannot enqueue print");
+    }
+
+    return {
+      id: payload.id,
+      status: (payload.status as PrintJobStatus) || "PENDING",
+      errorMessage: payload.errorMessage || null,
+      updatedAt: payload.updatedAt || new Date().toISOString()
+    } as EnqueueResponse;
+  }
+
   async function enqueue(channel: PrintChannel) {
     if (!orderId) return;
     const selectedPrinter = channel === "CASHIER_RECEIPT" ? cashierPrinter : kitchenPrinter;
@@ -283,42 +316,51 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
       return;
     }
 
-    setQueueingChannel(channel);
+    setQueueingAction(channel);
     setError("");
     setMessage("");
 
     try {
-      const response = await fetch("/api/print/jobs", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          orderId,
-          channel,
-          printerTarget: selectedPrinter
-        })
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || "Cannot enqueue print");
-      }
-
+      const result = await enqueueOne(channel, selectedPrinter);
       setPrintJobs((prev) => ({
         ...prev,
-        [channel]: {
-          id: payload.id,
-          status: (payload.status as PrintJobStatus) || "PENDING",
-          errorMessage: payload.errorMessage || null,
-          updatedAt: payload.updatedAt || new Date().toISOString()
-        }
+        [channel]: result
       }));
-      setMessage(`ส่งคิวแล้ว (${payload.id})`);
+      setMessage(`ส่งคิวแล้ว (${result.id})`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot enqueue print");
     } finally {
-      setQueueingChannel(null);
+      setQueueingAction(null);
+    }
+  }
+
+  async function enqueueBoth() {
+    if (!orderId) return;
+    if (!cashierPrinter || !kitchenPrinter) {
+      setError("กรุณาเลือกเครื่องพิมพ์ทั้งใบเสร็จและบิลครัวก่อน");
+      return;
+    }
+
+    setQueueingAction("BOTH");
+    setError("");
+    setMessage("");
+
+    try {
+      const [cashierJob, kitchenJob] = await Promise.all([
+        enqueueOne("CASHIER_RECEIPT", cashierPrinter),
+        enqueueOne("KITCHEN_TICKET", kitchenPrinter)
+      ]);
+
+      setPrintJobs((prev) => ({
+        ...prev,
+        CASHIER_RECEIPT: cashierJob,
+        KITCHEN_TICKET: kitchenJob
+      }));
+      setMessage(`ส่งคิวสองเครื่องแล้ว (${cashierJob.id}, ${kitchenJob.id})`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot enqueue both print jobs");
+    } finally {
+      setQueueingAction(null);
     }
   }
 
@@ -374,19 +416,22 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
               <a className="secondary" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
                 ดาวน์โหลด PDF
               </a>
-              <button
-                className="secondary"
-                disabled={queueingChannel !== null}
-                onClick={() => void enqueue("CASHIER_RECEIPT")}
-              >
-                {queueingChannel === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
+              <button disabled={queueingAction !== null} onClick={() => void enqueueBoth()}>
+                {queueingAction === "BOTH" ? "กำลังส่ง 2 เครื่อง..." : "พิมพ์ 2 เครื่อง"}
               </button>
               <button
                 className="secondary"
-                disabled={queueingChannel !== null}
+                disabled={queueingAction !== null}
+                onClick={() => void enqueue("CASHIER_RECEIPT")}
+              >
+                {queueingAction === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
+              </button>
+              <button
+                className="secondary"
+                disabled={queueingAction !== null}
                 onClick={() => void enqueue("KITCHEN_TICKET")}
               >
-                {queueingChannel === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
+                {queueingAction === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
               </button>
             </div>
           </div>
