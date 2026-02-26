@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { formatCurrency, formatDateTime } from "@/lib/format";
 
 type Customer = {
   id: string;
@@ -15,6 +16,31 @@ type Customer = {
 
 type CustomerManagerProps = {
   initialCustomers: Customer[];
+  currency: string;
+};
+
+type CustomerOrderHistory = {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  paymentMethod: string;
+  itemCount: number;
+  total: number;
+};
+
+type CustomerHistoryPayload = {
+  customer: {
+    id: string;
+    name: string;
+    type: "WALK_IN" | "REGULAR";
+  };
+  summary: {
+    totalOrders: number;
+    totalSpent: number;
+    averageOrderValue: number;
+    lastOrderAt: string | null;
+  };
+  rows: CustomerOrderHistory[];
 };
 
 type DraftMap = Record<
@@ -41,13 +67,25 @@ function buildDrafts(customers: Customer[]): DraftMap {
   }, {});
 }
 
-export function CustomerManager({ initialCustomers }: CustomerManagerProps) {
+export function CustomerManager({ initialCustomers, currency }: CustomerManagerProps) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialCustomers));
   const [saving, setSaving] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [selectedHistoryCustomerId, setSelectedHistoryCustomerId] = useState<string>(() => {
+    const firstRegular = initialCustomers.find((item) => item.type === "REGULAR" && item.isActive);
+    return firstRegular?.id || "";
+  });
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [history, setHistory] = useState<CustomerHistoryPayload | null>(null);
+
   const activeCount = useMemo(() => customers.filter((item) => item.isActive).length, [customers]);
+  const regularCustomers = useMemo(
+    () => customers.filter((item) => item.type === "REGULAR").sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [customers]
+  );
 
   function setDraftValue(customerId: string, key: keyof DraftMap[string], value: string | boolean) {
     setDrafts((prev) => ({
@@ -58,6 +96,46 @@ export function CustomerManager({ initialCustomers }: CustomerManagerProps) {
       }
     }));
   }
+
+  useEffect(() => {
+    if (!selectedHistoryCustomerId) {
+      setHistory(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setHistoryLoading(true);
+      setHistoryError("");
+
+      try {
+        const response = await fetch(`/api/customers/${selectedHistoryCustomerId}/orders`, { cache: "no-store" });
+        const payload = (await response.json()) as CustomerHistoryPayload | { error?: string };
+        if (!response.ok) {
+          throw new Error(("error" in payload && payload.error) || "Cannot load history");
+        }
+
+        if (!cancelled) {
+          setHistory(payload as CustomerHistoryPayload);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setHistory(null);
+          setHistoryError(err instanceof Error ? err.message : "Cannot load history");
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedHistoryCustomerId]);
 
   async function createCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,22 +156,26 @@ export function CustomerManager({ initialCustomers }: CustomerManagerProps) {
         })
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as Customer | { error?: string };
       if (!response.ok) {
-        throw new Error(data.error || "Cannot create customer");
+        throw new Error(("error" in data && data.error) || "Cannot create customer");
       }
 
-      setCustomers((prev) => [data, ...prev]);
+      const created = data as Customer;
+      setCustomers((prev) => [created, ...prev]);
       setDrafts((prev) => ({
         ...prev,
-        [data.id]: {
-          name: data.name,
-          type: data.type,
-          phone: data.phone || "",
-          note: data.note || "",
-          isActive: data.isActive
+        [created.id]: {
+          name: created.name,
+          type: created.type,
+          phone: created.phone || "",
+          note: created.note || "",
+          isActive: created.isActive
         }
       }));
+      if (created.type === "REGULAR" && !selectedHistoryCustomerId) {
+        setSelectedHistoryCustomerId(created.id);
+      }
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create customer");
@@ -122,22 +204,27 @@ export function CustomerManager({ initialCustomers }: CustomerManagerProps) {
         })
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as Customer | { error?: string };
       if (!response.ok) {
-        throw new Error(data.error || "Cannot update customer");
+        throw new Error(("error" in data && data.error) || "Cannot update customer");
       }
 
-      setCustomers((prev) => prev.map((item) => (item.id === customerId ? data : item)));
+      const updated = data as Customer;
+      setCustomers((prev) => prev.map((item) => (item.id === customerId ? updated : item)));
       setDrafts((prev) => ({
         ...prev,
         [customerId]: {
-          name: data.name,
-          type: data.type,
-          phone: data.phone || "",
-          note: data.note || "",
-          isActive: data.isActive
+          name: updated.name,
+          type: updated.type,
+          phone: updated.phone || "",
+          note: updated.note || "",
+          isActive: updated.isActive
         }
       }));
+
+      if (selectedHistoryCustomerId === customerId && updated.type !== "REGULAR") {
+        setSelectedHistoryCustomerId("");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot update customer");
     } finally {
@@ -267,6 +354,84 @@ export function CustomerManager({ initialCustomers }: CustomerManagerProps) {
           </table>
         </div>
         <p className="mb-0 text-xs text-[var(--muted)]">เลือกประเภทลูกค้าได้ทั้งลูกค้าประจำและขาจรสำหรับ POS dropdown</p>
+      </section>
+
+      <section className="card lg:col-span-2">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <div className="field mb-0 min-w-[260px] flex-1">
+            <label htmlFor="historyCustomer">ประวัติการซื้อรายลูกค้า (เลือกจากลูกค้าประจำ)</label>
+            <select
+              id="historyCustomer"
+              value={selectedHistoryCustomerId}
+              onChange={(event) => setSelectedHistoryCustomerId(event.target.value)}
+            >
+              <option value="">เลือกชื่อลูกค้า</option>
+              {regularCustomers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {historyError ? <p className="text-sm text-red-600">{historyError}</p> : null}
+        {historyLoading ? <p className="text-sm text-[var(--muted)]">กำลังโหลดประวัติ...</p> : null}
+
+        {!historyLoading && selectedHistoryCustomerId && history ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <p className="mb-1 text-xs text-[var(--muted)]">ชื่อลูกค้า</p>
+                <p className="m-0 font-semibold">{history.customer.name}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <p className="mb-1 text-xs text-[var(--muted)]">จำนวนบิล</p>
+                <p className="m-0 font-semibold">{history.summary.totalOrders}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <p className="mb-1 text-xs text-[var(--muted)]">ยอดซื้อรวม</p>
+                <p className="m-0 font-semibold">{formatCurrency(history.summary.totalSpent, currency)}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <p className="mb-1 text-xs text-[var(--muted)]">บิลเฉลี่ย</p>
+                <p className="m-0 font-semibold">{formatCurrency(history.summary.averageOrderValue, currency)}</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="table min-w-[720px]">
+                <thead>
+                  <tr>
+                    <th>เวลา</th>
+                    <th>เลขที่บิล</th>
+                    <th>จำนวนรายการ</th>
+                    <th>ชำระ</th>
+                    <th>ยอดสุทธิ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.rows.map((row) => (
+                    <tr key={row.id}>
+                      <td>{formatDateTime(row.createdAt)}</td>
+                      <td>{row.orderNumber}</td>
+                      <td>{row.itemCount}</td>
+                      <td>{row.paymentMethod}</td>
+                      <td>{formatCurrency(row.total, currency)}</td>
+                    </tr>
+                  ))}
+                  {history.rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center text-[var(--muted)]">
+                        ยังไม่พบประวัติการซื้อ
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

@@ -373,7 +373,9 @@ main {
     background: var(--brand-dark);
   }
 
-  button.secondary {
+  button.secondary,
+  .secondary {
+    @apply inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors;
     border-color: var(--line);
     background: var(--secondary-bg);
     color: var(--secondary-text);

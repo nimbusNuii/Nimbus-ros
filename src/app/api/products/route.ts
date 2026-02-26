@@ -4,6 +4,30 @@ import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 
+const DATA_URL_IMAGE_PATTERN = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i;
+const MAX_IMAGE_DATA_LENGTH = 450_000;
+
+function normalizeImageValue(raw?: string) {
+  const value = raw?.trim() || "";
+  if (!value) return null;
+
+  if (value.startsWith("data:image/")) {
+    if (!DATA_URL_IMAGE_PATTERN.test(value)) {
+      throw new Error("Invalid base64 image");
+    }
+    if (value.length > MAX_IMAGE_DATA_LENGTH) {
+      throw new Error("Image too large");
+    }
+    return value;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  throw new Error("Unsupported image format");
+}
+
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["MANAGER", "ADMIN"]);
   if (auth.response) return auth.response;
@@ -30,6 +54,7 @@ export async function POST(request: Request) {
       sku?: string;
       name?: string;
       category?: string;
+      imageData?: string;
       imageUrl?: string;
       price?: number;
       cost?: number;
@@ -40,12 +65,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "name, price and cost are required" }, { status: 400 });
     }
 
+    const imageValue = normalizeImageValue(body.imageData || body.imageUrl);
+
     const created = await prisma.product.create({
       data: {
         sku: body.sku?.trim() || null,
         name: body.name.trim(),
         category: body.category?.trim() || null,
-        imageUrl: body.imageUrl?.trim() || null,
+        imageUrl: imageValue,
         price: Number(body.price),
         cost: Number(body.cost),
         stockQty: Math.max(0, Math.floor(Number(body.stockQty) || 0))
@@ -76,7 +103,10 @@ export async function POST(request: Request) {
       price: toNumber(created.price),
       cost: toNumber(created.cost)
     });
-  } catch {
-    return NextResponse.json({ error: "Cannot create product" }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Cannot create product" },
+      { status: 400 }
+    );
   }
 }

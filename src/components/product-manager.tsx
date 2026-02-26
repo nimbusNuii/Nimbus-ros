@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 
 type Product = {
@@ -20,12 +20,86 @@ type ProductManagerProps = {
   currency: string;
 };
 
+const IMAGE_MAX_SIDE = 720;
+const TARGET_DATA_URL_LENGTH = 320_000;
+const MIN_QUALITY = 0.55;
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Cannot read image file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Cannot load image"));
+    image.src = source;
+  });
+}
+
+async function resizeImageFile(file: File) {
+  const src = await readFileAsDataUrl(file);
+  const image = await loadImage(src);
+  const ratio = Math.min(1, IMAGE_MAX_SIDE / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * ratio));
+  const height = Math.max(1, Math.round(image.height * ratio));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Cannot process image");
+
+  ctx.drawImage(image, 0, 0, width, height);
+  let quality = 0.82;
+  let output = canvas.toDataURL("image/jpeg", quality);
+  while (output.length > TARGET_DATA_URL_LENGTH && quality > MIN_QUALITY) {
+    quality -= 0.08;
+    output = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return output;
+}
+
 export function ProductManager({ initialProducts, currency }: ProductManagerProps) {
   const [products, setProducts] = useState(initialProducts);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [stockAdjust, setStockAdjust] = useState<Record<string, number>>({});
+  const [imageData, setImageData] = useState("");
+  const [imageInfo, setImageInfo] = useState("");
+  const [processingImage, setProcessingImage] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  async function onImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setImageData("");
+      setImageInfo("");
+      return;
+    }
+
+    setProcessingImage(true);
+    setError("");
+    try {
+      const resized = await resizeImageFile(file);
+      const sizeKb = Math.round((resized.length * 0.75) / 1024);
+      setImageData(resized);
+      setImageInfo(`ไฟล์ถูกย่อและแปลงแล้ว ~${sizeKb} KB`);
+    } catch (err) {
+      setImageData("");
+      setImageInfo("");
+      setError(err instanceof Error ? err.message : "Cannot process image");
+    } finally {
+      setProcessingImage(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,7 +115,7 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
           sku: form.get("sku"),
           name: form.get("name"),
           category: form.get("category"),
-          imageUrl: form.get("imageUrl"),
+          imageData,
           price: Number(form.get("price")),
           cost: Number(form.get("cost")),
           stockQty: Number(form.get("stockQty"))
@@ -55,6 +129,9 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
 
       setProducts((prev) => [data, ...prev]);
       event.currentTarget.reset();
+      setImageData("");
+      setImageInfo("");
+      setFileInputKey((prev) => prev + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create product");
     } finally {
@@ -113,9 +190,37 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
             <input id="category" name="category" />
           </div>
           <div className="field">
-            <label htmlFor="imageUrl">รูปสินค้า (URL)</label>
-            <input id="imageUrl" name="imageUrl" placeholder="https://example.com/product.jpg" />
+            <label htmlFor="imageFile">รูปสินค้า (ไฟล์)</label>
+            <input
+              key={fileInputKey}
+              id="imageFile"
+              type="file"
+              accept="image/*"
+              onChange={onImageFileChange}
+              disabled={processingImage}
+            />
+            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+              ระบบจะย่อรูปอัตโนมัติและเก็บเป็น base64 เพื่อให้ใช้งานเร็วขึ้น
+            </p>
           </div>
+          {imageData ? (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+              <p className="mb-2 text-xs text-[var(--muted)]">{imageInfo}</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageData} alt="Preview" className="h-28 w-full rounded-lg object-cover" />
+              <button
+                type="button"
+                className="secondary mt-2"
+                onClick={() => {
+                  setImageData("");
+                  setImageInfo("");
+                  setFileInputKey((prev) => prev + 1);
+                }}
+              >
+                ลบรูป
+              </button>
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="price">ราคาขาย *</label>
             <input id="price" name="price" type="number" min={0} step="0.01" required />
@@ -128,7 +233,9 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
             <label htmlFor="stockQty">สต็อกเริ่มต้น *</label>
             <input id="stockQty" name="stockQty" type="number" min={0} step={1} defaultValue={0} required />
           </div>
-          <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกสินค้า"}</button>
+          <button disabled={saving || processingImage}>
+            {saving ? "กำลังบันทึก..." : processingImage ? "กำลังย่อรูป..." : "บันทึกสินค้า"}
+          </button>
         </form>
         {error ? <p className="mt-2 text-red-600">{error}</p> : null}
       </section>

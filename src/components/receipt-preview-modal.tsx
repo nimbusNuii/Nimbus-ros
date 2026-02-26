@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
 
 type PrintChannel = "CASHIER_RECEIPT" | "KITCHEN_TICKET";
@@ -29,6 +29,8 @@ type ReceiptPayload = {
     orderNumber: string;
     createdAt: string;
     paymentMethod: string;
+    customerType?: "WALK_IN" | "REGULAR";
+    customerName?: string | null;
     subtotal: number;
     discount: number;
     tax: number;
@@ -67,6 +69,30 @@ type ReceiptPreviewModalProps = {
   onClose: () => void;
 };
 
+function isPrinterAvailable(item: PrinterOption) {
+  return item.state !== "disabled";
+}
+
+function truncate(text: string, max = 42) {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 3)}...`;
+}
+
+function formatPrinterOptionLabel(item: PrinterOption) {
+  const badge: string[] = [];
+  if (item.isDefault) badge.push("default");
+  if (item.state && item.source === "system") badge.push(item.state);
+  if (item.source === "history") badge.push("history");
+  const suffix = badge.length ? ` [${badge.join(", ")}]` : "";
+  return `${truncate(item.label)}${suffix}`;
+}
+
+function statusTone(status: PrintJobStatus) {
+  if (status === "FAILED") return "text-red-600";
+  if (status === "PRINTED") return "text-[var(--ok)]";
+  return "text-[var(--muted)]";
+}
+
 export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalProps) {
   const [data, setData] = useState<ReceiptPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,17 +104,14 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [kitchenPrinter, setKitchenPrinter] = useState("");
   const [printJobs, setPrintJobs] = useState<Partial<Record<PrintChannel, PrintJobLive>>>({});
 
-  function isPrinterAvailable(item: PrinterOption) {
-    return item.state !== "disabled";
-  }
-
-  function formatPrinterLabel(item: PrinterOption) {
-    const badges: string[] = [];
-    if (item.isDefault) badges.push("default");
-    if (item.state && item.source === "system") badges.push(item.state);
-    if (item.source === "history") badges.push("history");
-    return badges.length ? `${item.label} (${badges.join(", ")})` : item.label;
-  }
+  const cashierSelectedPrinter = useMemo(
+    () => printers.find((item) => item.target === cashierPrinter) || null,
+    [printers, cashierPrinter]
+  );
+  const kitchenSelectedPrinter = useMemo(
+    () => printers.find((item) => item.target === kitchenPrinter) || null,
+    [printers, kitchenPrinter]
+  );
 
   useEffect(() => {
     if (!orderId) return;
@@ -107,17 +130,17 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
           fetch("/api/printers", { cache: "no-store" })
         ]);
 
-        const payload = await receiptResponse.json();
-        const printerPayload = await printersResponse.json();
+        const payload = (await receiptResponse.json()) as ReceiptPayload | { error?: string };
+        const printerPayload = (await printersResponse.json()) as PrinterOption[];
 
         if (!receiptResponse.ok) {
-          throw new Error(payload.error || "Cannot load receipt");
+          throw new Error(("error" in payload && payload.error) || "Cannot load receipt");
         }
 
         if (!cancelled) {
-          setData(payload);
+          setData(payload as ReceiptPayload);
           if (printersResponse.ok && Array.isArray(printerPayload)) {
-            const list = printerPayload as PrinterOption[];
+            const list = printerPayload;
             setPrinters(list);
 
             const cashierDefault =
@@ -246,11 +269,9 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     if (job.status === "PENDING") {
       return `กำลังรอพิมพ์... (job: ${job.id})`;
     }
-
     if (job.status === "PRINTED") {
       return `พิมพ์เสร็จแล้ว (job: ${job.id})`;
     }
-
     return `พิมพ์ไม่สำเร็จ (job: ${job.id})${job.errorMessage ? ` - ${job.errorMessage}` : ""}`;
   }
 
@@ -307,80 +328,86 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-panel">
         <div className="modal-header hide-print">
-          <h3 style={{ margin: 0 }}>พรีวิวใบเสร็จ</h3>
+          <h3 className="m-0 text-lg font-semibold">พรีวิวใบเสร็จ</h3>
           <button className="secondary" onClick={onClose}>
             ปิด
           </button>
         </div>
 
-        <div className="hide-print" style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-          <a className="nav-link" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
-            ดาวน์โหลด PDF
-          </a>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={{ color: "var(--muted)" }}>เครื่องพิมพ์ใบเสร็จ</label>
-            <select value={cashierPrinter} onChange={(event) => setCashierPrinter(event.target.value)}>
-              <option value="">เลือกเครื่องพิมพ์</option>
-              {printers
-                .filter((item) => item.channels.includes("CASHIER_RECEIPT"))
-                .map((item) => (
-                  <option key={`cashier-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
-                    {formatPrinterLabel(item)}
-                  </option>
-                ))}
-            </select>
+        <section className="hide-print mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+            <div className="field mb-0">
+              <label className="text-xs">เครื่องพิมพ์ใบเสร็จ</label>
+              <select value={cashierPrinter} onChange={(event) => setCashierPrinter(event.target.value)}>
+                <option value="">เลือกเครื่องพิมพ์</option>
+                {printers
+                  .filter((item) => item.channels.includes("CASHIER_RECEIPT"))
+                  .map((item) => (
+                    <option key={`cashier-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
+                      {formatPrinterOptionLabel(item)}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-1 break-all text-xs text-[var(--muted)]">
+                {cashierSelectedPrinter ? `เลือก: ${cashierSelectedPrinter.label} (${cashierSelectedPrinter.target})` : "ยังไม่เลือกเครื่อง"}
+              </p>
+            </div>
+
+            <div className="field mb-0">
+              <label className="text-xs">เครื่องพิมพ์บิลครัว</label>
+              <select value={kitchenPrinter} onChange={(event) => setKitchenPrinter(event.target.value)}>
+                <option value="">เลือกเครื่องพิมพ์</option>
+                {printers
+                  .filter((item) => item.channels.includes("KITCHEN_TICKET"))
+                  .map((item) => (
+                    <option key={`kitchen-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
+                      {formatPrinterOptionLabel(item)}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-1 break-all text-xs text-[var(--muted)]">
+                {kitchenSelectedPrinter ? `เลือก: ${kitchenSelectedPrinter.label} (${kitchenSelectedPrinter.target})` : "ยังไม่เลือกเครื่อง"}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-2">
+              <a className="secondary" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
+                ดาวน์โหลด PDF
+              </a>
+              <button
+                className="secondary"
+                disabled={queueingChannel !== null}
+                onClick={() => void enqueue("CASHIER_RECEIPT")}
+              >
+                {queueingChannel === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
+              </button>
+              <button
+                className="secondary"
+                disabled={queueingChannel !== null}
+                onClick={() => void enqueue("KITCHEN_TICKET")}
+              >
+                {queueingChannel === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
+              </button>
+            </div>
           </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={{ color: "var(--muted)" }}>เครื่องพิมพ์บิลครัว</label>
-            <select value={kitchenPrinter} onChange={(event) => setKitchenPrinter(event.target.value)}>
-              <option value="">เลือกเครื่องพิมพ์</option>
-              {printers
-                .filter((item) => item.channels.includes("KITCHEN_TICKET"))
-                .map((item) => (
-                  <option key={`kitchen-${item.target}`} value={item.target} disabled={!isPrinterAvailable(item)}>
-                    {formatPrinterLabel(item)}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <button
-            className="secondary"
-            disabled={queueingChannel !== null}
-            onClick={() => void enqueue("CASHIER_RECEIPT")}
-          >
-            {queueingChannel === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
-          </button>
-          <button
-            className="secondary"
-            disabled={queueingChannel !== null}
-            onClick={() => void enqueue("KITCHEN_TICKET")}
-          >
-            {queueingChannel === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
-          </button>
-        </div>
+        </section>
+
         {printJobs.CASHIER_RECEIPT ? (
-          <p className="hide-print" style={{ marginTop: 0, color: printJobs.CASHIER_RECEIPT.status === "FAILED" ? "crimson" : "var(--muted)" }}>
+          <p className={`hide-print mt-0 text-sm ${statusTone(printJobs.CASHIER_RECEIPT.status)}`}>
             สถานะใบเสร็จ: {jobStatusText("CASHIER_RECEIPT")}
           </p>
         ) : null}
         {printJobs.KITCHEN_TICKET ? (
-          <p className="hide-print" style={{ marginTop: 0, color: printJobs.KITCHEN_TICKET.status === "FAILED" ? "crimson" : "var(--muted)" }}>
+          <p className={`hide-print mt-0 text-sm ${statusTone(printJobs.KITCHEN_TICKET.status)}`}>
             สถานะบิลครัว: {jobStatusText("KITCHEN_TICKET")}
           </p>
         ) : null}
 
-        {message ? <p className="hide-print" style={{ color: "var(--ok)", marginTop: 0 }}>{message}</p> : null}
-        {error ? <p className="hide-print" style={{ color: "crimson", marginTop: 0 }}>{error}</p> : null}
+        {message ? <p className="hide-print mt-0 text-sm text-[var(--ok)]">{message}</p> : null}
+        {error ? <p className="hide-print mt-0 text-sm text-red-600">{error}</p> : null}
 
         {loading ? <p>กำลังโหลดใบเสร็จ...</p> : null}
-
-        {data ? (
-          <ReceiptDocument
-            order={data.order}
-            store={data.store}
-            template={data.template}
-          />
-        ) : null}
+        {data ? <ReceiptDocument order={data.order} store={data.store} template={data.template} /> : null}
       </div>
     </div>
   );
