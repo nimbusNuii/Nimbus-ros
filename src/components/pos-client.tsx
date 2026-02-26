@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
+import { useRealtime } from "@/lib/use-realtime";
 
 type Product = {
   id: string;
@@ -134,7 +135,7 @@ function modifierNote(modifier: CartModifier) {
 }
 
 export function PosClient({
-  products,
+  products: initialProducts,
   categories: categoryMaster,
   menuOptions,
   customers,
@@ -146,6 +147,7 @@ export function PosClient({
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<ServiceMode>("DINE_IN");
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -216,6 +218,79 @@ export function PosClient({
     const timer = window.setTimeout(() => setRemovedLine(null), 5000);
     return () => window.clearTimeout(timer);
   }, [removedLine]);
+
+  const reloadProducts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products", { cache: "no-store" });
+      if (!response.ok) return;
+
+      const rows = (await response.json()) as Array<Product & { isActive?: boolean }>;
+      const activeRows = rows.filter((item) => item.isActive !== false);
+      const nextProducts = activeRows.map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        imageUrl: item.imageUrl,
+        price: item.price,
+        cost: item.cost,
+        stockQty: item.stockQty
+      }));
+      const productById = new Map(nextProducts.map((item) => [item.id, item]));
+
+      setProducts(nextProducts);
+      setCartLines((prev) =>
+        prev
+          .map((line) => {
+            const nextProduct = productById.get(line.productId);
+            if (!nextProduct) return null;
+            const qty = Math.min(line.qty, nextProduct.stockQty);
+            if (qty <= 0) return null;
+            return {
+              ...line,
+              name: nextProduct.name,
+              category: nextProduct.category,
+              imageUrl: nextProduct.imageUrl,
+              unitPrice: nextProduct.price,
+              stockQty: nextProduct.stockQty,
+              qty
+            };
+          })
+          .filter((line): line is CartLine => line !== null)
+      );
+      setModifierProduct((prev) => {
+        if (!prev) return null;
+        return productById.get(prev.id) || null;
+      });
+    } catch {
+      // keep current state if reload fails
+    }
+  }, []);
+
+  const reloadRecentReceipts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/receipts?limit=10", { cache: "no-store" });
+      if (!response.ok) return;
+      const rows = (await response.json()) as PosClientProps["initialRecentReceipts"];
+      setRecentReceipts(rows);
+    } catch {
+      // keep current state if reload fails
+    }
+  }, []);
+
+  useRealtime((event) => {
+    if (
+      event.type === "order.created" ||
+      event.type === "order.updated" ||
+      event.type === "stock.updated" ||
+      event.type === "product.updated"
+    ) {
+      void reloadProducts();
+    }
+
+    if (event.type === "order.created" || event.type === "order.updated") {
+      void reloadRecentReceipts();
+    }
+  });
 
   function showToast(text: string, tone: ToastState["tone"] = "success") {
     setToast({ id: Date.now(), text, tone });

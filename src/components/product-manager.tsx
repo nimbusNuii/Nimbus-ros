@@ -1,7 +1,8 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { useRealtime } from "@/lib/use-realtime";
 
 type Product = {
   id: string;
@@ -84,6 +85,28 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+
+  const reloadProducts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = (await response.json()) as Product[];
+      setProducts(data);
+    } catch {
+      // keep current state if refresh fails
+    }
+  }, []);
+
+  useRealtime((event) => {
+    if (
+      event.type === "product.updated" ||
+      event.type === "stock.updated" ||
+      event.type === "order.created" ||
+      event.type === "order.updated"
+    ) {
+      void reloadProducts();
+    }
+  });
 
   async function onImageFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDateTime } from "@/lib/format";
+import { useRealtime } from "@/lib/use-realtime";
 
 type KitchenStatus = "NEW" | "PREPARING" | "READY" | "SERVED";
 type KitchenViewMode = "ORDER" | "ITEM";
@@ -114,9 +115,15 @@ export function KitchenBoard() {
     void load();
     const timer = setInterval(() => {
       void load();
-    }, 5000);
+    }, 30000);
     return () => clearInterval(timer);
   }, [load]);
+
+  useRealtime((event) => {
+    if (event.type === "order.created" || event.type === "order.updated" || event.type === "kitchen.updated") {
+      void load();
+    }
+  });
 
   useEffect(() => {
     const timer = window.setInterval(() => setTick(Date.now()), 1000);

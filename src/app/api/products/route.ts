@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { publishRealtime } from "@/lib/realtime";
 
 const DATA_URL_IMAGE_PATTERN = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i;
 const MAX_IMAGE_DATA_LENGTH = 450_000;
@@ -29,7 +30,7 @@ function normalizeImageValue(raw?: string) {
 }
 
 export async function GET(request: Request) {
-  const auth = requireApiRole(request, ["MANAGER", "ADMIN"]);
+  const auth = requireApiRole(request, ["CASHIER", "MANAGER", "ADMIN"]);
   if (auth.response) return auth.response;
 
   const products = await prisma.product.findMany({
@@ -130,6 +131,11 @@ export async function POST(request: Request) {
         cost: toNumber(created.cost),
         stockQty: created.stockQty
       }
+    });
+
+    publishRealtime("product.updated", {
+      productId: created.id,
+      action: "CREATED"
     });
 
     return NextResponse.json({

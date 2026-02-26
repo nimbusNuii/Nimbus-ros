@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { formatDateTime } from "@/lib/format";
+import { useRealtime } from "@/lib/use-realtime";
 
 type Product = {
   id: string;
@@ -85,6 +86,15 @@ export function InventoryLogBoard() {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtime((event) => {
+    if (event.type === "stock.updated" || event.type === "order.created" || event.type === "order.updated") {
+      void loadLogs();
+    }
+    if (event.type === "product.updated") {
+      void loadProducts();
+    }
+  });
 
   async function onFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

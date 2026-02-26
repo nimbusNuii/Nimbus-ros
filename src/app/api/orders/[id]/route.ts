@@ -4,6 +4,7 @@ import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
+import { publishRealtime } from "@/lib/realtime";
 
 type UpdateAction = "CANCEL" | "MARK_PAID";
 
@@ -113,6 +114,20 @@ export async function PATCH(
         return cancelled;
       });
 
+      publishRealtime("order.updated", {
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: updated.status
+      });
+      publishRealtime("stock.updated", {
+        source: "order.cancelled",
+        productIds: Array.from(stockMap.keys())
+      });
+      publishRealtime("kitchen.updated", {
+        orderId: updated.id,
+        kitchenState: "SERVED"
+      });
+
       return NextResponse.json({
         id: updated.id,
         orderNumber: updated.orderNumber,
@@ -190,6 +205,17 @@ export async function PATCH(
       );
 
       return paid;
+    });
+
+    publishRealtime("order.updated", {
+      orderId: updated.id,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+      paymentMethod: updated.paymentMethod
+    });
+    publishRealtime("kitchen.updated", {
+      orderId: updated.id,
+      kitchenState: "NEW"
     });
 
     return NextResponse.json({

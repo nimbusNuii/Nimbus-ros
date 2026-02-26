@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
+import { publishRealtime } from "@/lib/realtime";
 
 type CustomerType = "WALK_IN" | "REGULAR";
 
@@ -353,6 +354,18 @@ export async function POST(request: Request) {
     if (!order) {
       return NextResponse.json({ error: "Cannot create order number" }, { status: 500 });
     }
+
+    const changedProductIds = Array.from(consolidated.keys());
+    publishRealtime("order.created", {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      itemCount: normalizedItems.reduce((sum, item) => sum + item.qty, 0)
+    });
+    publishRealtime("stock.updated", {
+      source: "order.created",
+      productIds: changedProductIds
+    });
 
     return NextResponse.json({
       id: order.id,

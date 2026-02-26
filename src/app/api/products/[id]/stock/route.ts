@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { publishRealtime } from "@/lib/realtime";
 
 export async function PATCH(
   request: Request,
@@ -74,6 +75,13 @@ export async function PATCH(
       );
 
       return product;
+    });
+
+    publishRealtime("stock.updated", {
+      source: "stock.adjust",
+      productId: updated.id,
+      stockQty: updated.stockQty,
+      deltaQty
     });
 
     return NextResponse.json({

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
+import { useRealtime } from "@/lib/use-realtime";
 
 type ReceiptSummary = {
   id: string;
@@ -66,6 +67,12 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useRealtime((event) => {
+    if (event.type === "order.created" || event.type === "order.updated") {
+      void load();
+    }
+  });
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

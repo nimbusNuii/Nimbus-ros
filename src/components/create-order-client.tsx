@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { useRealtime } from "@/lib/use-realtime";
 
 type Product = {
   id: string;
@@ -11,6 +12,7 @@ type Product = {
   imageUrl: string | null;
   price: number;
   stockQty: number;
+  isActive?: boolean;
 };
 
 type Category = {
@@ -51,7 +53,7 @@ function createLineId() {
 }
 
 export function CreateOrderClient({
-  products,
+  products: initialProducts,
   categories: categoryMaster,
   customers,
   vatEnabled,
@@ -59,6 +61,7 @@ export function CreateOrderClient({
   currency
 }: CreateOrderClientProps) {
   const [activeCategory, setActiveCategory] = useState("ALL");
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("WALK_IN");
@@ -138,6 +141,50 @@ export function CreateOrderClient({
   function clearCart() {
     setCartLines([]);
   }
+
+  const reloadProducts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products", { cache: "no-store" });
+      if (!response.ok) return;
+
+      const rows = (await response.json()) as Product[];
+      const activeRows = rows.filter((item) => item.isActive !== false);
+      const stockByProductId = new Map(activeRows.map((item) => [item.id, item]));
+
+      setProducts(activeRows);
+      setCartLines((prev) =>
+        prev
+          .map((line) => {
+            const nextProduct = stockByProductId.get(line.productId);
+            if (!nextProduct) return null;
+            const qty = Math.min(line.qty, nextProduct.stockQty);
+            if (qty <= 0) return null;
+            return {
+              ...line,
+              name: nextProduct.name,
+              imageUrl: nextProduct.imageUrl,
+              unitPrice: nextProduct.price,
+              stockQty: nextProduct.stockQty,
+              qty
+            };
+          })
+          .filter((line): line is CartLine => line !== null)
+      );
+    } catch {
+      // keep existing data when reload fails
+    }
+  }, []);
+
+  useRealtime((event) => {
+    if (
+      event.type === "order.created" ||
+      event.type === "order.updated" ||
+      event.type === "stock.updated" ||
+      event.type === "product.updated"
+    ) {
+      void reloadProducts();
+    }
+  });
 
   async function createOrder() {
     if (submitting) return;

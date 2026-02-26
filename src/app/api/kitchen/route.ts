@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { publishRealtime } from "@/lib/realtime";
 
 const VALID_STATES: KitchenStatus[] = ["NEW", "PREPARING", "READY", "SERVED"];
 const ACTIVE_STATES: KitchenStatus[] = ["NEW", "PREPARING", "READY"];
@@ -125,6 +126,12 @@ export async function PATCH(request: Request) {
         }
       });
 
+      publishRealtime("kitchen.updated", {
+        orderId: body.orderId,
+        kitchenState: targetState,
+        updatedItems: updated.count
+      });
+
       return NextResponse.json({
         orderId: body.orderId,
         kitchenState: targetState,
@@ -153,6 +160,11 @@ export async function PATCH(request: Request) {
       metadata: {
         kitchenState: updated.kitchenState
       }
+    });
+
+    publishRealtime("kitchen.updated", {
+      itemId: updated.id,
+      kitchenState: updated.kitchenState
     });
 
     return NextResponse.json({ id: updated.id, kitchenState: updated.kitchenState });
