@@ -14,6 +14,9 @@ export default async function SummaryPage({
   await requirePageRole(["MANAGER", "ADMIN"]);
 
   const params = await searchParams;
+  const todayText = new Date().toISOString().slice(0, 10);
+  const fromValue = params.from || todayText;
+  const toValue = params.to || todayText;
   const [summary, trends, setting] = await Promise.all([
     calculateSummary(params.from, params.to),
     calculateProfitTrends(params.from, params.to),
@@ -31,11 +34,11 @@ export default async function SummaryPage({
         <div className="grid grid-3 items-end gap-3">
           <div className="field">
             <label htmlFor="from">ตั้งแต่</label>
-            <input id="from" name="from" type="date" defaultValue={params.from} />
+            <input id="from" name="from" type="date" defaultValue={fromValue} />
           </div>
           <div className="field">
             <label htmlFor="to">ถึง</label>
-            <input id="to" name="to" type="date" defaultValue={params.to} />
+            <input id="to" name="to" type="date" defaultValue={toValue} />
           </div>
           <button type="submit">อัปเดตช่วงเวลา</button>
         </div>

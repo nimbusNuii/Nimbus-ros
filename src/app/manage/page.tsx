@@ -44,6 +44,14 @@ export default async function ManagePage() {
           <h3 className="mt-0">สินค้า</h3>
           <p className="mb-0 text-[var(--muted)]">เพิ่มเมนู ตั้งราคาขาย และต้นทุนต่อหน่วย</p>
         </Link>
+        <Link href="/manage/categories" className="card">
+          <h3 className="mt-0">หมวดหมู่สินค้า</h3>
+          <p className="mb-0 text-[var(--muted)]">สร้างหมวดหมู่แบบแยก และนำไปเลือกในหน้าเพิ่มสินค้า</p>
+        </Link>
+        <Link href="/manage/menu-options" className="card">
+          <h3 className="mt-0">ตัวเลือกเมนู</h3>
+          <p className="mb-0 text-[var(--muted)]">จัดการระดับเผ็ด เพิ่มพิเศษ และรายการไม่ใส่</p>
+        </Link>
         <Link href="/manage/customers" className="card">
           <h3 className="mt-0">ลูกค้า</h3>
           <p className="mb-0 text-[var(--muted)]">จัดการรายชื่อลูกค้า และใช้เป็น dropdown ในหน้าขาย</p>

@@ -70,6 +70,13 @@ function statusRank(state: KitchenStatus) {
   return 3;
 }
 
+function nextKitchenAction(state: KitchenStatus): { label: string; target: KitchenStatus } | null {
+  if (state === "NEW") return { label: "START", target: "PREPARING" };
+  if (state === "PREPARING") return { label: "READY", target: "READY" };
+  if (state === "READY") return { label: "SERVED", target: "SERVED" };
+  return null;
+}
+
 function elapsedText(createdAt: string, nowMs: number) {
   const deltaSec = Math.max(0, Math.floor((nowMs - new Date(createdAt).getTime()) / 1000));
   const hour = Math.floor(deltaSec / 3600);
@@ -269,6 +276,7 @@ export function KitchenBoard() {
                 {groupedOrders[state].map((order) => {
                   const elapsed = elapsedText(order.createdAt, tick);
                   const delayed = Date.now() - new Date(order.createdAt).getTime() > 15 * 60 * 1000 && order.kitchenState !== "READY";
+                  const action = nextKitchenAction(order.kitchenState);
                   const borderClass = delayed
                     ? "border-[#DC2626] kds-delayed-pulse"
                     : order.kitchenState === "PREPARING"
@@ -300,29 +308,17 @@ export function KitchenBoard() {
                         ))}
                       </div>
 
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <button
-                          className={order.kitchenState === "NEW" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveOrder(order.id, "PREPARING")}
-                        >
-                          START
-                        </button>
-                        <button
-                          className={order.kitchenState === "PREPARING" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveOrder(order.id, "READY")}
-                        >
-                          READY
-                        </button>
-                        <button
-                          className={order.kitchenState === "READY" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveOrder(order.id, "SERVED")}
-                        >
-                          SERVED
-                        </button>
-                      </div>
+                      {action ? (
+                        <div className="mt-3">
+                          <button
+                            className="w-full"
+                            disabled={Boolean(updatingKey)}
+                            onClick={() => void moveOrder(order.id, action.target)}
+                          >
+                            {action.label}
+                          </button>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}
@@ -332,6 +328,7 @@ export function KitchenBoard() {
                 {groupedItems[state].length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีรายการ</p> : null}
                 {groupedItems[state].map((item) => {
                   const delayed = Date.now() - new Date(item.order.createdAt).getTime() > 15 * 60 * 1000 && item.kitchenState !== "READY";
+                  const action = nextKitchenAction(item.kitchenState);
                   const borderClass = delayed
                     ? "border-[#DC2626] kds-delayed-pulse"
                     : item.kitchenState === "PREPARING"
@@ -353,29 +350,17 @@ export function KitchenBoard() {
                       </div>
                       <div className="text-xs text-[var(--muted)]">{customerLabel(item.order)}</div>
                       {item.note ? <div className="mt-1 text-xs font-semibold text-[#DC2626]">หมายเหตุ: {item.note}</div> : null}
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <button
-                          className={item.kitchenState === "NEW" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveItem(item.id, "PREPARING")}
-                        >
-                          START
-                        </button>
-                        <button
-                          className={item.kitchenState === "PREPARING" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveItem(item.id, "READY")}
-                        >
-                          READY
-                        </button>
-                        <button
-                          className={item.kitchenState === "READY" ? "" : "secondary"}
-                          disabled={Boolean(updatingKey)}
-                          onClick={() => void moveItem(item.id, "SERVED")}
-                        >
-                          SERVED
-                        </button>
-                      </div>
+                      {action ? (
+                        <div className="mt-3">
+                          <button
+                            className="w-full"
+                            disabled={Boolean(updatingKey)}
+                            onClick={() => void moveItem(item.id, action.target)}
+                          >
+                            {action.label}
+                          </button>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}

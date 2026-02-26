@@ -36,6 +36,7 @@ type ReceiptPayload = {
     orderNumber: string;
     createdAt: string;
     paymentMethod: string;
+    status: "PAID" | "OPEN" | "CANCELLED";
     customerType?: "WALK_IN" | "REGULAR";
     customerName?: string | null;
     subtotal: number;
@@ -112,6 +113,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [kitchenPrinter, setKitchenPrinter] = useState("");
   const [printJobs, setPrintJobs] = useState<Partial<Record<PrintChannel, PrintJobLive>>>({});
   const printMenuRef = useRef<HTMLDivElement | null>(null);
+  const printDisabled = data?.order.status === "CANCELLED";
 
   const cashierSelectedPrinter = useMemo(
     () => printers.find((item) => item.target === cashierPrinter) || null,
@@ -330,6 +332,10 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
 
   async function enqueue(channel: PrintChannel) {
     if (!orderId) return;
+    if (printDisabled) {
+      setError("บิลที่ยกเลิกแล้วไม่สามารถส่งพิมพ์ได้");
+      return;
+    }
     const selectedPrinter = channel === "CASHIER_RECEIPT" ? cashierPrinter : kitchenPrinter;
     if (!selectedPrinter) {
       setError("กรุณาเลือกเครื่องปริ้นก่อนส่งคิว");
@@ -357,6 +363,10 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
 
   async function enqueueBoth() {
     if (!orderId) return;
+    if (printDisabled) {
+      setError("บิลที่ยกเลิกแล้วไม่สามารถส่งพิมพ์ได้");
+      return;
+    }
     if (!cashierPrinter || !kitchenPrinter) {
       setError("กรุณาเลือกเครื่องพิมพ์ทั้งใบเสร็จและบิลครัวก่อน");
       return;
@@ -442,7 +452,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
                 <div className="inline-flex">
                   <button
                     type="button"
-                    disabled={queueingAction !== null}
+                    disabled={queueingAction !== null || printDisabled}
                     onClick={() => void enqueueBoth()}
                     className="rounded-r-none border-r border-white/30 px-4"
                   >
@@ -457,7 +467,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
                   <button
                     type="button"
                     className="rounded-l-none px-3"
-                    disabled={queueingAction !== null}
+                    disabled={queueingAction !== null || printDisabled}
                     onClick={() => setPrintMenuOpen((prev) => !prev)}
                     aria-label="เปิดตัวเลือกการพิมพ์"
                   >
@@ -511,6 +521,11 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
 
         {message ? <p className="hide-print mt-0 text-sm text-[var(--ok)]">{message}</p> : null}
         {error ? <p className="hide-print mt-0 text-sm text-red-600">{error}</p> : null}
+        {data ? (
+          <p className="hide-print mt-0 text-sm text-[var(--muted)]">
+            สถานะบิล: {data.order.status === "PAID" ? "ชำระแล้ว" : data.order.status === "OPEN" ? "บิลล่วงหน้า" : "ยกเลิก"}
+          </p>
+        ) : null}
 
         {loading ? <p>กำลังโหลดใบเสร็จ...</p> : null}
         {data ? <ReceiptDocument order={data.order} store={data.store} template={data.template} /> : null}

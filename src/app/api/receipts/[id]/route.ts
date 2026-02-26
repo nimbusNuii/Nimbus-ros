@@ -36,6 +36,7 @@ export async function GET(
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
       paymentMethod: order.paymentMethod,
+      status: order.status,
       customerType: order.customerType,
       customerName: order.customerName,
       subtotal: toNumber(order.subtotal),

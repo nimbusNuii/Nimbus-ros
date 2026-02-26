@@ -8,9 +8,25 @@ export const dynamic = "force-dynamic";
 export default async function ManageProductsPage() {
   await requirePageRole(["MANAGER", "ADMIN"]);
 
-  const [products, settings] = await Promise.all([
-    prisma.product.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] }),
-    prisma.storeSetting.findUnique({ where: { id: 1 } })
+  const [products, settings, categories] = await Promise.all([
+    prisma.product.findMany({
+      include: {
+        categoryRef: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: [{ category: "asc" }, { name: "asc" }]
+    }),
+    prisma.storeSetting.findUnique({ where: { id: 1 } }),
+    prisma.productCategory.findMany({
+      where: {
+        isActive: true
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    })
   ]);
 
   return (
@@ -20,9 +36,12 @@ export default async function ManageProductsPage() {
       <ProductManager
         initialProducts={products.map((product) => ({
           ...product,
+          categoryId: product.categoryId,
+          category: product.categoryRef?.name || product.category,
           price: toNumber(product.price),
           cost: toNumber(product.cost)
         }))}
+        initialCategories={categories}
         currency={settings?.currency || "THB"}
       />
     </div>

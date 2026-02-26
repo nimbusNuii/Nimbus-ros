@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 const labelBySegment: Record<string, string> = {
   manage: "จัดการ",
   products: "สินค้า",
+  categories: "หมวดหมู่สินค้า",
+  "menu-options": "ตัวเลือกเมนู",
   customers: "ลูกค้า",
   expenses: "ค่าใช้จ่าย",
   users: "ผู้ใช้งาน",

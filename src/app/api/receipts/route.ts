@@ -10,11 +10,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const status = searchParams.get("status");
   const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit") || "100")));
 
   const orders = await prisma.order.findMany({
     where: {
-      status: "PAID",
+      status:
+        status && ["PAID", "OPEN", "CANCELLED"].includes(status)
+          ? (status as "PAID" | "OPEN" | "CANCELLED")
+          : undefined,
       createdAt:
         from || to
           ? {
@@ -42,8 +46,10 @@ export async function GET(request: Request) {
       id: order.id,
       orderNumber: order.orderNumber,
       paymentMethod: order.paymentMethod,
+      status: order.status,
       customerType: order.customerType,
       customerName: order.customerName,
+      scheduledFor: order.scheduledFor,
       createdAt: order.createdAt,
       subtotal: toNumber(order.subtotal),
       discount: toNumber(order.discount),

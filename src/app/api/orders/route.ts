@@ -11,6 +11,8 @@ type OrderInput = {
   items: Array<{ productId: string; qty: number; note?: string }>;
   discount?: number;
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
+  orderStatus?: "PAID" | "OPEN";
+  scheduledFor?: string;
   customerId?: string;
   customerType?: CustomerType;
   customerName?: string;
@@ -77,6 +79,14 @@ export async function POST(request: Request) {
         note: item.note?.trim() || null
       }))
       .filter((item) => item.productId);
+
+    const orderStatus = body.orderStatus === "OPEN" ? "OPEN" : "PAID";
+    const scheduledFor =
+      orderStatus === "OPEN" && body.scheduledFor ? new Date(body.scheduledFor) : null;
+
+    if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
+      return NextResponse.json({ error: "scheduledFor is invalid datetime" }, { status: 400 });
+    }
 
     const customerNameRaw = body.customerName?.trim() || "";
     const customerIdRaw = body.customerId?.trim() || null;
@@ -165,6 +175,8 @@ export async function POST(request: Request) {
             data: {
               orderNumber,
               paymentMethod: body.paymentMethod ?? "CASH",
+              status: orderStatus,
+              scheduledFor,
               customerId,
               customerType,
               customerName,
@@ -173,7 +185,6 @@ export async function POST(request: Request) {
               discount,
               tax,
               total,
-              status: "PAID",
               items: {
                 create: normalizedItems.map((item) => {
                   const product = productMap.get(item.productId)!;
@@ -219,37 +230,39 @@ export async function POST(request: Request) {
             });
           }
 
-          await tx.printJob.create({
-            data: {
-              orderId: createdOrder.id,
-              status: "PENDING",
-              channel: "KITCHEN_TICKET",
-              printerTarget: suggestedTarget("KITCHEN_TICKET"),
-              payload: buildPrintPayload({
+          if (orderStatus === "PAID") {
+            await tx.printJob.create({
+              data: {
+                orderId: createdOrder.id,
+                status: "PENDING",
                 channel: "KITCHEN_TICKET",
-                businessName: storeName,
-                order: {
-                  id: createdOrder.id,
-                  orderNumber: createdOrder.orderNumber,
-                  createdAt: createdOrder.createdAt,
-                  subtotal,
-                  discount,
-                  tax,
-                  total,
-                  items: normalizedItems.map((item) => {
-                    const product = productMap.get(item.productId)!;
-                    return {
-                      nameSnapshot: product.name,
-                      qty: item.qty,
-                      lineTotal: toNumber(product.price) * item.qty,
-                      note: item.note
-                    };
-                  })
-                },
-                footerText: receiptFooter
-              })
-            }
-          });
+                printerTarget: suggestedTarget("KITCHEN_TICKET"),
+                payload: buildPrintPayload({
+                  channel: "KITCHEN_TICKET",
+                  businessName: storeName,
+                  order: {
+                    id: createdOrder.id,
+                    orderNumber: createdOrder.orderNumber,
+                    createdAt: createdOrder.createdAt,
+                    subtotal,
+                    discount,
+                    tax,
+                    total,
+                    items: normalizedItems.map((item) => {
+                      const product = productMap.get(item.productId)!;
+                      return {
+                        nameSnapshot: product.name,
+                        qty: item.qty,
+                        lineTotal: toNumber(product.price) * item.qty,
+                        note: item.note
+                      };
+                    })
+                  },
+                  footerText: receiptFooter
+                })
+              }
+            });
+          }
 
           await writeAuditLog(
             {
@@ -264,6 +277,8 @@ export async function POST(request: Request) {
               metadata: {
                 orderNumber: createdOrder.orderNumber,
                 paymentMethod: body.paymentMethod ?? "CASH",
+                status: orderStatus,
+                scheduledFor,
                 customerId,
                 customerType,
                 customerName,
@@ -302,6 +317,8 @@ export async function POST(request: Request) {
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
       paymentMethod: order.paymentMethod,
+      status: order.status,
+      scheduledFor: order.scheduledFor,
       customerId: order.customerId,
       customerType: order.customerType,
       customerName: order.customerName,

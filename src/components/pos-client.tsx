@@ -14,6 +14,17 @@ type Product = {
   stockQty: number;
 };
 
+type Category = {
+  id: string;
+  name: string;
+};
+
+type MenuOption = {
+  id: string;
+  type: "SPICE_LEVEL" | "ADD_ON" | "REMOVE_INGREDIENT";
+  label: string;
+};
+
 type Customer = {
   id: string;
   name: string;
@@ -22,6 +33,8 @@ type Customer = {
 
 type PosClientProps = {
   products: Product[];
+  categories: Category[];
+  menuOptions: MenuOption[];
   customers: Customer[];
   taxRate: number;
   currency: string;
@@ -30,6 +43,7 @@ type PosClientProps = {
     orderNumber: string;
     createdAt: string;
     paymentMethod: string;
+    status: "PAID" | "OPEN" | "CANCELLED";
     customerType: "WALK_IN" | "REGULAR";
     customerName: string | null;
     itemCount: number;
@@ -41,8 +55,9 @@ type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
 type ServiceMode = "DINE_IN" | "TAKEAWAY";
 
 type CartModifier = {
-  spiceLevel: "ไม่เผ็ด" | "เผ็ดน้อย" | "เผ็ดกลาง" | "เผ็ดมาก";
+  spiceLevel: string;
   addOns: string[];
+  removeSelections: string[];
   removeIngredients: string;
   note: string;
 };
@@ -67,13 +82,12 @@ type ToastState = {
 };
 
 const DEFAULT_MODIFIER: CartModifier = {
-  spiceLevel: "เผ็ดกลาง",
+  spiceLevel: "",
   addOns: [],
+  removeSelections: [],
   removeIngredients: "",
   note: ""
 };
-
-const ADD_ON_OPTIONS = ["ไข่ดาว", "เพิ่มชีส", "เพิ่มผัก", "เพิ่มข้าว", "เพิ่มน้ำจิ้ม"];
 
 function createLineId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -84,10 +98,17 @@ function customerNameLabel(item: { customerType: "WALK_IN" | "REGULAR"; customer
   return item.customerName || (item.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร");
 }
 
+function receiptStatusLabel(status: "PAID" | "OPEN" | "CANCELLED") {
+  if (status === "PAID") return "ชำระแล้ว";
+  if (status === "OPEN") return "บิลล่วงหน้า";
+  return "ยกเลิก";
+}
+
 function sanitizeModifier(modifier: CartModifier): CartModifier {
   return {
     spiceLevel: modifier.spiceLevel,
     addOns: [...modifier.addOns].sort(),
+    removeSelections: [...modifier.removeSelections].sort(),
     removeIngredients: modifier.removeIngredients.trim(),
     note: modifier.note.trim()
   };
@@ -103,12 +124,23 @@ function modifierNote(modifier: CartModifier) {
   const chunks: string[] = [];
   if (normalized.spiceLevel) chunks.push(`เผ็ด: ${normalized.spiceLevel}`);
   if (normalized.addOns.length) chunks.push(`เพิ่ม: ${normalized.addOns.join(", ")}`);
-  if (normalized.removeIngredients) chunks.push(`ไม่ใส่: ${normalized.removeIngredients}`);
+  const removeItems = normalized.removeSelections.length ? normalized.removeSelections.join(", ") : "";
+  const removeRaw = normalized.removeIngredients ? normalized.removeIngredients : "";
+  const removeText = [removeItems, removeRaw].filter(Boolean).join(", ");
+  if (removeText) chunks.push(`ไม่ใส่: ${removeText}`);
   if (normalized.note) chunks.push(`โน้ต: ${normalized.note}`);
   return chunks.join(" | ");
 }
 
-export function PosClient({ products, customers, taxRate, currency, initialRecentReceipts }: PosClientProps) {
+export function PosClient({
+  products,
+  categories: categoryMaster,
+  menuOptions,
+  customers,
+  taxRate,
+  currency,
+  initialRecentReceipts
+}: PosClientProps) {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [serviceMode, setServiceMode] = useState<ServiceMode>("DINE_IN");
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
@@ -125,19 +157,34 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
   const [removedLine, setRemovedLine] = useState<CartLine | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pulseProductId, setPulseProductId] = useState<string | null>(null);
+  const [scheduledFor, setScheduledFor] = useState("");
 
   const selectedCustomer = useMemo(
     () => customers.find((item) => item.id === selectedCustomerId) || null,
     [customers, selectedCustomerId]
   );
 
+  const spiceOptions = useMemo(
+    () => menuOptions.filter((item) => item.type === "SPICE_LEVEL").map((item) => item.label),
+    [menuOptions]
+  );
+  const addOnOptions = useMemo(
+    () => menuOptions.filter((item) => item.type === "ADD_ON").map((item) => item.label),
+    [menuOptions]
+  );
+  const removeIngredientOptions = useMemo(
+    () => menuOptions.filter((item) => item.type === "REMOVE_INGREDIENT").map((item) => item.label),
+    [menuOptions]
+  );
+
   const categories = useMemo(() => {
     const set = new Set<string>();
+    for (const item of categoryMaster) set.add(item.name);
     for (const product of products) {
       if (product.category) set.add(product.category);
     }
     return ["ALL", ...Array.from(set)];
-  }, [products]);
+  }, [categoryMaster, products]);
 
   const visibleProducts = useMemo(() => {
     if (activeCategory === "ALL") return products;
@@ -246,12 +293,16 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
 
   function openModifier(product: Product) {
     setModifierProduct(product);
-    setModifierState(DEFAULT_MODIFIER);
+    setModifierState({
+      ...DEFAULT_MODIFIER
+    });
   }
 
   function closeModifier() {
     setModifierProduct(null);
-    setModifierState(DEFAULT_MODIFIER);
+    setModifierState({
+      ...DEFAULT_MODIFIER
+    });
   }
 
   function toggleAddOn(label: string) {
@@ -261,7 +312,16 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
     }));
   }
 
-  async function submitOrder(lines: CartLine[], action: "KITCHEN" | "PAYMENT") {
+  function toggleRemoveSelection(label: string) {
+    setModifierState((prev) => ({
+      ...prev,
+      removeSelections: prev.removeSelections.includes(label)
+        ? prev.removeSelections.filter((item) => item !== label)
+        : [...prev.removeSelections, label]
+    }));
+  }
+
+  async function submitOrder(lines: CartLine[], action: "KITCHEN" | "PAYMENT" | "ADVANCE") {
     if (!lines.length || submitting) return;
     setSubmitting(true);
     setError("");
@@ -279,6 +339,8 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
           })),
           discount: action === "PAYMENT" ? safeDiscount : 0,
           paymentMethod,
+          orderStatus: action === "ADVANCE" ? "OPEN" : "PAID",
+          scheduledFor: action === "ADVANCE" && scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
           customerId: selectedCustomer?.id,
           customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
           customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร",
@@ -301,8 +363,17 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
       if (action === "PAYMENT") {
         setDiscount(0);
       }
+      if (action === "ADVANCE") {
+        setScheduledFor("");
+      }
 
-      setMessage(action === "KITCHEN" ? `ส่งครัวแล้ว ${data.orderNumber}` : `ชำระเงินแล้ว ${data.orderNumber}`);
+      setMessage(
+        action === "KITCHEN"
+          ? `ส่งครัวแล้ว ${data.orderNumber}`
+          : action === "ADVANCE"
+            ? `บันทึกบิลล่วงหน้าแล้ว ${data.orderNumber}`
+            : `ชำระเงินแล้ว ${data.orderNumber}`
+      );
       setReceiptOrderId(data.id);
       setRecentReceipts((prev) =>
         [
@@ -311,6 +382,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
             orderNumber: data.orderNumber,
             createdAt: data.createdAt,
             paymentMethod: data.paymentMethod,
+            status: data.status,
             customerType: data.customerType,
             customerName: data.customerName,
             itemCount: data.itemCount,
@@ -528,6 +600,19 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
               </tbody>
             </table>
 
+            <div className="field mb-0">
+              <label htmlFor="scheduledFor">บิลล่วงหน้า (วัน/เวลา)</label>
+              <input
+                id="scheduledFor"
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(event) => setScheduledFor(event.target.value)}
+              />
+              <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+                ถ้าระบุวันเวลา ระบบจะบันทึกเป็นสถานะบิลล่วงหน้า และยังไม่คิดยอดขายในสรุป
+              </p>
+            </div>
+
             <div className="grid gap-2">
               <button
                 onClick={() => void submitOrder(selectedLines, "KITCHEN")}
@@ -542,6 +627,13 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                 className="secondary w-full"
               >
                 {submitting ? "กำลังบันทึก..." : "Proceed to Payment"}
+              </button>
+              <button
+                onClick={() => void submitOrder(cartLines, "ADVANCE")}
+                disabled={submitting || cartLines.length === 0}
+                className="secondary w-full"
+              >
+                {submitting ? "กำลังบันทึก..." : "บันทึกบิลล่วงหน้า"}
               </button>
             </div>
 
@@ -559,6 +651,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
               <tr>
                 <th>เวลา</th>
                 <th>เลขที่บิล</th>
+                <th>สถานะ</th>
                 <th>จำนวน</th>
                 <th>ลูกค้า</th>
                 <th>ชำระ</th>
@@ -571,6 +664,19 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                 <tr key={row.id}>
                   <td>{formatDateTime(row.createdAt)}</td>
                   <td>{row.orderNumber}</td>
+                  <td>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        row.status === "PAID"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : row.status === "OPEN"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-rose-50 text-rose-700"
+                      }`}
+                    >
+                      {receiptStatusLabel(row.status)}
+                    </span>
+                  </td>
                   <td>{row.itemCount}</td>
                   <td>{customerNameLabel(row)}</td>
                   <td>{row.paymentMethod}</td>
@@ -584,7 +690,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
               ))}
               {recentReceipts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-[var(--muted)]">
+                  <td colSpan={8} className="text-center text-[var(--muted)]">
                     ยังไม่มีใบเสร็จ
                   </td>
                 </tr>
@@ -612,21 +718,23 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                   onChange={(event) =>
                     setModifierState((prev) => ({
                       ...prev,
-                      spiceLevel: event.target.value as CartModifier["spiceLevel"]
+                      spiceLevel: event.target.value
                     }))
                   }
                 >
-                  <option value="ไม่เผ็ด">ไม่เผ็ด</option>
-                  <option value="เผ็ดน้อย">เผ็ดน้อย</option>
-                  <option value="เผ็ดกลาง">เผ็ดกลาง</option>
-                  <option value="เผ็ดมาก">เผ็ดมาก</option>
+                  <option value="">ไม่ระบุ</option>
+                  {spiceOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="field">
                 <label>เพิ่มพิเศษ</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {ADD_ON_OPTIONS.map((item) => (
+                  {addOnOptions.map((item) => (
                     <label
                       key={item}
                       className="flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[#111827]"
@@ -640,11 +748,32 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                       {item}
                     </label>
                   ))}
+                  {addOnOptions.length === 0 ? (
+                    <p className="col-span-2 m-0 text-xs text-[var(--muted)]">
+                      ยังไม่ได้ตั้งค่าเพิ่มพิเศษในหน้า Manage &gt; Menu Options
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="field">
                 <label>ไม่ใส่วัตถุดิบ</label>
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  {removeIngredientOptions.map((item) => (
+                    <label
+                      key={item}
+                      className="flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[#111827]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={modifierState.removeSelections.includes(item)}
+                        onChange={() => toggleRemoveSelection(item)}
+                        className="h-4 w-4 accent-[#E24A3B]"
+                      />
+                      {item}
+                    </label>
+                  ))}
+                </div>
                 <input
                   value={modifierState.removeIngredients}
                   onChange={(event) =>

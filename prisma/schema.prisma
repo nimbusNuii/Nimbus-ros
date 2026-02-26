@@ -63,6 +63,12 @@ enum PrintChannel {
   KITCHEN_TICKET
 }
 
+enum MenuOptionType {
+  SPICE_LEVEL
+  ADD_ON
+  REMOVE_INGREDIENT
+}
+
 model StoreSetting {
   id            Int      @id
   businessName  String
@@ -98,6 +104,7 @@ model Product {
   sku           String?        @unique
   name          String
   category      String?
+  categoryId    String?
   imageUrl      String?
   price         Decimal        @db.Decimal(10, 2)
   cost          Decimal        @db.Decimal(10, 2)
@@ -107,8 +114,10 @@ model Product {
   updatedAt     DateTime       @updatedAt
   orderItems    OrderItem[]
   inventoryLogs InventoryLog[]
+  categoryRef   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([name])
+  @@index([categoryId])
 }
 
 model Order {
@@ -124,6 +133,7 @@ model Order {
   discount      Decimal       @db.Decimal(10, 2)
   tax           Decimal       @db.Decimal(10, 2)
   total         Decimal       @db.Decimal(10, 2)
+  scheduledFor  DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   items         OrderItem[]
@@ -133,6 +143,7 @@ model Order {
 
   @@index([createdAt])
   @@index([customerId])
+  @@index([scheduledFor])
 }
 
 model Customer {
@@ -245,4 +256,29 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([entity, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+model ProductCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@index([isActive, sortOrder, name])
+}
+
+model MenuOption {
+  id        String         @id @default(cuid())
+  type      MenuOptionType
+  label     String
+  sortOrder Int            @default(0)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([type, label])
+  @@index([type, isActive, sortOrder, label])
 }

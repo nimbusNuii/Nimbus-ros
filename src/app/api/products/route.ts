@@ -33,12 +33,22 @@ export async function GET(request: Request) {
   if (auth.response) return auth.response;
 
   const products = await prisma.product.findMany({
+    include: {
+      categoryRef: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
+    },
     orderBy: [{ category: "asc" }, { name: "asc" }]
   });
 
   return NextResponse.json(
     products.map((product) => ({
       ...product,
+      categoryId: product.categoryId,
+      category: product.categoryRef?.name || product.category || null,
       price: toNumber(product.price),
       cost: toNumber(product.cost)
     }))
@@ -53,6 +63,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       sku?: string;
       name?: string;
+      categoryId?: string;
       category?: string;
       imageData?: string;
       imageUrl?: string;
@@ -66,16 +77,37 @@ export async function POST(request: Request) {
     }
 
     const imageValue = normalizeImageValue(body.imageData || body.imageUrl);
+    const categoryId = body.categoryId?.trim() || null;
+    let categoryName = body.category?.trim() || null;
+
+    if (categoryId) {
+      const category = await prisma.productCategory.findUnique({
+        where: { id: categoryId }
+      });
+      if (!category || !category.isActive) {
+        return NextResponse.json({ error: "ไม่พบหมวดหมู่ หรือหมวดหมู่ถูกปิดใช้งาน" }, { status: 404 });
+      }
+      categoryName = category.name;
+    }
 
     const created = await prisma.product.create({
       data: {
         sku: body.sku?.trim() || null,
         name: body.name.trim(),
-        category: body.category?.trim() || null,
+        categoryId,
+        category: categoryName,
         imageUrl: imageValue,
         price: Number(body.price),
         cost: Number(body.cost),
         stockQty: Math.max(0, Math.floor(Number(body.stockQty) || 0))
+      },
+      include: {
+        categoryRef: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
 
@@ -91,6 +123,8 @@ export async function POST(request: Request) {
       metadata: {
         name: created.name,
         sku: created.sku,
+        categoryId: created.categoryId,
+        category: created.categoryRef?.name || created.category,
         imageUrl: created.imageUrl,
         price: toNumber(created.price),
         cost: toNumber(created.cost),
@@ -100,6 +134,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...created,
+      category: created.categoryRef?.name || created.category,
       price: toNumber(created.price),
       cost: toNumber(created.cost)
     });

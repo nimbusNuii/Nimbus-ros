@@ -7,6 +7,7 @@ type Product = {
   id: string;
   sku: string | null;
   name: string;
+  categoryId: string | null;
   category: string | null;
   imageUrl: string | null;
   price: number;
@@ -15,8 +16,14 @@ type Product = {
   isActive: boolean;
 };
 
+type ProductCategory = {
+  id: string;
+  name: string;
+};
+
 type ProductManagerProps = {
   initialProducts: Product[];
+  initialCategories: ProductCategory[];
   currency: string;
 };
 
@@ -66,8 +73,9 @@ async function resizeImageFile(file: File) {
   return output;
 }
 
-export function ProductManager({ initialProducts, currency }: ProductManagerProps) {
+export function ProductManager({ initialProducts, initialCategories, currency }: ProductManagerProps) {
   const [products, setProducts] = useState(initialProducts);
+  const [categories] = useState(initialCategories);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
@@ -114,7 +122,7 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
         body: JSON.stringify({
           sku: form.get("sku"),
           name: form.get("name"),
-          category: form.get("category"),
+          categoryId: form.get("categoryId"),
           imageData,
           price: Number(form.get("price")),
           cost: Number(form.get("cost")),
@@ -186,8 +194,18 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
             <input id="name" name="name" required />
           </div>
           <div className="field">
-            <label htmlFor="category">หมวดหมู่</label>
-            <input id="category" name="category" />
+            <label htmlFor="categoryId">หมวดหมู่</label>
+            <select id="categoryId" name="categoryId" defaultValue="">
+              <option value="">ไม่ระบุหมวดหมู่</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+              จัดการหมวดหมู่เพิ่มเติมได้ที่เมนู Manage &gt; Categories
+            </p>
           </div>
           <div className="field">
             <label htmlFor="imageFile">รูปสินค้า (ไฟล์)</label>
