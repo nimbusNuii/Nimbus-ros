@@ -8,6 +8,34 @@ export const dynamic = "force-dynamic";
 
 export default async function ManagePage() {
   const LOW_STOCK_THRESHOLD = 10;
+  const menuGroups = [
+    {
+      title: "เมนูสินค้า",
+      items: [
+        { href: "/manage/products", label: "สินค้า", hint: "เมนูและราคา" },
+        { href: "/manage/categories", label: "หมวดหมู่สินค้า", hint: "จัดกลุ่มสินค้า" },
+        { href: "/manage/menu-options", label: "ตัวเลือกเมนู", hint: "เผ็ด/เพิ่มพิเศษ" },
+        { href: "/manage/inventory", label: "ประวัติสต็อก", hint: "ดูตัด/ปรับสต็อก" }
+      ]
+    },
+    {
+      title: "เมนูขายและลูกค้า",
+      items: [
+        { href: "/manage/customers", label: "ลูกค้า", hint: "ลูกค้าประจำ/ขาจร" },
+        { href: "/manage/billing-batch", label: "ลงบิลย้อนหลัง", hint: "เพิ่มบิลชำระแล้ว" },
+        { href: "/manage/receipt-template", label: "Template ใบเสร็จ", hint: "แก้รูปแบบใบเสร็จ" },
+        { href: "/manage/print-jobs", label: "คิวพิมพ์", hint: "ติดตามงานพิมพ์" }
+      ]
+    },
+    {
+      title: "เมนูระบบ",
+      items: [
+        { href: "/manage/expenses", label: "ค่าใช้จ่าย", hint: "ต้นทุน/ค่าไฟ/พนักงาน" },
+        { href: "/manage/users", label: "ผู้ใช้งาน", hint: "สิทธิ์และ PIN" },
+        { href: "/manage/audit", label: "Audit Log", hint: "ตรวจสอบประวัติระบบ" }
+      ]
+    }
+  ];
 
   await requirePageRole(["MANAGER", "ADMIN"]);
 
@@ -37,52 +65,22 @@ export default async function ManagePage() {
 
   return (
     <div>
-
-      <section className="grid grid-3 mb-4">
-        <Link href="/manage/products" className="card">
-          <h3 className="mt-0">สินค้า</h3>
-          <p className="mb-0 text-[var(--muted)]">เพิ่มเมนู ตั้งราคาขาย และต้นทุนต่อหน่วย</p>
-        </Link>
-        <Link href="/manage/categories" className="card">
-          <h3 className="mt-0">หมวดหมู่สินค้า</h3>
-          <p className="mb-0 text-[var(--muted)]">สร้างหมวดหมู่แบบแยก และนำไปเลือกในหน้าเพิ่มสินค้า</p>
-        </Link>
-        <Link href="/manage/menu-options" className="card">
-          <h3 className="mt-0">ตัวเลือกเมนู</h3>
-          <p className="mb-0 text-[var(--muted)]">จัดการระดับเผ็ด เพิ่มพิเศษ และรายการไม่ใส่</p>
-        </Link>
-        <Link href="/manage/customers" className="card">
-          <h3 className="mt-0">ลูกค้า</h3>
-          <p className="mb-0 text-[var(--muted)]">จัดการรายชื่อลูกค้า และใช้เป็น dropdown ในหน้าขาย</p>
-        </Link>
-        <Link href="/manage/expenses" className="card">
-          <h3 className="mt-0">ค่าใช้จ่าย</h3>
-          <p className="mb-0 text-[var(--muted)]">บันทึกค่าของ ค่าพนักงาน ค่าไฟ และค่าใช้จ่ายอื่น</p>
-        </Link>
-        <Link href="/manage/receipt-template" className="card">
-          <h3 className="mt-0">Template ใบเสร็จ</h3>
-          <p className="mb-0 text-[var(--muted)]">ปรับหัวท้ายใบเสร็จ ความกว้างกระดาษ และสไตล์</p>
-        </Link>
-        <Link href="/manage/billing-batch" className="card">
-          <h3 className="mt-0">ลงบิลย้อนหลัง (ชำระแล้ว)</h3>
-          <p className="mb-0 text-[var(--muted)]">เพิ่มทีละบิลแบบชำระแล้ว เลือกวันเวลา ลูกค้า และสินค้าแบบ Modal</p>
-        </Link>
-        <Link href="/manage/print-jobs" className="card">
-          <h3 className="mt-0">คิวพิมพ์</h3>
-          <p className="mb-0 text-[var(--muted)]">ติดตามงานพิมพ์ใบเสร็จที่รอส่งเครื่องพิมพ์</p>
-        </Link>
-        <Link href="/manage/users" className="card">
-          <h3 className="mt-0">ผู้ใช้งาน</h3>
-          <p className="mb-0 text-[var(--muted)]">กำหนดสิทธิ์และจัดการ PIN ของผู้ใช้ระบบ</p>
-        </Link>
-        <Link href="/manage/inventory" className="card">
-          <h3 className="mt-0">ประวัติสต็อก</h3>
-          <p className="mb-0 text-[var(--muted)]">ตรวจสอบรายการตัด/ปรับ/เติมสต็อกย้อนหลัง</p>
-        </Link>
-        <Link href="/manage/audit" className="card">
-          <h3 className="mt-0">Audit Log</h3>
-          <p className="mb-0 text-[var(--muted)]">ดูประวัติการแก้ไขข้อมูลและการใช้งานของผู้ใช้</p>
-        </Link>
+      <section className="card mb-4">
+        <div className="grid gap-3 lg:grid-cols-3">
+          {menuGroups.map((group) => (
+            <div key={group.title} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+              <p className="mb-2 mt-0 text-sm font-semibold text-[var(--text)]">{group.title}</p>
+              <div className="space-y-2">
+                {group.items.map((item) => (
+                  <Link key={item.href} href={item.href} className="secondary flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm">
+                    <span className="font-medium text-[var(--text)]">{item.label}</span>
+                    <span className="text-xs text-[var(--muted)]">{item.hint}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="card mb-4">
