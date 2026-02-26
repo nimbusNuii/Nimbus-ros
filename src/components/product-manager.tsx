@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useCallback, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Product = {
   id: string;
@@ -31,6 +32,7 @@ type ProductManagerProps = {
 const IMAGE_MAX_SIDE = 720;
 const TARGET_DATA_URL_LENGTH = 320_000;
 const MIN_QUALITY = 0.55;
+const PAGE_SIZE = 10;
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -85,6 +87,19 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const pagedProducts = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return products.slice(start, start + PAGE_SIZE);
+  }, [page, products]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const reloadProducts = useCallback(async () => {
     try {
@@ -159,6 +174,7 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
       }
 
       setProducts((prev) => [data, ...prev]);
+      setPage(1);
       event.currentTarget.reset();
       setImageData("");
       setImageInfo("");
@@ -297,7 +313,7 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {pagedProducts.map((product) => (
                 <tr key={product.id}>
                   <td>
                     {product.imageUrl ? (
@@ -347,6 +363,7 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
             </tbody>
           </table>
         </div>
+        <PaginationControls page={page} pageSize={PAGE_SIZE} totalItems={products.length} onPageChange={setPage} />
       </section>
     </div>
   );

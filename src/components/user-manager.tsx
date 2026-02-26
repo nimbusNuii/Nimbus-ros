@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Role = "CASHIER" | "KITCHEN" | "MANAGER" | "ADMIN";
 
@@ -23,12 +24,25 @@ const roleLabel: Record<Role, string> = {
   MANAGER: "ผู้จัดการ",
   ADMIN: "แอดมิน"
 };
+const PAGE_SIZE = 10;
 
 export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
   const [users, setUsers] = useState(initialUsers);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const pagedUsers = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return users.slice(start, start + PAGE_SIZE);
+  }, [page, users]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,6 +72,7 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
       }
 
       setUsers((prev) => [data, ...prev]);
+      setPage(1);
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create user");
@@ -111,7 +126,7 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {pagedUsers.map((user) => (
                 <tr key={user.id}>
                   <td>{user.username}</td>
                   <td>{user.fullName}</td>
@@ -182,6 +197,7 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
             </tbody>
           </table>
         </div>
+        <PaginationControls page={page} pageSize={PAGE_SIZE} totalItems={users.length} onPageChange={setPage} />
       </section>
 
       <section className="card">
