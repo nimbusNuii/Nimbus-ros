@@ -20,6 +20,11 @@ enum PaymentMethod {
   QR
 }
 
+enum CustomerType {
+  WALK_IN
+  REGULAR
+}
+
 enum KitchenStatus {
   NEW
   PREPARING
@@ -110,6 +115,8 @@ model Order {
   orderNumber   String        @unique
   status        OrderStatus   @default(PAID)
   paymentMethod PaymentMethod
+  customerType  CustomerType  @default(WALK_IN)
+  customerName  String?
   note          String?
   subtotal      Decimal       @db.Decimal(10, 2)
   discount      Decimal       @db.Decimal(10, 2)

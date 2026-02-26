@@ -22,17 +22,22 @@ type PosClientProps = {
     orderNumber: string;
     createdAt: string;
     paymentMethod: string;
+    customerType: "WALK_IN" | "REGULAR";
+    customerName: string | null;
     itemCount: number;
     total: number;
   }>;
 };
 
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
+type CustomerType = "WALK_IN" | "REGULAR";
 
 export function PosClient({ products, taxRate, currency, initialRecentReceipts }: PosClientProps) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [customerType, setCustomerType] = useState<CustomerType>("WALK_IN");
+  const [customerName, setCustomerName] = useState("ลูกค้าขาจร");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -52,6 +57,15 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
   );
 
   const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.lineTotal, 0), [cartItems]);
+  const regularCustomerSuggestions = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of recentReceipts) {
+      if (item.customerType === "REGULAR" && item.customerName) {
+        names.add(item.customerName);
+      }
+    }
+    return Array.from(names).slice(0, 20);
+  }, [recentReceipts]);
   const safeDiscount = Math.max(0, Math.min(discount, subtotal));
   const taxable = Math.max(0, subtotal - safeDiscount);
   const tax = (taxable * taxRate) / 100;
@@ -78,6 +92,10 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
 
   async function checkout() {
     if (cartItems.length === 0 || submitting) return;
+    if (customerType === "REGULAR" && !customerName.trim()) {
+      setError("กรุณาระบุชื่อลูกค้าประจำ");
+      return;
+    }
 
     setSubmitting(true);
     setError("");
@@ -95,7 +113,9 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
             qty: item.qty
           })),
           discount: safeDiscount,
-          paymentMethod
+          paymentMethod,
+          customerType,
+          customerName: customerName.trim()
         })
       });
 
@@ -114,6 +134,8 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
 
       setCart({});
       setDiscount(0);
+      setCustomerType("WALK_IN");
+      setCustomerName("ลูกค้าขาจร");
       setMessage(`สร้างบิล ${data.orderNumber} แล้ว`);
       setReceiptOrderId(data.id);
       setRecentReceipts((prev) =>
@@ -123,6 +145,8 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
             orderNumber: data.orderNumber,
             createdAt: data.createdAt,
             paymentMethod: data.paymentMethod,
+            customerType: data.customerType,
+            customerName: data.customerName,
             itemCount: data.itemCount,
             total: data.total
           },
@@ -205,6 +229,42 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
         </div>
 
         <div className="field">
+          <label htmlFor="customerType">ประเภทลูกค้า</label>
+          <select
+            id="customerType"
+            value={customerType}
+            onChange={(event) => {
+              const nextType = event.target.value as CustomerType;
+              setCustomerType(nextType);
+              if (nextType === "WALK_IN" && !customerName.trim()) {
+                setCustomerName("ลูกค้าขาจร");
+              }
+            }}
+          >
+            <option value="WALK_IN">ขาจร</option>
+            <option value="REGULAR">ลูกค้าประจำ</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="customerName">ชื่อลูกค้า</label>
+          <input
+            id="customerName"
+            value={customerName}
+            onChange={(event) => setCustomerName(event.target.value)}
+            placeholder={customerType === "REGULAR" ? "เช่น คุณสมชาย" : "ลูกค้าขาจร"}
+            list={customerType === "REGULAR" ? "regular-customer-list" : undefined}
+          />
+          {customerType === "REGULAR" && regularCustomerSuggestions.length > 0 ? (
+            <datalist id="regular-customer-list">
+              {regularCustomerSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          ) : null}
+        </div>
+
+        <div className="field">
           <label htmlFor="payment">วิธีชำระเงิน</label>
           <select
             id="payment"
@@ -256,6 +316,7 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
               <th>เวลา</th>
               <th>เลขที่บิล</th>
               <th>จำนวน</th>
+              <th>ลูกค้า</th>
               <th>ชำระ</th>
               <th>ยอดสุทธิ</th>
               <th>ดู/พิมพ์</th>
@@ -267,6 +328,7 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
                 <td>{formatDateTime(row.createdAt)}</td>
                 <td>{row.orderNumber}</td>
                 <td>{row.itemCount}</td>
+                <td>{row.customerName || (row.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร")}</td>
                 <td>{row.paymentMethod}</td>
                 <td>{formatCurrency(row.total, currency)}</td>
                 <td>
@@ -278,7 +340,7 @@ export function PosClient({ products, taxRate, currency, initialRecentReceipts }
             ))}
             {recentReceipts.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>
+                <td colSpan={7} style={{ textAlign: "center", color: "var(--muted)" }}>
                   ยังไม่มีใบเสร็จ
                 </td>
               </tr>

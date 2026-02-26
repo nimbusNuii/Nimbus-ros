@@ -59,6 +59,8 @@ export default async function PosPage() {
           orderNumber: order.orderNumber,
           createdAt: order.createdAt.toISOString(),
           paymentMethod: order.paymentMethod,
+          customerType: order.customerType,
+          customerName: order.customerName,
           itemCount: order.items.reduce((sum, item) => sum + item.qty, 0),
           total: toNumber(order.total)
         }))}

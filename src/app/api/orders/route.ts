@@ -5,10 +5,14 @@ import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
 
+type CustomerType = "WALK_IN" | "REGULAR";
+
 type OrderInput = {
   items: Array<{ productId: string; qty: number; note?: string }>;
   discount?: number;
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
+  customerType?: CustomerType;
+  customerName?: string;
   note?: string;
 };
 
@@ -72,6 +76,14 @@ export async function POST(request: Request) {
         note: item.note?.trim() || null
       }))
       .filter((item) => item.productId);
+
+    const customerType: CustomerType = body.customerType === "REGULAR" ? "REGULAR" : "WALK_IN";
+    const customerNameRaw = body.customerName?.trim() || "";
+    const customerName = customerType === "REGULAR" ? customerNameRaw : customerNameRaw || "ลูกค้าขาจร";
+
+    if (customerType === "REGULAR" && !customerName) {
+      return NextResponse.json({ error: "กรุณาระบุชื่อลูกค้าประจำ" }, { status: 400 });
+    }
 
     const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
     const products = await prisma.product.findMany({
@@ -138,6 +150,8 @@ export async function POST(request: Request) {
             data: {
               orderNumber,
               paymentMethod: body.paymentMethod ?? "CASH",
+              customerType,
+              customerName,
               note: body.note?.trim() || null,
               subtotal,
               discount,
@@ -234,6 +248,8 @@ export async function POST(request: Request) {
               metadata: {
                 orderNumber: createdOrder.orderNumber,
                 paymentMethod: body.paymentMethod ?? "CASH",
+                customerType,
+                customerName,
                 items: normalizedItems.length,
                 subtotal,
                 discount,
@@ -269,6 +285,8 @@ export async function POST(request: Request) {
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
       paymentMethod: order.paymentMethod,
+      customerType: order.customerType,
+      customerName: order.customerName,
       itemCount: normalizedItems.reduce((sum, item) => sum + item.qty, 0),
       subtotal: toNumber(order.subtotal),
       discount: toNumber(order.discount),
