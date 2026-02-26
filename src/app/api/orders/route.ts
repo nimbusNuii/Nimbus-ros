@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
@@ -13,18 +14,35 @@ type OrderInput = {
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
   orderStatus?: "PAID" | "OPEN";
   scheduledFor?: string;
+  billAt?: string;
   customerId?: string;
   customerType?: CustomerType;
   customerName?: string;
   note?: string;
 };
 
-function buildOrderNumber() {
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
-  const suffix = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `ORD-${stamp}-${suffix}`;
+const ORDER_TIMEZONE = "Asia/Bangkok";
+
+function buildOrderNumber(orderDateKey: string, orderSequence: number) {
+  return `ORD-${orderDateKey}-${String(orderSequence).padStart(4, "0")}`;
+}
+
+function toOrderDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ORDER_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((map, item) => {
+      if (item.type !== "literal") {
+        map[item.type] = item.value;
+      }
+      return map;
+    }, {});
+
+  return `${parts.year || "1970"}${parts.month || "01"}${parts.day || "01"}`;
 }
 
 export async function GET(request: Request) {
@@ -83,10 +101,17 @@ export async function POST(request: Request) {
     const orderStatus = body.orderStatus === "OPEN" ? "OPEN" : "PAID";
     const scheduledFor =
       orderStatus === "OPEN" && body.scheduledFor ? new Date(body.scheduledFor) : null;
+    const billAt = body.billAt ? new Date(body.billAt) : null;
 
     if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
       return NextResponse.json({ error: "scheduledFor is invalid datetime" }, { status: 400 });
     }
+    if (billAt && Number.isNaN(billAt.getTime())) {
+      return NextResponse.json({ error: "billAt is invalid datetime" }, { status: 400 });
+    }
+
+    const sequenceDateReference = billAt ?? (orderStatus === "OPEN" && scheduledFor ? scheduledFor : new Date());
+    const orderDateKey = toOrderDateKey(sequenceDateReference);
 
     const customerNameRaw = body.customerName?.trim() || "";
     const customerIdRaw = body.customerId?.trim() || null;
@@ -168,13 +193,28 @@ export async function POST(request: Request) {
 
     let order = null;
     let outOfStockRace = false;
-    for (let attempts = 0; attempts < 3; attempts += 1) {
-      const orderNumber = buildOrderNumber();
+    for (let attempts = 0; attempts < 6; attempts += 1) {
       try {
         order = await prisma.$transaction(async (tx) => {
+          const lastOrder = await tx.order.findFirst({
+            where: {
+              orderDateKey
+            },
+            orderBy: {
+              orderSequence: "desc"
+            },
+            select: {
+              orderSequence: true
+            }
+          });
+          const orderSequence = (lastOrder?.orderSequence ?? 0) + 1;
+          const orderNumber = buildOrderNumber(orderDateKey, orderSequence);
+
           const createdOrder = await tx.order.create({
             data: {
               orderNumber,
+              orderDateKey,
+              orderSequence,
               paymentMethod: body.paymentMethod ?? "CASH",
               status: orderStatus,
               scheduledFor,
@@ -186,6 +226,7 @@ export async function POST(request: Request) {
               discount,
               tax,
               total,
+              ...(billAt ? { createdAt: billAt } : {}),
               items: {
                 create: normalizedItems.map((item) => {
                   const product = productMap.get(item.productId)!;
@@ -277,9 +318,12 @@ export async function POST(request: Request) {
               },
               metadata: {
                 orderNumber: createdOrder.orderNumber,
+                orderDateKey: createdOrder.orderDateKey,
+                orderSequence: createdOrder.orderSequence,
                 paymentMethod: body.paymentMethod ?? "CASH",
                 status: orderStatus,
                 scheduledFor,
+                billAt,
                 vatEnabled,
                 taxRate,
                 customerId,
@@ -303,7 +347,10 @@ export async function POST(request: Request) {
           outOfStockRace = true;
           break;
         }
-        continue;
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          continue;
+        }
+        throw error;
       }
     }
 
@@ -318,6 +365,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: order.id,
       orderNumber: order.orderNumber,
+      orderDateKey: order.orderDateKey,
+      orderSequence: order.orderSequence,
       createdAt: order.createdAt,
       paymentMethod: order.paymentMethod,
       status: order.status,
@@ -331,7 +380,10 @@ export async function POST(request: Request) {
       tax: toNumber(order.tax),
       total: toNumber(order.total)
     });
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Invalid request" },
+      { status: 400 }
+    );
   }
 }

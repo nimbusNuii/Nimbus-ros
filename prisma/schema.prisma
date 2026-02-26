@@ -125,6 +125,8 @@ model Product {
 model Order {
   id            String        @id @default(cuid())
   orderNumber   String        @unique
+  orderDateKey  String        @default("19700101")
+  orderSequence Int           @default(0)
   status        OrderStatus   @default(PAID)
   paymentMethod PaymentMethod
   customerId    String?
@@ -146,6 +148,8 @@ model Order {
   @@index([createdAt])
   @@index([customerId])
   @@index([scheduledFor])
+  @@index([orderDateKey, orderSequence])
+  @@unique([orderDateKey, orderSequence])
 }
 
 model Customer {

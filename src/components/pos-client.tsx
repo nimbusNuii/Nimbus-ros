@@ -161,6 +161,7 @@ export function PosClient({
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pulseProductId, setPulseProductId] = useState<string | null>(null);
   const [scheduledFor, setScheduledFor] = useState("");
+  const [billAt, setBillAt] = useState("");
 
   const selectedCustomer = useMemo(
     () => customers.find((item) => item.id === selectedCustomerId) || null,
@@ -344,6 +345,7 @@ export function PosClient({
           paymentMethod,
           orderStatus: action === "ADVANCE" ? "OPEN" : "PAID",
           scheduledFor: action === "ADVANCE" && scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
+          billAt: action !== "KITCHEN" && billAt ? new Date(billAt).toISOString() : undefined,
           customerId: selectedCustomer?.id,
           customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
           customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร",
@@ -368,6 +370,9 @@ export function PosClient({
       }
       if (action === "ADVANCE") {
         setScheduledFor("");
+      }
+      if (action !== "KITCHEN") {
+        setBillAt("");
       }
 
       setMessage(
@@ -528,6 +533,18 @@ export function PosClient({
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--muted)]">รองรับส่งบางรายการเข้าครัว โดยเลือกเช็กบ็อกซ์ในแต่ละรายการ</p>
+          {cartLines.length > 0 ? (
+            <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+              <p className="m-0 text-xs font-semibold text-[var(--muted)]">รายการที่เพิ่มไว้ตอนนี้</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {cartLines.map((line) => (
+                  <span key={`summary-${line.lineId}`} className="pill">
+                    {line.name} x{line.qty}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-2 flex-1 space-y-2 overflow-auto pr-1">
             {cartLines.length === 0 ? <p className="text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
@@ -642,6 +659,14 @@ export function PosClient({
               </p>
             </div>
 
+            <div className="field mb-0">
+              <label htmlFor="billAt">ลงบิลย้อนหลัง (วัน/เวลา)</label>
+              <input id="billAt" type="datetime-local" value={billAt} onChange={(event) => setBillAt(event.target.value)} />
+              <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+                ใช้สำหรับบันทึกบิลย้อนหลัง โดยเลขออเดอร์จะรันตามวันที่ที่เลือก
+              </p>
+            </div>
+
             <div className="grid gap-2">
               <button
                 onClick={() => void submitOrder(selectedLines, "KITCHEN")}
@@ -657,6 +682,9 @@ export function PosClient({
               >
                 {submitting ? "กำลังบันทึก..." : "Proceed to Payment"}
               </button>
+              <p className="m-0 text-xs text-[var(--muted)]">
+                `Send to Kitchen` = ส่งคิวให้ครัวทันที (ยังไม่ปิดบิล) | `Proceed to Payment` = ปิดบิลและชำระเงินทันที
+              </p>
               <button
                 onClick={() => void submitOrder(cartLines, "ADVANCE")}
                 disabled={submitting || cartLines.length === 0}
