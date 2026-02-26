@@ -5,6 +5,7 @@ import { formatDateTime } from "@/lib/format";
 
 type KitchenStatus = "NEW" | "PREPARING" | "READY" | "SERVED";
 type KitchenViewMode = "ORDER" | "ITEM";
+type StationFilter = "ALL" | "GRILL" | "WOK" | "DRINKS";
 
 type KitchenItem = {
   id: string;
@@ -41,27 +42,41 @@ type KitchenOrder = {
 const STATES: Array<"NEW" | "PREPARING" | "READY"> = ["NEW", "PREPARING", "READY"];
 
 const stateLabel: Record<KitchenStatus, string> = {
-  NEW: "รอทำ",
+  NEW: "ใหม่",
   PREPARING: "กำลังทำ",
   READY: "พร้อมเสิร์ฟ",
   SERVED: "เสิร์ฟแล้ว"
 };
 
-function nextState(state: KitchenStatus): KitchenStatus {
-  if (state === "NEW") return "PREPARING";
-  if (state === "PREPARING") return "READY";
-  return "SERVED";
-}
-
 function customerLabel(order: KitchenItem["order"]) {
   return order.customerName || (order.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร");
 }
 
-function stateRank(state: KitchenStatus): number {
+function inferStation(name: string): StationFilter {
+  const value = name.toLowerCase();
+  if (value.includes("ชาบู") || value.includes("หมูย่าง") || value.includes("เนื้อย่าง") || value.includes("grill")) {
+    return "GRILL";
+  }
+  if (value.includes("กาแฟ") || value.includes("ชา") || value.includes("น้ำ") || value.includes("drink")) {
+    return "DRINKS";
+  }
+  return "WOK";
+}
+
+function statusRank(state: KitchenStatus) {
   if (state === "NEW") return 0;
   if (state === "PREPARING") return 1;
   if (state === "READY") return 2;
   return 3;
+}
+
+function elapsedText(createdAt: string, nowMs: number) {
+  const deltaSec = Math.max(0, Math.floor((nowMs - new Date(createdAt).getTime()) / 1000));
+  const hour = Math.floor(deltaSec / 3600);
+  const minute = Math.floor((deltaSec % 3600) / 60);
+  const sec = deltaSec % 60;
+  if (hour > 0) return `${hour}h ${minute}m`;
+  return `${minute}:${sec.toString().padStart(2, "0")}`;
 }
 
 export function KitchenBoard() {
@@ -69,14 +84,14 @@ export function KitchenBoard() {
   const [loading, setLoading] = useState(true);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [mode, setMode] = useState<KitchenViewMode>("ORDER");
+  const [station, setStation] = useState<StationFilter>("ALL");
   const [error, setError] = useState("");
+  const [tick, setTick] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/kitchen", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("cannot load kitchen queue");
-      }
+      if (!response.ok) throw new Error("cannot load kitchen queue");
       const data = await response.json();
       setItems(data);
       setError("");
@@ -93,25 +108,25 @@ export function KitchenBoard() {
     const timer = setInterval(() => {
       void load();
     }, 5000);
-
     return () => clearInterval(timer);
   }, [load]);
 
-  async function moveItem(item: KitchenItem) {
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  async function moveItem(itemId: string, kitchenState: KitchenStatus) {
     if (updatingKey) return;
-    const next = nextState(item.kitchenState);
-    setUpdatingKey(`item:${item.id}`);
+    setUpdatingKey(`item:${itemId}:${kitchenState}`);
 
     try {
       const response = await fetch("/api/kitchen", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ itemId: item.id, kitchenState: next })
+        body: JSON.stringify({ itemId, kitchenState })
       });
-
-      if (!response.ok) {
-        throw new Error("update item failed");
-      }
+      if (!response.ok) throw new Error("update item failed");
       await load();
     } catch {
       setError("อัปเดตสถานะเมนูไม่สำเร็จ");
@@ -120,20 +135,17 @@ export function KitchenBoard() {
     }
   }
 
-  async function moveOrder(orderId: string) {
+  async function moveOrder(orderId: string, kitchenState: KitchenStatus) {
     if (updatingKey) return;
-    setUpdatingKey(`order:${orderId}`);
+    setUpdatingKey(`order:${orderId}:${kitchenState}`);
 
     try {
       const response = await fetch("/api/kitchen", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orderId })
+        body: JSON.stringify({ orderId, kitchenState })
       });
-
-      if (!response.ok) {
-        throw new Error("update order failed");
-      }
+      if (!response.ok) throw new Error("update order failed");
       await load();
     } catch {
       setError("อัปเดตสถานะออเดอร์ไม่สำเร็จ");
@@ -142,28 +154,29 @@ export function KitchenBoard() {
     }
   }
 
+  const filteredItems = useMemo(() => {
+    if (station === "ALL") return items;
+    return items.filter((item) => inferStation(item.name) === station);
+  }, [items, station]);
+
   const groupedItems = useMemo(() => {
     const map: Record<string, KitchenItem[]> = {
       NEW: [],
       PREPARING: [],
       READY: []
     };
-
-    for (const item of items) {
-      if (map[item.kitchenState]) {
-        map[item.kitchenState].push(item);
-      }
+    for (const item of filteredItems) {
+      if (map[item.kitchenState]) map[item.kitchenState].push(item);
     }
-
     return map;
-  }, [items]);
+  }, [filteredItems]);
 
   const groupedOrders = useMemo(() => {
     const orderMap = new Map<string, KitchenOrder>();
 
-    for (const item of items) {
-      const existing = orderMap.get(item.order.id);
-      if (!existing) {
+    for (const item of filteredItems) {
+      const current = orderMap.get(item.order.id);
+      if (!current) {
         orderMap.set(item.order.id, {
           id: item.order.id,
           orderNumber: item.order.orderNumber,
@@ -182,12 +195,12 @@ export function KitchenBoard() {
         continue;
       }
 
-      existing.items.push(item);
-      if (item.kitchenState === "NEW") existing.counts.NEW += 1;
-      if (item.kitchenState === "PREPARING") existing.counts.PREPARING += 1;
-      if (item.kitchenState === "READY") existing.counts.READY += 1;
-      if (stateRank(item.kitchenState) < stateRank(existing.kitchenState)) {
-        existing.kitchenState = item.kitchenState as "NEW" | "PREPARING" | "READY";
+      current.items.push(item);
+      if (item.kitchenState === "NEW") current.counts.NEW += 1;
+      if (item.kitchenState === "PREPARING") current.counts.PREPARING += 1;
+      if (item.kitchenState === "READY") current.counts.READY += 1;
+      if (statusRank(item.kitchenState) < statusRank(current.kitchenState)) {
+        current.kitchenState = item.kitchenState as "NEW" | "PREPARING" | "READY";
       }
     }
 
@@ -196,105 +209,177 @@ export function KitchenBoard() {
       PREPARING: [],
       READY: []
     };
-
     for (const order of orderMap.values()) {
       grouped[order.kitchenState].push(order);
     }
-
     for (const state of STATES) {
       grouped[state].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     }
-
     return grouped;
-  }, [items]);
+  }, [filteredItems]);
 
-  if (loading) {
-    return <p>กำลังโหลดคิวครัว...</p>;
-  }
+  if (loading) return <p>กำลังโหลดคิวครัว...</p>;
 
   return (
     <>
       <section className="card mb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="m-0 text-lg font-semibold">รูปแบบการทำอาหาร</h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">เลือกได้ว่าจะเลื่อนสถานะแบบทีละออเดอร์ หรือทีละเมนู</p>
+            <h3 className="m-0 text-lg font-semibold">Kitchen Display</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">หน้าจอครัวแบบเรียลไทม์ ลดความผิดพลาดช่วงพีค</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button type="button" className={mode === "ORDER" ? "" : "secondary"} onClick={() => setMode("ORDER")}>
-              ทีละคำสั่งซื้อ
+              ทีละออเดอร์
             </button>
             <button type="button" className={mode === "ITEM" ? "" : "secondary"} onClick={() => setMode("ITEM")}>
               ทีละเมนู
             </button>
           </div>
         </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(["ALL", "GRILL", "WOK", "DRINKS"] as StationFilter[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              className={station === key ? "" : "secondary"}
+              onClick={() => setStation(key)}
+            >
+              {key === "ALL" ? "All" : key}
+            </button>
+          ))}
+        </div>
         {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
 
-      <div className="grid grid-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         {STATES.map((state) => (
           <section className="card" key={state}>
-            <h3 className="mt-0">{stateLabel[state]}</h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="m-0 text-base font-semibold">{stateLabel[state]}</h3>
+              <span className="rounded-full border border-[var(--line)] px-2 py-1 text-xs text-[var(--muted)]">
+                {mode === "ORDER" ? groupedOrders[state].length : groupedItems[state].length}
+              </span>
+            </div>
 
             {mode === "ORDER" ? (
-              <>
-                {groupedOrders[state].length === 0 ? <p className="text-[var(--muted)]">ไม่มีออเดอร์</p> : null}
-                {groupedOrders[state].map((order) => (
-                  <article
-                    key={order.id}
-                    className="mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3"
-                  >
-                    <div className="text-xs text-[var(--muted)]">{order.orderNumber}</div>
-                    <strong>{customerLabel(order)}</strong>
-                    <div className="mt-1 text-xs text-[var(--muted)]">{formatDateTime(order.createdAt)}</div>
-                    <div className="mt-2 text-xs text-[var(--muted)]">
-                      เมนู {order.items.length} รายการ (รอทำ {order.counts.NEW}, กำลังทำ {order.counts.PREPARING}, พร้อมเสิร์ฟ {order.counts.READY})
-                    </div>
-                    <div className="mt-2 grid gap-1">
-                      {order.items.map((item) => (
-                        <div key={item.id} className="text-sm">
-                          {item.name} x{item.qty}
-                          {item.note ? <span className="text-[var(--muted)]"> ({item.note})</span> : null}
+              <div className="space-y-2">
+                {groupedOrders[state].length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีออเดอร์</p> : null}
+                {groupedOrders[state].map((order) => {
+                  const elapsed = elapsedText(order.createdAt, tick);
+                  const delayed = Date.now() - new Date(order.createdAt).getTime() > 15 * 60 * 1000 && order.kitchenState !== "READY";
+                  const borderClass = delayed
+                    ? "border-[#DC2626] kds-delayed-pulse"
+                    : order.kitchenState === "PREPARING"
+                      ? "border-[#F59E0B]"
+                      : order.kitchenState === "READY"
+                        ? "border-[#16A34A]"
+                        : "border-[var(--line)]";
+
+                  return (
+                    <article key={order.id} className={`rounded-xl border bg-white p-3 ${borderClass}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-2xl font-bold text-[#111827]">#{order.orderNumber}</div>
+                          <div className="text-xs text-[var(--muted)]">โต๊ะ: -</div>
                         </div>
-                      ))}
-                    </div>
-                    <button onClick={() => moveOrder(order.id)} disabled={Boolean(updatingKey)} className="mt-2 w-full">
-                      {updatingKey === `order:${order.id}`
-                        ? "กำลังอัปเดต..."
-                        : state === "READY"
-                          ? "เสิร์ฟทั้งออเดอร์"
-                          : state === "PREPARING"
-                            ? "ทำทั้งออเดอร์ให้พร้อมเสิร์ฟ"
-                            : "เริ่มทำทั้งออเดอร์"}
-                    </button>
-                  </article>
-                ))}
-              </>
+                        <div className={`text-lg font-semibold ${delayed ? "text-red-600" : "text-[#111827]"}`}>{elapsed}</div>
+                      </div>
+
+                      <div className="mt-1 text-xs text-[var(--muted)]">{customerLabel(order)}</div>
+                      <div className="mt-1 text-xs text-[var(--muted)]">{formatDateTime(order.createdAt)}</div>
+                      <div className="mt-2 space-y-1">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="rounded-lg border border-[var(--line)] bg-[#fafafa] px-2 py-1">
+                            <div className="text-sm font-medium text-[#111827]">
+                              {item.name} x{item.qty}
+                            </div>
+                            {item.note ? <div className="text-xs font-semibold text-[#DC2626]">หมายเหตุ: {item.note}</div> : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <button
+                          className={order.kitchenState === "NEW" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveOrder(order.id, "PREPARING")}
+                        >
+                          START
+                        </button>
+                        <button
+                          className={order.kitchenState === "PREPARING" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveOrder(order.id, "READY")}
+                        >
+                          READY
+                        </button>
+                        <button
+                          className={order.kitchenState === "READY" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveOrder(order.id, "SERVED")}
+                        >
+                          SERVED
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             ) : (
-              <>
-                {groupedItems[state].length === 0 ? <p className="text-[var(--muted)]">ไม่มีรายการ</p> : null}
-                {groupedItems[state].map((item) => (
-                  <article key={item.id} className="mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-                    <div className="text-xs text-[var(--muted)]">{item.order.orderNumber}</div>
-                    <strong>
-                      {item.name} x{item.qty}
-                    </strong>
-                    <div className="mt-1 text-xs text-[var(--muted)]">{customerLabel(item.order)}</div>
-                    <div className="text-xs text-[var(--muted)]">{formatDateTime(item.order.createdAt)}</div>
-                    {item.note ? <div className="mt-1 text-sm">หมายเหตุ: {item.note}</div> : null}
-                    <button onClick={() => moveItem(item)} disabled={Boolean(updatingKey)} className="mt-2 w-full">
-                      {updatingKey === `item:${item.id}`
-                        ? "กำลังอัปเดต..."
-                        : item.kitchenState === "READY"
-                          ? "เสิร์ฟเมนูนี้"
-                          : item.kitchenState === "PREPARING"
-                            ? "ทำเมนูนี้เสร็จ"
-                            : "เริ่มทำเมนูนี้"}
-                    </button>
-                  </article>
-                ))}
-              </>
+              <div className="space-y-2">
+                {groupedItems[state].length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีรายการ</p> : null}
+                {groupedItems[state].map((item) => {
+                  const delayed = Date.now() - new Date(item.order.createdAt).getTime() > 15 * 60 * 1000 && item.kitchenState !== "READY";
+                  const borderClass = delayed
+                    ? "border-[#DC2626] kds-delayed-pulse"
+                    : item.kitchenState === "PREPARING"
+                      ? "border-[#F59E0B]"
+                      : item.kitchenState === "READY"
+                        ? "border-[#16A34A]"
+                        : "border-[var(--line)]";
+
+                  return (
+                    <article key={item.id} className={`rounded-xl border bg-white p-3 ${borderClass}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="text-sm font-semibold text-[#111827]">#{item.order.orderNumber}</div>
+                        <div className={`text-sm font-semibold ${delayed ? "text-red-600" : "text-[#111827]"}`}>
+                          {elapsedText(item.order.createdAt, tick)}
+                        </div>
+                      </div>
+                      <div className="text-base font-semibold text-[#111827]">
+                        {item.name} x{item.qty}
+                      </div>
+                      <div className="text-xs text-[var(--muted)]">{customerLabel(item.order)}</div>
+                      {item.note ? <div className="mt-1 text-xs font-semibold text-[#DC2626]">หมายเหตุ: {item.note}</div> : null}
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <button
+                          className={item.kitchenState === "NEW" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveItem(item.id, "PREPARING")}
+                        >
+                          START
+                        </button>
+                        <button
+                          className={item.kitchenState === "PREPARING" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveItem(item.id, "READY")}
+                        >
+                          READY
+                        </button>
+                        <button
+                          className={item.kitchenState === "READY" ? "" : "secondary"}
+                          disabled={Boolean(updatingKey)}
+                          onClick={() => void moveItem(item.id, "SERVED")}
+                        >
+                          SERVED
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             )}
           </section>
         ))}

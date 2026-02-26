@@ -292,16 +292,72 @@ html[data-theme="graphite-night"] {
   --topnav-logo-b: #ffd38f;
 }
 
+:root,
+html[data-theme="brand"],
+html[data-theme="sandstone"],
+html[data-theme="ocean-ink"],
+html[data-theme="matcha-paper"],
+html[data-theme="sunset-ledger"],
+html[data-theme="graphite-night"] {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --line: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --brand: #e24a3b;
+  --brand-dark: #cb3f32;
+  --brand-primary: #e24a3b;
+  --brand-accent: #cb3f32;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --input-bg: #ffffff;
+  --secondary-bg: #ffffff;
+  --secondary-text: #111827;
+  --nav-bg: #ffffff;
+  --nav-link-bg: #ffffff;
+  --nav-active-bg: #fef2f2;
+  --nav-active-text: #111827;
+  --bg-pattern: #f6f7f9;
+  --modal-overlay-bg: rgba(17, 24, 39, 0.45);
+  --shadow-rgb: 17, 24, 39;
+  --topnav-shell-bg: #ffffff;
+  --topnav-shell-border: #e5e7eb;
+  --topnav-shell-shadow: none;
+  --topnav-chip-bg: #ffffff;
+  --topnav-chip-border: #e5e7eb;
+  --topnav-link-text: #374151;
+  --topnav-link-hover-bg: #f9fafb;
+  --topnav-link-hover-text: #111827;
+  --topnav-link-active-bg: #fef2f2;
+  --topnav-link-active-text: #111827;
+  --topnav-control-bg: #ffffff;
+  --topnav-control-border: #e5e7eb;
+  --topnav-control-text: #111827;
+  --topnav-icon-bg: #ffffff;
+  --topnav-icon-border: #e5e7eb;
+  --topnav-icon-text: #6b7280;
+  --topnav-avatar-from: #fee2e2;
+  --topnav-avatar-to: #fecaca;
+  --topnav-avatar-text: #991b1b;
+  --topnav-logout-bg: #ffffff;
+  --topnav-logout-border: #e5e7eb;
+  --topnav-logout-text: #374151;
+  --topnav-logout-hover-bg: #f9fafb;
+  --topnav-logo-a: #e24a3b;
+  --topnav-logo-b: #f97316;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: "Noto Sans Thai", "Sarabun", sans-serif;
+  font-family: "Inter", "SF Pro Text", "Noto Sans Thai", "Sarabun", sans-serif;
   background: var(--bg-pattern);
   color: var(--text);
-  transition: background 240ms ease, color 240ms ease;
+  transition: background 200ms ease, color 200ms ease;
 }
 
 a {
@@ -310,24 +366,27 @@ a {
 }
 
 main {
-  max-width: 1200px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 24px;
 }
 
 .page-title {
   margin: 0 0 6px;
-  font-size: 1.65rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
   margin: 0 0 18px;
   color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .grid-2 {
@@ -350,10 +409,10 @@ main {
 
 @layer components {
   .card {
-    @apply rounded-2xl border p-4;
+    @apply rounded-xl border p-4;
     border-color: var(--line);
     background: var(--surface);
-    box-shadow: 0 10px 26px rgba(var(--shadow-rgb), 0.12);
+    box-shadow: none;
   }
 
   button,
@@ -364,7 +423,7 @@ main {
   }
 
   button {
-    @apply inline-flex items-center justify-center rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-xl border border-transparent px-3 py-2 text-sm font-semibold transition-all duration-150 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
     background: var(--brand);
     color: #fff;
   }
@@ -375,7 +434,7 @@ main {
 
   button.secondary,
   .secondary {
-    @apply inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors;
+    @apply inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-150 ease-out active:scale-[0.98];
     border-color: var(--line);
     background: var(--secondary-bg);
     color: var(--secondary-text);
@@ -384,7 +443,7 @@ main {
   input,
   select,
   textarea {
-    @apply w-full rounded-lg border px-3 py-2;
+    @apply w-full rounded-xl border px-3 py-2;
     border-color: var(--line);
     background: var(--input-bg);
     color: var(--text);
@@ -405,7 +464,7 @@ main {
 
   .table th,
   .table td {
-    @apply border-b px-2 py-2 text-left text-sm;
+    @apply border-b px-3 py-2 text-left text-sm;
     border-color: var(--line);
   }
 }
@@ -413,7 +472,7 @@ main {
 .nav {
   border-bottom: 1px solid var(--line);
   background: var(--nav-bg);
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -443,7 +502,7 @@ main {
 }
 
 .topnav-shell {
-  border-radius: 0.8rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--topnav-shell-border);
   background: var(--topnav-shell-bg);
   box-shadow: var(--topnav-shell-shadow);
@@ -511,7 +570,7 @@ main {
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 14px;
 }
 
@@ -520,6 +579,20 @@ main {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+}
+
+@keyframes kdsDelayedPulse {
+  0%,
+  100% {
+    background-color: #ffffff;
+  }
+  50% {
+    background-color: #fff5f5;
+  }
+}
+
+.kds-delayed-pulse {
+  animation: kdsDelayedPulse 1.8s ease-in-out infinite;
 }
 
 @media (max-width: 768px) {

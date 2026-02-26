@@ -9,7 +9,7 @@ export default async function KitchenPage() {
   return (
     <div>
       <h1 className="page-title">หน้าคนในครัว</h1>
-      <p className="page-subtitle">ติดตามคิวออเดอร์ และเปลี่ยนสถานะรอทำ/กำลังทำ/พร้อมเสิร์ฟ</p>
+      <p className="page-subtitle">โหมดจอ 27 นิ้ว: อ่านไกลชัดเจน ลดสื่อสารผิดพลาด และอัปเดตสถานะแบบเรียลไทม์</p>
       <KitchenBoard />
     </div>
   );

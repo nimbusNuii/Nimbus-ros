@@ -144,10 +144,10 @@ export function MainNav() {
   const visibleLinks = user ? navItems.filter((item) => item.roles.includes(user.role)) : [];
 
   return (
-    <nav className="nav px-4 py-3">
-      <div className="topnav-shell mx-auto flex w-full max-w-[1240px] items-center justify-between px-4 py-3">
+    <nav className="nav px-4 py-2">
+      <div className="topnav-shell mx-auto flex w-full max-w-[1500px] items-center justify-between px-3 py-2">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="topnav-chip grid h-10 w-10 place-items-center rounded-lg">
+          <div className="topnav-chip grid h-9 w-9 place-items-center rounded-xl">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M3 10C6.5 7 9.5 7 13 10"
@@ -172,7 +172,7 @@ export function MainNav() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`topnav-link rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    className={`topnav-link rounded-xl px-3 py-2 text-sm font-medium transition ${
                       active ? "topnav-link-active" : ""
                     }`}
                   >
@@ -181,7 +181,7 @@ export function MainNav() {
                 );
               })
             ) : (
-              <Link href="/auth/login" className="topnav-link topnav-link-active rounded-lg px-3 py-2 text-sm font-medium">
+              <Link href="/auth/login" className="topnav-link topnav-link-active rounded-xl px-3 py-2 text-sm font-medium">
                 Login
               </Link>
             )}
@@ -189,12 +189,12 @@ export function MainNav() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <select
               id="systemTheme"
               value={theme}
               onChange={(event) => onThemeChange(event.target.value as AppThemeKey)}
-              className="topnav-control h-9 rounded-lg px-3 text-xs"
+              className="topnav-control h-9 rounded-xl px-3 text-xs"
               title={selectedTheme.description}
             >
               {APP_THEME_PRESETS.map((item) => (
@@ -205,32 +205,13 @@ export function MainNav() {
             </select>
           </div>
 
-          <button
-            type="button"
-            className="topnav-icon grid h-9 w-9 place-items-center rounded-full"
-            title={selectedTheme.description}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M12 20.5C13.3 20.5 14.4 19.4 14.4 18.1H9.6C9.6 19.4 10.7 20.5 12 20.5Z"
-                fill="currentColor"
-              />
-              <path
-                d="M18 14.7L16.8 12.8V10.1C16.8 7.46 14.64 5.3 12 5.3C9.36 5.3 7.2 7.46 7.2 10.1V12.8L6 14.7V15.5H18V14.7Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
           {user ? (
             <>
               <div className="topnav-avatar grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">
                 {initials(user.fullName)}
               </div>
               <button
-                className="topnav-logout h-9 rounded-lg px-3 text-sm"
+                className="topnav-logout h-9 rounded-xl px-3 text-sm"
                 type="button"
                 onClick={logout}
               >

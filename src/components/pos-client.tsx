@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
 
@@ -38,13 +38,80 @@ type PosClientProps = {
 };
 
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
+type ServiceMode = "DINE_IN" | "TAKEAWAY";
+
+type CartModifier = {
+  spiceLevel: "ไม่เผ็ด" | "เผ็ดน้อย" | "เผ็ดกลาง" | "เผ็ดมาก";
+  addOns: string[];
+  removeIngredients: string;
+  note: string;
+};
+
+type CartLine = {
+  lineId: string;
+  productId: string;
+  name: string;
+  category: string | null;
+  imageUrl: string | null;
+  unitPrice: number;
+  qty: number;
+  stockQty: number;
+  modifier: CartModifier;
+  sendToKitchen: boolean;
+};
+
+type ToastState = {
+  id: number;
+  text: string;
+  tone: "success" | "warning";
+};
+
+const DEFAULT_MODIFIER: CartModifier = {
+  spiceLevel: "เผ็ดกลาง",
+  addOns: [],
+  removeIngredients: "",
+  note: ""
+};
+
+const ADD_ON_OPTIONS = ["ไข่ดาว", "เพิ่มชีส", "เพิ่มผัก", "เพิ่มข้าว", "เพิ่มน้ำจิ้ม"];
+
+function createLineId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `line-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+}
 
 function customerNameLabel(item: { customerType: "WALK_IN" | "REGULAR"; customerName: string | null }) {
   return item.customerName || (item.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร");
 }
 
+function sanitizeModifier(modifier: CartModifier): CartModifier {
+  return {
+    spiceLevel: modifier.spiceLevel,
+    addOns: [...modifier.addOns].sort(),
+    removeIngredients: modifier.removeIngredients.trim(),
+    note: modifier.note.trim()
+  };
+}
+
+function modifierSignature(modifier: CartModifier) {
+  const normalized = sanitizeModifier(modifier);
+  return JSON.stringify(normalized);
+}
+
+function modifierNote(modifier: CartModifier) {
+  const normalized = sanitizeModifier(modifier);
+  const chunks: string[] = [];
+  if (normalized.spiceLevel) chunks.push(`เผ็ด: ${normalized.spiceLevel}`);
+  if (normalized.addOns.length) chunks.push(`เพิ่ม: ${normalized.addOns.join(", ")}`);
+  if (normalized.removeIngredients) chunks.push(`ไม่ใส่: ${normalized.removeIngredients}`);
+  if (normalized.note) chunks.push(`โน้ต: ${normalized.note}`);
+  return chunks.join(" | ");
+}
+
 export function PosClient({ products, customers, taxRate, currency, initialRecentReceipts }: PosClientProps) {
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [activeCategory, setActiveCategory] = useState("ALL");
+  const [serviceMode, setServiceMode] = useState<ServiceMode>("DINE_IN");
+  const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [selectedCustomerId, setSelectedCustomerId] = useState("WALK_IN");
@@ -53,91 +120,189 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
   const [error, setError] = useState("");
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
   const [recentReceipts, setRecentReceipts] = useState(initialRecentReceipts);
+  const [modifierProduct, setModifierProduct] = useState<Product | null>(null);
+  const [modifierState, setModifierState] = useState<CartModifier>(DEFAULT_MODIFIER);
+  const [removedLine, setRemovedLine] = useState<CartLine | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [pulseProductId, setPulseProductId] = useState<string | null>(null);
 
   const selectedCustomer = useMemo(
     () => customers.find((item) => item.id === selectedCustomerId) || null,
     [customers, selectedCustomerId]
   );
 
-  const cartItems = useMemo(
-    () =>
-      products
-        .filter((product) => cart[product.id] > 0)
-        .map((product) => ({
-          ...product,
-          qty: cart[product.id],
-          lineTotal: cart[product.id] * product.price
-        })),
-    [cart, products]
-  );
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const product of products) {
+      if (product.category) set.add(product.category);
+    }
+    return ["ALL", ...Array.from(set)];
+  }, [products]);
 
-  const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.lineTotal, 0), [cartItems]);
+  const visibleProducts = useMemo(() => {
+    if (activeCategory === "ALL") return products;
+    return products.filter((product) => (product.category || "Other") === activeCategory);
+  }, [activeCategory, products]);
+
+  const subtotal = useMemo(
+    () => cartLines.reduce((sum, line) => sum + line.unitPrice * line.qty, 0),
+    [cartLines]
+  );
   const safeDiscount = Math.max(0, Math.min(discount, subtotal));
   const taxable = Math.max(0, subtotal - safeDiscount);
   const tax = (taxable * taxRate) / 100;
   const total = taxable + tax;
+  const selectedLines = cartLines.filter((line) => line.sendToKitchen);
 
-  function add(productId: string) {
-    setCart((prev) => {
-      const product = products.find((item) => item.id === productId);
-      if (!product) return prev;
-      const nextQty = (prev[productId] || 0) + 1;
-      if (nextQty > product.stockQty) return prev;
-      return { ...prev, [productId]: nextQty };
-    });
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!removedLine) return;
+    const timer = window.setTimeout(() => setRemovedLine(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [removedLine]);
+
+  function showToast(text: string, tone: ToastState["tone"] = "success") {
+    setToast({ id: Date.now(), text, tone });
   }
 
-  function remove(productId: string) {
-    setCart((prev) => {
-      const nextQty = Math.max(0, (prev[productId] || 0) - 1);
-      const next = { ...prev, [productId]: nextQty };
-      if (nextQty === 0) delete next[productId];
+  function addLineFromProduct(product: Product, modifier: CartModifier = DEFAULT_MODIFIER) {
+    const normalized = sanitizeModifier(modifier);
+    const signature = modifierSignature(normalized);
+
+    setCartLines((prev) => {
+      const index = prev.findIndex(
+        (line) => line.productId === product.id && modifierSignature(line.modifier) === signature
+      );
+      if (index < 0) {
+        return [
+          {
+            lineId: createLineId(),
+            productId: product.id,
+            name: product.name,
+            category: product.category,
+            imageUrl: product.imageUrl,
+            unitPrice: product.price,
+            qty: 1,
+            stockQty: product.stockQty,
+            modifier: normalized,
+            sendToKitchen: true
+          },
+          ...prev
+        ];
+      }
+
+      const next = [...prev];
+      const target = next[index];
+      if (target.qty >= target.stockQty) return prev;
+      next[index] = { ...target, qty: target.qty + 1 };
       return next;
     });
+
+    setPulseProductId(product.id);
+    window.setTimeout(() => setPulseProductId((current) => (current === product.id ? null : current)), 200);
+    showToast(`เพิ่ม ${product.name} ลงตะกร้า`);
   }
 
-  async function checkout() {
-    if (cartItems.length === 0 || submitting) return;
+  function updateQty(lineId: string, delta: number) {
+    setCartLines((prev) =>
+      prev
+        .map((line) => {
+          if (line.lineId !== lineId) return line;
+          const nextQty = Math.max(0, Math.min(line.stockQty, line.qty + delta));
+          return { ...line, qty: nextQty };
+        })
+        .filter((line) => line.qty > 0)
+    );
+  }
+
+  function removeLine(lineId: string) {
+    setCartLines((prev) => {
+      const target = prev.find((line) => line.lineId === lineId) || null;
+      if (target) {
+        setRemovedLine(target);
+      }
+      return prev.filter((line) => line.lineId !== lineId);
+    });
+    showToast("ลบรายการแล้ว", "warning");
+  }
+
+  function undoRemove() {
+    if (!removedLine) return;
+    setCartLines((prev) => [removedLine, ...prev]);
+    setRemovedLine(null);
+    showToast("คืนรายการกลับแล้ว");
+  }
+
+  function toggleSend(lineId: string) {
+    setCartLines((prev) =>
+      prev.map((line) => (line.lineId === lineId ? { ...line, sendToKitchen: !line.sendToKitchen } : line))
+    );
+  }
+
+  function openModifier(product: Product) {
+    setModifierProduct(product);
+    setModifierState(DEFAULT_MODIFIER);
+  }
+
+  function closeModifier() {
+    setModifierProduct(null);
+    setModifierState(DEFAULT_MODIFIER);
+  }
+
+  function toggleAddOn(label: string) {
+    setModifierState((prev) => ({
+      ...prev,
+      addOns: prev.addOns.includes(label) ? prev.addOns.filter((item) => item !== label) : [...prev.addOns, label]
+    }));
+  }
+
+  async function submitOrder(lines: CartLine[], action: "KITCHEN" | "PAYMENT") {
+    if (!lines.length || submitting) return;
     setSubmitting(true);
     setError("");
     setMessage("");
-
-    const payload = {
-      items: cartItems.map((item) => ({
-        productId: item.id,
-        qty: item.qty
-      })),
-      discount: safeDiscount,
-      paymentMethod,
-      customerId: selectedCustomer?.id,
-      customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
-      customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร"
-    };
 
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          items: lines.map((line) => ({
+            productId: line.productId,
+            qty: line.qty,
+            note: modifierNote(line.modifier) || undefined
+          })),
+          discount: action === "PAYMENT" ? safeDiscount : 0,
+          paymentMethod,
+          customerId: selectedCustomer?.id,
+          customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
+          customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร",
+          note: `บริการ: ${serviceMode === "DINE_IN" ? "ทานที่ร้าน" : "กลับบ้าน"}`
+        })
       });
 
       const data = await response.json();
       if (!response.ok) {
         if (data.items && Array.isArray(data.items)) {
           const detail = data.items
-            .map((item: { name: string; required: number; stock: number }) => {
-              return `${item.name} (ต้องการ ${item.required}, เหลือ ${item.stock})`;
-            })
+            .map((item: { name: string; required: number; stock: number }) => `${item.name} (ต้องการ ${item.required}, เหลือ ${item.stock})`)
             .join(", ");
           throw new Error(`สต็อกไม่พอ: ${detail}`);
         }
-        throw new Error(data.error ?? "Checkout failed");
+        throw new Error(data.error ?? "Cannot submit order");
       }
 
-      setCart({});
-      setDiscount(0);
-      setSelectedCustomerId("WALK_IN");
-      setMessage(`สร้างบิล ${data.orderNumber} แล้ว`);
+      setCartLines((prev) => prev.filter((line) => !lines.some((target) => target.lineId === line.lineId)));
+      if (action === "PAYMENT") {
+        setDiscount(0);
+      }
+
+      setMessage(action === "KITCHEN" ? `ส่งครัวแล้ว ${data.orderNumber}` : `ชำระเงินแล้ว ${data.orderNumber}`);
       setReceiptOrderId(data.id);
       setRecentReceipts((prev) =>
         [
@@ -155,7 +320,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
         ].slice(0, 10)
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot checkout");
+      setError(err instanceof Error ? err.message : "Cannot submit order");
     } finally {
       setSubmitting(false);
     }
@@ -163,15 +328,63 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_420px]">
+        <aside className="card space-y-3">
+          <h2 className="mt-0 text-base font-semibold">หมวดเมนู</h2>
+          <div className="space-y-1">
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setActiveCategory(category)}
+                className={`secondary w-full justify-start rounded-xl border-l-4 px-3 py-2 text-left ${
+                  activeCategory === category
+                    ? "border-l-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]"
+                    : "border-l-transparent"
+                }`}
+              >
+                {category === "ALL" ? "ทั้งหมด" : category}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+            <p className="m-0 text-xs font-semibold text-[var(--muted)]">โหมดออเดอร์</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={serviceMode === "DINE_IN" ? "" : "secondary"}
+                onClick={() => setServiceMode("DINE_IN")}
+              >
+                ทานที่ร้าน
+              </button>
+              <button
+                type="button"
+                className={serviceMode === "TAKEAWAY" ? "" : "secondary"}
+                onClick={() => setServiceMode("TAKEAWAY")}
+              >
+                กลับบ้าน
+              </button>
+            </div>
+          </div>
+        </aside>
+
         <section className="card">
-          <h2 className="mt-0 text-xl font-semibold">เมนูขาย</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="m-0 text-xl font-semibold">เมนูขาย</h2>
+            <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
+              แตะเมนูเพื่อเพิ่มทันที
+            </span>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {products.map((product) => (
+            {visibleProducts.map((product) => (
               <button
                 key={product.id}
-                onClick={() => add(product.id)}
-                className="secondary flex h-full flex-col items-start gap-2 rounded-xl p-3 text-left"
+                onClick={() => addLineFromProduct(product)}
+                className={`secondary group flex min-h-52 flex-col items-start rounded-xl border p-3 text-left transition duration-150 hover:bg-[#f9fafb] ${
+                  pulseProductId === product.id ? "scale-[0.98]" : ""
+                }`}
                 disabled={product.stockQty <= 0}
               >
                 {product.imageUrl ? (
@@ -186,47 +399,73 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                     ไม่มีรูปสินค้า
                   </div>
                 )}
-
-                <div className="w-full">
-                  <div className="font-semibold">{product.name}</div>
+                <div className="mt-2 w-full space-y-1">
+                  <div className="line-clamp-2 font-semibold text-[#111827]">{product.name}</div>
                   <div className="text-xs text-[var(--muted)]">{product.category || "Uncategorized"}</div>
                   <div className={`text-xs ${product.stockQty > 0 ? "text-[var(--muted)]" : "text-red-600"}`}>
                     คงเหลือ {product.stockQty}
                   </div>
-                  <div className="mt-1">{formatCurrency(product.price, currency)}</div>
+                  <div className="text-base font-semibold">{formatCurrency(product.price, currency)}</div>
+                </div>
+                <div className="mt-auto w-full pt-2">
+                  <button
+                    type="button"
+                    className="secondary w-full text-xs"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openModifier(product);
+                    }}
+                  >
+                    ปรับแต่งเมนู
+                  </button>
                 </div>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="card">
-          <h2 className="mt-0 text-xl font-semibold">ตะกร้า</h2>
-          {cartItems.length === 0 ? <p className="text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
+        <section className="card flex max-h-[calc(100vh-150px)] flex-col">
+          <h2 className="m-0 text-xl font-semibold">ตะกร้า</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">รองรับส่งบางรายการเข้าครัว โดยเลือกเช็กบ็อกซ์ในแต่ละรายการ</p>
 
-          <div className="space-y-2">
-            {cartItems.map((item) => (
-              <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-[var(--line)] p-2">
-                <div>
-                  <div>{item.name}</div>
-                  <small className="text-[var(--muted)]">
-                    {formatCurrency(item.price, currency)} x {item.qty}
-                  </small>
+          <div className="mt-2 flex-1 space-y-2 overflow-auto pr-1">
+            {cartLines.length === 0 ? <p className="text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
+            {cartLines.map((line) => (
+              <article key={line.lineId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+                <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={line.sendToKitchen}
+                    onChange={() => toggleSend(line.lineId)}
+                    className="mt-1 h-4 w-4 accent-[#E24A3B]"
+                  />
+                  <div>
+                    <div className="font-semibold">{line.name}</div>
+                    <p className="m-0 text-xs text-[var(--muted)]">
+                      {formatCurrency(line.unitPrice, currency)} x {line.qty}
+                    </p>
+                    <p className="m-0 text-xs text-[var(--muted)]">{modifierNote(line.modifier) || "ไม่ระบุเพิ่มเติม"}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button className="secondary h-8 w-8 p-0" onClick={() => updateQty(line.lineId, -1)}>
+                      -
+                    </button>
+                    <span className="min-w-6 text-center text-sm font-semibold">{line.qty}</span>
+                    <button className="secondary h-8 w-8 p-0" onClick={() => updateQty(line.lineId, 1)}>
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button className="secondary px-2 py-1" onClick={() => remove(item.id)}>
-                    -
-                  </button>
-                  <span className="min-w-7 text-center">{item.qty}</span>
-                  <button className="secondary px-2 py-1" onClick={() => add(item.id)}>
-                    +
+                <div className="mt-2 flex justify-end">
+                  <button type="button" className="secondary text-xs" onClick={() => removeLine(line.lineId)}>
+                    ลบรายการ
                   </button>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2 space-y-2 border-t border-[var(--line)] pt-3">
             <div className="field">
               <label htmlFor="customerDropdown">ลูกค้า</label>
               <select
@@ -242,64 +481,73 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
                 ))}
               </select>
             </div>
-
-            <div className="field">
-              <label htmlFor="discount">ส่วนลด</label>
-              <input
-                id="discount"
-                type="number"
-                min={0}
-                value={discount}
-                onChange={(event) => setDiscount(Number(event.target.value))}
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="field mb-0">
+                <label htmlFor="discount">ส่วนลด</label>
+                <input
+                  id="discount"
+                  type="number"
+                  min={0}
+                  value={discount}
+                  onChange={(event) => setDiscount(Number(event.target.value))}
+                />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="payment">ชำระเงิน</label>
+                <select
+                  id="payment"
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                >
+                  <option value="CASH">เงินสด</option>
+                  <option value="CARD">บัตร</option>
+                  <option value="TRANSFER">โอนเงิน</option>
+                  <option value="QR">QR</option>
+                </select>
+              </div>
             </div>
 
-            <div className="field">
-              <label htmlFor="payment">วิธีชำระเงิน</label>
-              <select
-                id="payment"
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+            <table className="table">
+              <tbody>
+                <tr>
+                  <td>ยอดก่อนส่วนลด</td>
+                  <td>{formatCurrency(subtotal, currency)}</td>
+                </tr>
+                <tr>
+                  <td>ส่วนลด</td>
+                  <td>{formatCurrency(safeDiscount, currency)}</td>
+                </tr>
+                <tr>
+                  <td>ภาษี ({taxRate}%)</td>
+                  <td>{formatCurrency(tax, currency)}</td>
+                </tr>
+                <tr>
+                  <td className="text-base font-semibold">ยอดสุทธิ</td>
+                  <td className="text-lg font-bold">{formatCurrency(total, currency)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="grid gap-2">
+              <button
+                onClick={() => void submitOrder(selectedLines, "KITCHEN")}
+                disabled={submitting || selectedLines.length === 0}
+                className="w-full"
               >
-                <option value="CASH">เงินสด</option>
-                <option value="CARD">บัตร</option>
-                <option value="TRANSFER">โอนเงิน</option>
-                <option value="QR">QR</option>
-              </select>
+                {submitting ? "กำลังส่ง..." : `Send to Kitchen (${selectedLines.length})`}
+              </button>
+              <button
+                onClick={() => void submitOrder(cartLines, "PAYMENT")}
+                disabled={submitting || cartLines.length === 0}
+                className="secondary w-full"
+              >
+                {submitting ? "กำลังบันทึก..." : "Proceed to Payment"}
+              </button>
             </div>
+
+            {message ? <p className="mt-1 text-sm text-[var(--ok)]">{message}</p> : null}
+            {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
           </div>
-
-          <table className="table mt-3">
-            <tbody>
-              <tr>
-                <td>ยอดก่อนส่วนลด</td>
-                <td>{formatCurrency(subtotal, currency)}</td>
-              </tr>
-              <tr>
-                <td>ส่วนลด</td>
-                <td>{formatCurrency(safeDiscount, currency)}</td>
-              </tr>
-              <tr>
-                <td>ภาษี ({taxRate}%)</td>
-                <td>{formatCurrency(tax, currency)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>ยอดสุทธิ</strong>
-                </td>
-                <td>
-                  <strong>{formatCurrency(total, currency)}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <button onClick={checkout} disabled={cartItems.length === 0 || submitting} className="mt-3 w-full">
-            {submitting ? "กำลังบันทึก..." : "ชำระเงินและออกใบเสร็จ"}
-          </button>
-
-          {message ? <p className="mt-2 text-[var(--ok)]">{message}</p> : null}
-          {error ? <p className="mt-2 text-red-600">{error}</p> : null}
         </section>
       </div>
 
@@ -345,6 +593,122 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
           </table>
         </div>
       </section>
+
+      {modifierProduct ? (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-panel">
+            <div className="modal-header">
+              <h3 className="m-0 text-lg font-semibold">ปรับแต่งเมนู: {modifierProduct.name}</h3>
+              <button className="secondary" onClick={closeModifier}>
+                ปิด
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              <div className="field">
+                <label>ระดับความเผ็ด</label>
+                <select
+                  value={modifierState.spiceLevel}
+                  onChange={(event) =>
+                    setModifierState((prev) => ({
+                      ...prev,
+                      spiceLevel: event.target.value as CartModifier["spiceLevel"]
+                    }))
+                  }
+                >
+                  <option value="ไม่เผ็ด">ไม่เผ็ด</option>
+                  <option value="เผ็ดน้อย">เผ็ดน้อย</option>
+                  <option value="เผ็ดกลาง">เผ็ดกลาง</option>
+                  <option value="เผ็ดมาก">เผ็ดมาก</option>
+                </select>
+              </div>
+
+              <div className="field">
+                <label>เพิ่มพิเศษ</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ADD_ON_OPTIONS.map((item) => (
+                    <label
+                      key={item}
+                      className="flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[#111827]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={modifierState.addOns.includes(item)}
+                        onChange={() => toggleAddOn(item)}
+                        className="h-4 w-4 accent-[#E24A3B]"
+                      />
+                      {item}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="field">
+                <label>ไม่ใส่วัตถุดิบ</label>
+                <input
+                  value={modifierState.removeIngredients}
+                  onChange={(event) =>
+                    setModifierState((prev) => ({
+                      ...prev,
+                      removeIngredients: event.target.value
+                    }))
+                  }
+                  placeholder="เช่น ไม่ใส่หอม, ไม่ใส่พริก"
+                />
+              </div>
+
+              <div className="field">
+                <label>โน้ตเพิ่มเติม</label>
+                <textarea
+                  rows={3}
+                  value={modifierState.note}
+                  onChange={(event) =>
+                    setModifierState((prev) => ({
+                      ...prev,
+                      note: event.target.value
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button className="secondary" onClick={closeModifier}>
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => {
+                  addLineFromProduct(modifierProduct, modifierState);
+                  closeModifier();
+                }}
+              >
+                เพิ่มลงตะกร้า
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {removedLine ? (
+        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-[var(--line)] bg-white p-3 text-sm shadow-sm">
+          ลบ {removedLine.name} แล้ว
+          <button className="secondary ml-2 text-xs" onClick={undoRemove}>
+            Undo
+          </button>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div
+          className={`fixed right-4 top-20 z-50 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ${
+            toast.tone === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}
+        >
+          {toast.text}
+        </div>
+      ) : null}
 
       <ReceiptPreviewModal orderId={receiptOrderId} onClose={() => setReceiptOrderId(null)} />
     </>
