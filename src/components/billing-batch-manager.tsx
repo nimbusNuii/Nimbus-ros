@@ -25,35 +25,18 @@ type BillingBatchManagerProps = {
   currency: string;
 };
 
-type RowItem = {
-  id: string;
+type LineItem = {
+  lineId: string;
   productId: string;
   qty: number;
   note: string;
 };
 
-type RowResult = {
-  tone: "success" | "error";
-  message: string;
-};
-
-type BillingRow = {
-  id: string;
-  mode: BillingMode;
-  dateTime: string;
-  customerId: string;
-  paymentMethod: PaymentMethod;
-  discount: number;
-  note: string;
-  items: RowItem[];
-  result: RowResult | null;
-};
-
-function createId(prefix: string) {
+function createLineId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `${prefix}-${crypto.randomUUID()}`;
+    return crypto.randomUUID();
   }
-  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  return `line-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 }
 
 function toDateTimeLocalValue(date = new Date()) {
@@ -61,409 +44,327 @@ function toDateTimeLocalValue(date = new Date()) {
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
-function createRowItem(defaultProductId: string): RowItem {
-  return {
-    id: createId("item"),
-    productId: defaultProductId,
-    qty: 1,
-    note: ""
-  };
-}
-
-function createBillingRow(defaultProductId: string): BillingRow {
-  return {
-    id: createId("row"),
-    mode: "BACKDATE",
-    dateTime: toDateTimeLocalValue(),
-    customerId: "WALK_IN",
-    paymentMethod: "CASH",
-    discount: 0,
-    note: "",
-    items: [createRowItem(defaultProductId)],
-    result: null
-  };
-}
-
 export function BillingBatchManager({ products, customers, currency }: BillingBatchManagerProps) {
-  const defaultProductId = products[0]?.id || "";
-  const [rows, setRows] = useState<BillingRow[]>([createBillingRow(defaultProductId)]);
-  const [savingAll, setSavingAll] = useState(false);
+  const [mode, setMode] = useState<BillingMode>("BACKDATE");
+  const [dateTime, setDateTime] = useState(toDateTimeLocalValue());
+  const [customerId, setCustomerId] = useState("WALK_IN");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [discount, setDiscount] = useState(0);
+  const [note, setNote] = useState("");
+  const [items, setItems] = useState<LineItem[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productQuery, setProductQuery] = useState("");
 
-  const customerById = useMemo(() => {
-    return new Map(customers.map((item) => [item.id, item]));
-  }, [customers]);
+  const customerById = useMemo(() => new Map(customers.map((item) => [item.id, item])), [customers]);
+  const productById = useMemo(() => new Map(products.map((item) => [item.id, item])), [products]);
 
-  const productById = useMemo(() => {
-    return new Map(products.map((item) => [item.id, item]));
-  }, [products]);
+  const filteredProducts = useMemo(() => {
+    const q = productQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((item) => item.name.toLowerCase().includes(q));
+  }, [products, productQuery]);
 
-  function updateRow(rowId: string, updater: (row: BillingRow) => BillingRow) {
-    setRows((prev) => prev.map((row) => (row.id === rowId ? updater(row) : row)));
-  }
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const product = productById.get(item.productId);
+      if (!product) return sum;
+      return sum + product.price * item.qty;
+    }, 0);
+  }, [items, productById]);
 
-  function addRow() {
-    setRows((prev) => [...prev, createBillingRow(defaultProductId)]);
-  }
+  function addProduct(productId: string) {
+    const product = productById.get(productId);
+    if (!product) return;
 
-  function removeRow(rowId: string) {
-    setRows((prev) => {
-      if (prev.length <= 1) return prev;
-      return prev.filter((row) => row.id !== rowId);
+    setItems((prev) => {
+      const index = prev.findIndex((item) => item.productId === productId && item.note.trim() === "");
+      if (index < 0) {
+        return [...prev, { lineId: createLineId(), productId, qty: 1, note: "" }];
+      }
+
+      const next = [...prev];
+      const target = next[index];
+      next[index] = { ...target, qty: target.qty + 1 };
+      return next;
     });
   }
 
-  function addItem(rowId: string) {
-    updateRow(rowId, (row) => ({
-      ...row,
-      items: [...row.items, createRowItem(defaultProductId)],
-      result: null
-    }));
+  function updateItem(lineId: string, updater: (item: LineItem) => LineItem) {
+    setItems((prev) => prev.map((item) => (item.lineId === lineId ? updater(item) : item)));
   }
 
-  function removeItem(rowId: string, itemId: string) {
-    updateRow(rowId, (row) => ({
-      ...row,
-      items: row.items.length <= 1 ? row.items : row.items.filter((item) => item.id !== itemId),
-      result: null
-    }));
+  function removeItem(lineId: string) {
+    setItems((prev) => prev.filter((item) => item.lineId !== lineId));
   }
 
-  function updateItem(rowId: string, itemId: string, updater: (item: RowItem) => RowItem) {
-    updateRow(rowId, (row) => ({
-      ...row,
-      items: row.items.map((item) => (item.id === itemId ? updater(item) : item)),
-      result: null
-    }));
-  }
-
-  async function saveAllRows() {
-    if (savingAll) return;
-
-    setSavingAll(true);
+  async function submitBill() {
+    if (submitting) return;
     setMessage("");
     setError("");
 
-    const snapshot = [...rows];
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const row of snapshot) {
-      const validItems = row.items
-        .filter((item) => item.productId && item.qty > 0)
-        .map((item) => ({
-          productId: item.productId,
-          qty: Math.max(1, Math.trunc(item.qty)),
-          note: item.note.trim() || undefined
-        }));
-
-      if (!row.dateTime) {
-        failureCount += 1;
-        updateRow(row.id, (current) => ({
-          ...current,
-          result: {
-            tone: "error",
-            message: "กรุณาเลือกวันเวลา"
-          }
-        }));
-        continue;
-      }
-
-      if (validItems.length === 0) {
-        failureCount += 1;
-        updateRow(row.id, (current) => ({
-          ...current,
-          result: {
-            tone: "error",
-            message: "ยังไม่มีรายการสินค้า"
-          }
-        }));
-        continue;
-      }
-
-      const selectedCustomer = row.customerId === "WALK_IN" ? null : customerById.get(row.customerId) || null;
-
-      const payload: {
-        items: Array<{ productId: string; qty: number; note?: string }>;
-        discount: number;
-        paymentMethod: PaymentMethod;
-        customerId?: string;
-        customerType: "WALK_IN" | "REGULAR";
-        customerName: string;
-        note?: string;
-        orderStatus: "PAID" | "OPEN";
-        billAt?: string;
-        scheduledFor?: string;
-      } = {
-        items: validItems,
-        discount: Math.max(0, Number(row.discount) || 0),
-        paymentMethod: row.paymentMethod,
-        customerId: selectedCustomer?.id,
-        customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
-        customerName: selectedCustomer?.name || "ลูกค้าขาจร",
-        note: row.note.trim() || undefined,
-        orderStatus: row.mode === "ADVANCE" ? "OPEN" : "PAID"
-      };
-
-      if (row.mode === "ADVANCE") {
-        payload.scheduledFor = new Date(row.dateTime).toISOString();
-      } else {
-        payload.billAt = new Date(row.dateTime).toISOString();
-      }
-
-      try {
-        const response = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "Cannot create order");
-        }
-
-        successCount += 1;
-        updateRow(row.id, (current) => ({
-          ...current,
-          result: {
-            tone: "success",
-            message: `สำเร็จ ${data.orderNumber}`
-          }
-        }));
-      } catch (err) {
-        failureCount += 1;
-        updateRow(row.id, (current) => ({
-          ...current,
-          result: {
-            tone: "error",
-            message: err instanceof Error ? err.message : "Cannot create order"
-          }
-        }));
-      }
+    if (!dateTime) {
+      setError("กรุณาเลือกวันเวลา");
+      return;
     }
 
-    if (successCount > 0) {
-      setMessage(`บันทึกสำเร็จ ${successCount} บิล`);
-    }
-    if (failureCount > 0) {
-      setError(`มีรายการไม่สำเร็จ ${failureCount} บิล กรุณาตรวจสอบในตาราง`);
+    const validItems = items
+      .filter((item) => item.productId && item.qty > 0)
+      .map((item) => ({
+        productId: item.productId,
+        qty: Math.max(1, Math.trunc(item.qty)),
+        note: item.note.trim() || undefined
+      }));
+
+    if (validItems.length === 0) {
+      setError("กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ");
+      return;
     }
 
-    setSavingAll(false);
+    const selectedCustomer = customerId === "WALK_IN" ? null : customerById.get(customerId) || null;
+
+    const payload: {
+      items: Array<{ productId: string; qty: number; note?: string }>;
+      discount: number;
+      paymentMethod: PaymentMethod;
+      customerId?: string;
+      customerType: "WALK_IN" | "REGULAR";
+      customerName: string;
+      note?: string;
+      orderStatus: "PAID" | "OPEN";
+      billAt?: string;
+      scheduledFor?: string;
+    } = {
+      items: validItems,
+      discount: Math.max(0, Number(discount) || 0),
+      paymentMethod,
+      customerId: selectedCustomer?.id,
+      customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
+      customerName: selectedCustomer?.name || "ลูกค้าขาจร",
+      note: note.trim() || undefined,
+      orderStatus: mode === "ADVANCE" ? "OPEN" : "PAID"
+    };
+
+    if (mode === "ADVANCE") {
+      payload.scheduledFor = new Date(dateTime).toISOString();
+    } else {
+      payload.billAt = new Date(dateTime).toISOString();
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Cannot create order");
+      }
+
+      setMessage(
+        mode === "ADVANCE"
+          ? `บันทึกบิลล่วงหน้าสำเร็จ ${data.orderNumber} (จะขึ้นที่ครัว)`
+          : `บันทึกบิลย้อนหลังสำเร็จ ${data.orderNumber}`
+      );
+      setItems([]);
+      setNote("");
+      setDiscount(0);
+      setProductModalOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot create order");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <section className="card space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="m-0 text-xl font-semibold">ลงบิลย้อนหลัง / ลงบิลล่วงหน้า แบบตาราง</h2>
-          <p className="mb-0 mt-1 text-sm text-[var(--muted)]">
-            เพิ่มหลายแถวได้ในครั้งเดียว แล้วกดบันทึกทั้งหมด ระบบจะสร้างบิลตามวันที่ที่กำหนด
-          </p>
+      <div>
+        <h2 className="m-0 text-xl font-semibold">เพิ่มบิลทีละรายการ</h2>
+        <p className="mb-0 mt-1 text-sm text-[var(--muted)]">
+          เลือกบิลย้อนหลังหรือบิลล่วงหน้า แล้วเพิ่มสินค้าแบบ Modal ก่อนกดบันทึก
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="field mb-0">
+          <label htmlFor="billingMode">ประเภทบิล</label>
+          <select id="billingMode" value={mode} onChange={(event) => setMode(event.target.value as BillingMode)}>
+            <option value="BACKDATE">ย้อนหลัง (ชำระแล้ว)</option>
+            <option value="ADVANCE">ล่วงหน้า (ยังไม่ชำระ, ส่งครัวได้)</option>
+          </select>
         </div>
-        <div className="flex gap-2">
-          <button type="button" className="secondary" onClick={addRow}>
-            เพิ่มแถว
-          </button>
-          <button type="button" disabled={savingAll} onClick={() => void saveAllRows()}>
-            {savingAll ? "กำลังบันทึก..." : "บันทึกทั้งหมด"}
-          </button>
+
+        <div className="field mb-0">
+          <label htmlFor="billingDateTime">วัน/เวลา</label>
+          <input id="billingDateTime" type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} />
+        </div>
+
+        <div className="field mb-0">
+          <label htmlFor="billingCustomer">ลูกค้า</label>
+          <select id="billingCustomer" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
+            <option value="WALK_IN">ลูกค้าขาจร</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field mb-0">
+          <label htmlFor="billingPayment">ชำระเงิน</label>
+          <select id="billingPayment" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
+            <option value="CASH">เงินสด</option>
+            <option value="CARD">บัตร</option>
+            <option value="TRANSFER">โอนเงิน</option>
+            <option value="QR">QR</option>
+          </select>
+        </div>
+
+        <div className="field mb-0">
+          <label htmlFor="billingDiscount">ส่วนลด</label>
+          <input
+            id="billingDiscount"
+            type="number"
+            min={0}
+            value={discount}
+            onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
+          />
+        </div>
+
+        <div className="field mb-0">
+          <label htmlFor="billingNote">หมายเหตุบิล</label>
+          <input id="billingNote" value={note} onChange={(event) => setNote(event.target.value)} />
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="table min-w-[1200px]">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>ประเภทบิล</th>
-              <th>วัน/เวลา</th>
-              <th>ลูกค้า</th>
-              <th>รายการสินค้า</th>
-              <th>ส่วนลด</th>
-              <th>ชำระเงิน</th>
-              <th>หมายเหตุ</th>
-              <th>ผลลัพธ์</th>
-              <th>จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={row.id}>
-                <td>{index + 1}</td>
-                <td>
-                  <select
-                    value={row.mode}
-                    onChange={(event) =>
-                      updateRow(row.id, (current) => ({
-                        ...current,
-                        mode: event.target.value as BillingMode,
-                        result: null
-                      }))
-                    }
-                  >
-                    <option value="BACKDATE">ย้อนหลัง (ชำระแล้ว)</option>
-                    <option value="ADVANCE">ล่วงหน้า (ยังไม่ชำระ)</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="datetime-local"
-                    value={row.dateTime}
-                    onChange={(event) =>
-                      updateRow(row.id, (current) => ({
-                        ...current,
-                        dateTime: event.target.value,
-                        result: null
-                      }))
-                    }
-                  />
-                </td>
-                <td>
-                  <select
-                    value={row.customerId}
-                    onChange={(event) =>
-                      updateRow(row.id, (current) => ({
-                        ...current,
-                        customerId: event.target.value,
-                        result: null
-                      }))
-                    }
-                  >
-                    <option value="WALK_IN">ลูกค้าขาจร</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <div className="space-y-2">
-                    {row.items.map((item) => {
-                      const selected = productById.get(item.productId);
-                      return (
-                        <div key={item.id} className="rounded-lg border border-[var(--line)] bg-white p-2">
-                          <div className="grid gap-2 md:grid-cols-[1fr_70px_1fr_auto]">
-                            <select
-                              value={item.productId}
-                              onChange={(event) =>
-                                updateItem(row.id, item.id, (current) => ({
-                                  ...current,
-                                  productId: event.target.value
-                                }))
-                              }
-                            >
-                              {products.map((product) => (
-                                <option key={product.id} value={product.id}>
-                                  {product.name} ({formatCurrency(product.price, currency)})
-                                </option>
-                              ))}
-                            </select>
-                            <input
-                              type="number"
-                              min={1}
-                              step={1}
-                              value={item.qty}
-                              onChange={(event) =>
-                                updateItem(row.id, item.id, (current) => ({
-                                  ...current,
-                                  qty: Math.max(1, Math.trunc(Number(event.target.value) || 1))
-                                }))
-                              }
-                            />
-                            <input
-                              value={item.note}
-                              placeholder="หมายเหตุรายการ"
-                              onChange={(event) =>
-                                updateItem(row.id, item.id, (current) => ({
-                                  ...current,
-                                  note: event.target.value
-                                }))
-                              }
-                            />
-                            <button type="button" className="secondary" onClick={() => removeItem(row.id, item.id)}>
-                              ลบ
-                            </button>
-                          </div>
-                          {selected ? (
-                            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-                              ย่อย: {formatCurrency(selected.price * item.qty, currency)} | คงเหลือ {selected.stockQty}
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                    <button type="button" className="secondary text-xs" onClick={() => addItem(row.id)}>
-                      เพิ่มสินค้า
-                    </button>
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="m-0 text-base font-semibold">รายการสินค้า</h3>
+          <button type="button" className="secondary" onClick={() => setProductModalOpen(true)}>
+            เพิ่มสินค้า (Modal)
+          </button>
+        </div>
+
+        {items.length === 0 ? <p className="mb-0 text-sm text-[var(--muted)]">ยังไม่มีสินค้า</p> : null}
+
+        <div className="space-y-2">
+          {items.map((item) => {
+            const product = productById.get(item.productId);
+            return (
+              <article key={item.lineId} className="rounded-lg border border-[var(--line)] bg-white p-2">
+                <div className="grid gap-2 md:grid-cols-[1fr_90px_1fr_auto] md:items-center">
+                  <div>
+                    <p className="m-0 text-sm font-medium text-[var(--text)]">{product?.name || "-"}</p>
+                    <p className="m-0 text-xs text-[var(--muted)]">
+                      {product ? formatCurrency(product.price, currency) : "-"} | คงเหลือ {product?.stockQty ?? 0}
+                    </p>
                   </div>
-                </td>
-                <td>
                   <input
                     type="number"
-                    min={0}
-                    value={row.discount}
+                    min={1}
+                    value={item.qty}
                     onChange={(event) =>
-                      updateRow(row.id, (current) => ({
+                      updateItem(item.lineId, (current) => ({
                         ...current,
-                        discount: Math.max(0, Number(event.target.value) || 0),
-                        result: null
+                        qty: Math.max(1, Math.trunc(Number(event.target.value) || 1))
                       }))
                     }
                   />
-                </td>
-                <td>
-                  <select
-                    value={row.paymentMethod}
-                    onChange={(event) =>
-                      updateRow(row.id, (current) => ({
-                        ...current,
-                        paymentMethod: event.target.value as PaymentMethod,
-                        result: null
-                      }))
-                    }
-                  >
-                    <option value="CASH">เงินสด</option>
-                    <option value="CARD">บัตร</option>
-                    <option value="TRANSFER">โอนเงิน</option>
-                    <option value="QR">QR</option>
-                  </select>
-                </td>
-                <td>
                   <input
-                    value={row.note}
+                    placeholder="หมายเหตุรายการ"
+                    value={item.note}
                     onChange={(event) =>
-                      updateRow(row.id, (current) => ({
+                      updateItem(item.lineId, (current) => ({
                         ...current,
-                        note: event.target.value,
-                        result: null
+                        note: event.target.value
                       }))
                     }
                   />
-                </td>
-                <td>
-                  {row.result ? (
-                    <span className={row.result.tone === "success" ? "text-[var(--ok)]" : "text-red-600"}>{row.result.message}</span>
-                  ) : (
-                    <span className="text-[var(--muted)]">-</span>
-                  )}
-                </td>
-                <td>
-                  <button type="button" className="secondary" onClick={() => removeRow(row.id)}>
-                    ลบแถว
+                  <button type="button" className="secondary" onClick={() => removeItem(item.lineId)}>
+                    ลบ
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-sm text-[var(--muted)]">ยอดก่อนส่วนลด</span>
+          <span className="text-base font-semibold">{formatCurrency(subtotal, currency)}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={submitting} onClick={() => void submitBill()}>
+          {submitting ? "กำลังบันทึก..." : "บันทึกบิล"}
+        </button>
       </div>
 
       {message ? <p className="m-0 text-sm text-[var(--ok)]">{message}</p> : null}
       {error ? <p className="m-0 text-sm text-red-600">{error}</p> : null}
+
+      {productModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setProductModalOpen(false);
+            }
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(980px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เลือกสินค้า</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">กดเพิ่มสินค้าได้ทีละรายการ</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setProductModalOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <div className="field mb-3">
+              <label htmlFor="productSearch">ค้นหาสินค้า</label>
+              <input
+                id="productSearch"
+                value={productQuery}
+                onChange={(event) => setProductQuery(event.target.value)}
+                placeholder="พิมพ์ชื่อสินค้า"
+              />
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProducts.map((product) => (
+                <article key={product.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+                  <p className="m-0 text-sm font-semibold text-[var(--text)]">{product.name}</p>
+                  <p className="m-0 mt-1 text-xs text-[var(--muted)]">
+                    {formatCurrency(product.price, currency)} | คงเหลือ {product.stockQty}
+                  </p>
+                  <button
+                    type="button"
+                    className="secondary mt-2 w-full"
+                    disabled={product.stockQty <= 0}
+                    onClick={() => addProduct(product.id)}
+                  >
+                    {product.stockQty <= 0 ? "สินค้าหมด" : "เพิ่มสินค้า"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

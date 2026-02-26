@@ -67,7 +67,7 @@ export default async function ManagePage() {
         </Link>
         <Link href="/manage/billing-batch" className="card">
           <h3 className="mt-0">ลงบิลย้อนหลัง/ล่วงหน้า</h3>
-          <p className="mb-0 text-[var(--muted)]">เลือกวันเวลา ลูกค้า และรายการสินค้า แล้วบันทึกหลายบิลพร้อมกัน</p>
+          <p className="mb-0 text-[var(--muted)]">เพิ่มทีละบิล เลือกวันเวลา ลูกค้า และสินค้าแบบ Modal</p>
         </Link>
         <Link href="/manage/print-jobs" className="card">
           <h3 className="mt-0">คิวพิมพ์</h3>
