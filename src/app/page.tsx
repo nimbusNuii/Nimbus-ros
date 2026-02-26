@@ -8,6 +8,11 @@ const modules = [
     href: "/pos"
   },
   {
+    title: "Create Order (No Nav)",
+    desc: "หน้ารับออเดอร์แบบเต็มโฟกัส ไม่มีแถบเมนู",
+    href: "/create-order"
+  },
+  {
     title: "ใบเสร็จย้อนหลัง",
     desc: "ค้นหาและพิมพ์ซ้ำจากประวัติได้ทันที",
     href: "/receipts"

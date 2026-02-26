@@ -21,6 +21,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", roles: ["CASHIER", "KITCHEN", "MANAGER", "ADMIN"] },
   { href: "/pos", label: "POS", roles: ["CASHIER", "MANAGER", "ADMIN"] },
+  { href: "/create-order", label: "Create Order", roles: ["CASHIER", "MANAGER", "ADMIN"] },
   { href: "/receipts", label: "Receipts", roles: ["CASHIER", "MANAGER", "ADMIN"] },
   { href: "/kitchen", label: "Kitchen", roles: ["KITCHEN", "MANAGER", "ADMIN"] },
   { href: "/summary", label: "Summary", roles: ["MANAGER", "ADMIN"] },
@@ -134,6 +135,11 @@ export function MainNav() {
   }
 
   const visibleLinks = user ? navItems.filter((item) => item.roles.includes(user.role)) : [];
+  const hideNav = pathname === "/create-order" || pathname.startsWith("/create-order/");
+
+  if (hideNav) {
+    return null;
+  }
 
   return (
     <nav className="nav px-4 py-2">
