@@ -97,6 +97,45 @@ export default async function SummaryPage({
           ช่วงข้อมูล: {formatDateTime(summary.range.from)} - {formatDateTime(summary.range.to)}
         </p>
       </section>
+
+      <section className="card mt-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="m-0 text-xl font-semibold">ยอดขายตามสินค้าในช่วงที่เลือก</h2>
+          <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
+            รวม {summary.soldItemTotals.qty} ชิ้น / {formatCurrency(summary.soldItemTotals.revenue, currency)}
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="table min-w-[760px]">
+            <thead>
+              <tr>
+                <th>สินค้า</th>
+                <th>จำนวนที่ขาย</th>
+                <th>ยอดขายรวม</th>
+                <th>ราคาเฉลี่ย/ชิ้น</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.soldItems.map((item) => (
+                <tr key={item.name}>
+                  <td>{item.name}</td>
+                  <td>{item.qty}</td>
+                  <td>{formatCurrency(item.revenue, currency)}</td>
+                  <td>{formatCurrency(item.averagePrice, currency)}</td>
+                </tr>
+              ))}
+              {summary.soldItems.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center text-[var(--muted)]">
+                    ไม่พบข้อมูลการขายในช่วงวันที่นี้
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

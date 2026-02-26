@@ -36,6 +36,8 @@ type ReceiptTemplateFormProps = {
   store: Store;
 };
 
+const RECEIPT_PRESET_STORAGE_KEY = "receipt_template_selected_preset";
+
 export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateFormProps) {
   const [template, setTemplate] = useState(initialTemplate);
   const [previewThemeKey, setPreviewThemeKey] = useState(RECEIPT_THEME_PRESETS[0].key);
@@ -88,6 +90,18 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
     setMessage(`โหลดธีม ${preset.label} แล้ว กดบันทึกเพื่อใช้งานจริง`);
     setError("");
   }
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(RECEIPT_PRESET_STORAGE_KEY);
+    const exists = RECEIPT_THEME_PRESETS.some((item) => item.key === stored);
+    if (stored && exists) {
+      setPreviewThemeKey(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(RECEIPT_PRESET_STORAGE_KEY, previewThemeKey);
+  }, [previewThemeKey]);
 
   useEffect(() => {
     if (!themePresetModalOpen) return;
@@ -305,7 +319,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
             }
           }}
         >
-          <div className="modal-panel">
+          <div className="modal-panel" style={{ width: "min(1160px, 100%)" }}>
             <div className="modal-header">
               <div>
                 <h3 className="m-0 text-lg font-semibold">Theme Presets</h3>
@@ -316,45 +330,52 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
               </button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {RECEIPT_THEME_PRESETS.map((preset) => (
-                <article
-                  key={preset.key}
-                  className={`rounded-xl border p-3 ${
-                    previewThemeKey === preset.key
-                      ? "border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]"
-                      : "border-[var(--line)] bg-white"
-                  }`}
-                >
-                  <h4 className="m-0 text-sm font-semibold">{preset.label}</h4>
-                  <p className="mb-0 mt-1 text-xs text-[var(--muted)]">{preset.description}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {preset.tags.map((tag) => (
-                      <span key={`${preset.key}-${tag}`} className="pill">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] p-2">
-                      <p className="m-0 text-[11px] text-[var(--muted)]">Header</p>
-                      <p className="m-0 mt-1 text-xs text-[var(--text)]">{preset.template.headerText}</p>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-3">
+                {RECEIPT_THEME_PRESETS.map((preset) => (
+                  <article
+                    key={preset.key}
+                    className={`rounded-xl border p-3 ${
+                      previewThemeKey === preset.key
+                        ? "border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]"
+                        : "border-[var(--line)] bg-white"
+                    }`}
+                  >
+                    <h4 className="m-0 text-sm font-semibold">{preset.label}</h4>
+                    <p className="mb-0 mt-1 text-xs text-[var(--muted)]">{preset.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {preset.tags.map((tag) => (
+                        <span key={`${preset.key}-${tag}`} className="pill">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
-                    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] p-2">
-                      <p className="m-0 text-[11px] text-[var(--muted)]">Footer</p>
-                      <p className="m-0 mt-1 text-xs text-[var(--text)]">{preset.template.footerText}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" className="secondary" onClick={() => setPreviewThemeKey(preset.key)}>
+                        ดูตัวอย่าง
+                      </button>
+                      <button type="button" onClick={() => applyThemePreset(preset)}>
+                        ใช้ธีมนี้
+                      </button>
                     </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" className="secondary" onClick={() => setPreviewThemeKey(preset.key)}>
-                      ดูตัวอย่าง
-                    </button>
-                    <button type="button" onClick={() => applyThemePreset(preset)}>
-                      ใช้ธีมนี้
-                    </button>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                ))}
+              </div>
+
+              <aside className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <h4 className="m-0 text-sm font-semibold">ตัวอย่างการแสดงผล</h4>
+                <p className="mb-0 mt-1 text-xs text-[var(--muted)]">พรีวิวจากธีม: {previewTheme.label}</p>
+                <div className="mt-3 max-h-[62vh] overflow-auto rounded-lg border border-[var(--line)] bg-white p-2">
+                  <ReceiptDocument
+                    order={previewOrder}
+                    store={store}
+                    template={mergeTemplateWithTheme(template, previewTheme)}
+                  />
+                </div>
+                <button type="button" className="mt-3 w-full" onClick={() => applyThemePreset(previewTheme)}>
+                  ใช้ธีมที่กำลังพรีวิว
+                </button>
+              </aside>
             </div>
           </div>
         </div>

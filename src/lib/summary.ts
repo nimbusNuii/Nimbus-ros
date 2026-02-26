@@ -58,7 +58,7 @@ export async function calculateSummary(from?: string | null, to?: string | null)
     }
   };
 
-  const [orders, orderItems, expenseGroups, costItems] = await Promise.all([
+  const [orders, orderItems, expenseGroups, costItems, soldByItem] = await Promise.all([
     prisma.order.aggregate({
       where: orderWhere,
       _sum: {
@@ -91,6 +91,16 @@ export async function calculateSummary(from?: string | null, to?: string | null)
         qty: true,
         unitCost: true
       }
+    }),
+    prisma.orderItem.groupBy({
+      by: ["nameSnapshot"],
+      where: {
+        order: orderWhere
+      },
+      _sum: {
+        qty: true,
+        lineTotal: true
+      }
     })
   ]);
 
@@ -118,6 +128,28 @@ export async function calculateSummary(from?: string | null, to?: string | null)
 
   const totalExpense = cogsEstimate + ingredientExpense + staffCost + electricityCost + otherExpense;
   const netProfit = sales - totalExpense;
+  const soldItems = soldByItem
+    .map((item) => {
+      const qty = item._sum.qty || 0;
+      const revenue = toNumber(item._sum.lineTotal);
+      return {
+        name: item.nameSnapshot,
+        qty,
+        revenue,
+        averagePrice: qty > 0 ? revenue / qty : 0
+      };
+    })
+    .sort((a, b) => {
+      if (b.qty !== a.qty) return b.qty - a.qty;
+      return b.revenue - a.revenue;
+    });
+  const soldItemTotals = soldItems.reduce(
+    (sum, item) => ({
+      qty: sum.qty + item.qty,
+      revenue: sum.revenue + item.revenue
+    }),
+    { qty: 0, revenue: 0 }
+  );
 
   return {
     range: { from: fromDate, to: toDate },
@@ -134,6 +166,8 @@ export async function calculateSummary(from?: string | null, to?: string | null)
       other: otherExpense,
       totalExpense
     },
+    soldItems,
+    soldItemTotals,
     netProfit
   };
 }
