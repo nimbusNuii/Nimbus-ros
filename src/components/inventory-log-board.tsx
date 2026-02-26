@@ -52,7 +52,7 @@ export function InventoryLogBoard() {
   }, [reason, productId, from, to]);
 
   async function loadProducts() {
-    const response = await fetch("/api/products", { cache: "no-store" });
+    const response = await fetch("/api/products?active=1&limit=1000", { cache: "no-store" });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Cannot load products");

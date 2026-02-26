@@ -6,6 +6,7 @@ import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
 import { publishRealtime } from "@/lib/realtime";
+import { parseLimit } from "@/lib/query-utils";
 
 type CustomerType = "WALK_IN" | "REGULAR";
 
@@ -47,15 +48,18 @@ function toOrderDateKey(date: Date) {
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["CASHIER", "MANAGER", "ADMIN"]);
   if (auth.response) return auth.response;
+  const { searchParams } = new URL(request.url);
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const limit = parseLimit(searchParams, 200, 1000);
 
   const orders = await prisma.order.findMany({
     where: {
       createdAt: { gte: todayStart }
     },
     orderBy: { createdAt: "desc" },
+    take: limit,
     include: {
       items: true
     }

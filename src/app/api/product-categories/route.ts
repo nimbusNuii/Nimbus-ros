@@ -2,17 +2,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { parseBooleanFlag, parseLimit } from "@/lib/query-utils";
 
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["CASHIER", "MANAGER", "ADMIN"]);
   if (auth.response) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const activeOnly = searchParams.get("active") === "1";
+  const activeOnly = parseBooleanFlag(searchParams, "active");
+  const limit = parseLimit(searchParams, 300, 1000);
 
   const categories = await prisma.productCategory.findMany({
     where: activeOnly ? { isActive: true } : undefined,
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    take: limit
   });
 
   return NextResponse.json(categories);

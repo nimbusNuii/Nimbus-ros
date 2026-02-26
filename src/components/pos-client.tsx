@@ -221,7 +221,7 @@ export function PosClient({
 
   const reloadProducts = useCallback(async () => {
     try {
-      const response = await fetch("/api/products", { cache: "no-store" });
+      const response = await fetch("/api/products?active=1&limit=500", { cache: "no-store" });
       if (!response.ok) return;
 
       const rows = (await response.json()) as Array<Product & { isActive?: boolean }>;

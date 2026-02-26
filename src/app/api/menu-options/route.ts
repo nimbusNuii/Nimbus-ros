@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { parseBooleanFlag, parseLimit } from "@/lib/query-utils";
 
 const TYPES: MenuOptionType[] = ["SPICE_LEVEL", "ADD_ON", "REMOVE_INGREDIENT"];
 
@@ -20,14 +21,16 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const type = parseType(searchParams.get("type"));
-  const activeOnly = searchParams.get("active") === "1";
+  const activeOnly = parseBooleanFlag(searchParams, "active");
+  const limit = parseLimit(searchParams, 300, 1000);
 
   const options = await prisma.menuOption.findMany({
     where: {
       type: type || undefined,
       isActive: activeOnly ? true : undefined
     },
-    orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { label: "asc" }]
+    orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { label: "asc" }],
+    take: limit
   });
 
   return NextResponse.json(options);

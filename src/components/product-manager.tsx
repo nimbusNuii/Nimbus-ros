@@ -88,7 +88,7 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
 
   const reloadProducts = useCallback(async () => {
     try {
-      const response = await fetch("/api/products", { cache: "no-store" });
+      const response = await fetch("/api/products?limit=1000", { cache: "no-store" });
       if (!response.ok) return;
       const data = (await response.json()) as Product[];
       setProducts(data);

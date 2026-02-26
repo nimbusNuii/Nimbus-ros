@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPin, requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { parseLimit } from "@/lib/query-utils";
 
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["ADMIN", "MANAGER"]);
   if (auth.response) return auth.response;
+  const { searchParams } = new URL(request.url);
+  const limit = parseLimit(searchParams, 200, 500);
 
   const users = await prisma.appUser.findMany({
-    orderBy: [{ role: "asc" }, { username: "asc" }]
+    orderBy: [{ role: "asc" }, { username: "asc" }],
+    take: limit
   });
 
   return NextResponse.json(
