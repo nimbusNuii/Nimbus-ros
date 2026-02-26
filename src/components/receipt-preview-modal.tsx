@@ -439,21 +439,31 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
                 ดาวน์โหลด PDF
               </a>
               <div className="relative" ref={printMenuRef}>
-                <button
-                  type="button"
-                  disabled={queueingAction !== null}
-                  onClick={() => setPrintMenuOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2"
-                >
-                  {queueingAction === "BOTH"
-                    ? "กำลังส่ง 2 เครื่อง..."
-                    : queueingAction === "CASHIER_RECEIPT"
-                      ? "กำลังส่งใบเสร็จ..."
-                      : queueingAction === "KITCHEN_TICKET"
-                        ? "กำลังส่งบิลครัว..."
-                        : "พิมพ์ใบเสร็จ"}
-                  <span className="text-xs">▾</span>
-                </button>
+                <div className="inline-flex">
+                  <button
+                    type="button"
+                    disabled={queueingAction !== null}
+                    onClick={() => void enqueueBoth()}
+                    className="rounded-r-none border-r border-white/30 px-4"
+                  >
+                    {queueingAction === "BOTH"
+                      ? "กำลังส่ง 2 เครื่อง..."
+                      : queueingAction === "CASHIER_RECEIPT"
+                        ? "กำลังส่งใบเสร็จ..."
+                        : queueingAction === "KITCHEN_TICKET"
+                          ? "กำลังส่งบิลครัว..."
+                          : "พิมพ์ 2 เครื่อง"}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-l-none px-3"
+                    disabled={queueingAction !== null}
+                    onClick={() => setPrintMenuOpen((prev) => !prev)}
+                    aria-label="เปิดตัวเลือกการพิมพ์"
+                  >
+                    <span className="text-xs">▾</span>
+                  </button>
+                </div>
 
                 {printMenuOpen ? (
                   <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg">
