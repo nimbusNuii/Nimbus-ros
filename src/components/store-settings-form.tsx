@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { APP_THEME_PRESETS } from "@/lib/app-theme-presets";
 
 type StoreSettings = {
@@ -22,11 +22,81 @@ type StoreSettingsFormProps = {
   initialSettings: StoreSettings;
 };
 
+const IMAGE_MAX_SIDE = 720;
+const TARGET_DATA_URL_LENGTH = 320_000;
+const MIN_QUALITY = 0.55;
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Cannot read image file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Cannot load image"));
+    image.src = source;
+  });
+}
+
+async function resizeImageFile(file: File) {
+  const src = await readFileAsDataUrl(file);
+  const image = await loadImage(src);
+  const ratio = Math.min(1, IMAGE_MAX_SIDE / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * ratio));
+  const height = Math.max(1, Math.round(image.height * ratio));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Cannot process image");
+
+  ctx.drawImage(image, 0, 0, width, height);
+  let quality = 0.82;
+  let output = canvas.toDataURL("image/jpeg", quality);
+  while (output.length > TARGET_DATA_URL_LENGTH && quality > MIN_QUALITY) {
+    quality -= 0.08;
+    output = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return output;
+}
+
 export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
   const [state, setState] = useState(initialSettings);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [logoInfo, setLogoInfo] = useState("");
+  const [processingLogo, setProcessingLogo] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  async function onLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setLogoInfo("");
+      return;
+    }
+
+    setProcessingLogo(true);
+    setError("");
+    try {
+      const resized = await resizeImageFile(file);
+      const sizeKb = Math.round((resized.length * 0.75) / 1024);
+      setState((prev) => ({ ...prev, receiptLogoUrl: resized }));
+      setLogoInfo(`ไฟล์ถูกย่อและแปลงแล้ว ~${sizeKb} KB`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot process image");
+    } finally {
+      setProcessingLogo(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -143,14 +213,19 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="receiptLogoUrl">โลโก้ใบเสร็จ (URL รูป)</label>
+            <label htmlFor="receiptLogoFile">โลโก้ใบเสร็จ (ไฟล์)</label>
             <input
-              id="receiptLogoUrl"
-              name="receiptLogoUrl"
-              value={state.receiptLogoUrl || ""}
-              onChange={(event) => setState((prev) => ({ ...prev, receiptLogoUrl: event.target.value }))}
-              placeholder="https://example.com/logo.png"
+              key={fileInputKey}
+              id="receiptLogoFile"
+              type="file"
+              accept="image/*"
+              onChange={onLogoFileChange}
+              disabled={processingLogo}
             />
+            <input type="hidden" name="receiptLogoUrl" value={state.receiptLogoUrl || ""} />
+            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+              ระบบจะย่อรูปอัตโนมัติและเก็บเป็น base64 เหมือนรูปสินค้า
+            </p>
           </div>
           <div className="field">
             <label htmlFor="brandPrimary">สีหลักแบรนด์</label>
@@ -197,18 +272,28 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
           <textarea id="address" name="address" rows={3} defaultValue={state.address || ""} />
         </div>
 
-        <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกข้อมูลร้าน"}</button>
+        <button disabled={saving || processingLogo}>
+          {saving ? "กำลังบันทึก..." : processingLogo ? "กำลังย่อรูป..." : "บันทึกข้อมูลร้าน"}
+        </button>
       </form>
       {state.receiptLogoUrl ? (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-          <p className="mb-2 text-sm text-[var(--muted)]">ตัวอย่างโลโก้บนใบเสร็จ</p>
+          <p className="mb-2 text-sm text-[var(--muted)]">
+            ตัวอย่างโลโก้บนใบเสร็จ {logoInfo ? `(${logoInfo})` : ""}
+          </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={state.receiptLogoUrl}
-            alt="Receipt logo preview"
-            className="mx-auto max-h-20 w-auto object-contain"
-            onError={() => setError("โหลดรูปโลโก้ไม่สำเร็จ กรุณาตรวจสอบ URL")}
-          />
+          <img src={state.receiptLogoUrl} alt="Receipt logo preview" className="mx-auto max-h-20 w-auto object-contain" />
+          <button
+            type="button"
+            className="secondary mt-2"
+            onClick={() => {
+              setState((prev) => ({ ...prev, receiptLogoUrl: null }));
+              setLogoInfo("");
+              setFileInputKey((prev) => prev + 1);
+            }}
+          >
+            ลบรูป
+          </button>
         </div>
       ) : null}
       {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}

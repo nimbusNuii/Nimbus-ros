@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 
@@ -24,7 +25,6 @@ type Customer = {
 };
 
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
-type QuickFilter = "ALL" | "IN_STOCK" | "LOW_STOCK" | "SOLD_OUT";
 
 type CartLine = {
   lineId: string;
@@ -59,7 +59,6 @@ export function CreateOrderClient({
   currency
 }: CreateOrderClientProps) {
   const [activeCategory, setActiveCategory] = useState("ALL");
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("ALL");
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("WALK_IN");
@@ -87,22 +86,7 @@ export function CreateOrderClient({
     return products.filter((item) => (item.category || "Uncategory") === activeCategory);
   }, [activeCategory, products]);
 
-  const filterCount = useMemo(
-    () => ({
-      ALL: categoryProducts.length,
-      IN_STOCK: categoryProducts.filter((item) => item.stockQty > 0).length,
-      LOW_STOCK: categoryProducts.filter((item) => item.stockQty > 0 && item.stockQty <= 10).length,
-      SOLD_OUT: categoryProducts.filter((item) => item.stockQty <= 0).length
-    }),
-    [categoryProducts]
-  );
-
-  const visibleProducts = useMemo(() => {
-    if (quickFilter === "IN_STOCK") return categoryProducts.filter((item) => item.stockQty > 0);
-    if (quickFilter === "LOW_STOCK") return categoryProducts.filter((item) => item.stockQty > 0 && item.stockQty <= 10);
-    if (quickFilter === "SOLD_OUT") return categoryProducts.filter((item) => item.stockQty <= 0);
-    return categoryProducts;
-  }, [categoryProducts, quickFilter]);
+  const visibleProducts = categoryProducts;
 
   const itemCount = cartLines.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = cartLines.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
@@ -202,6 +186,12 @@ export function CreateOrderClient({
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center">
+        <Link href="/" className="secondary rounded-lg px-3 py-2 text-sm">
+          กลับหน้าหลัก
+        </Link>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="card space-y-4">
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -215,37 +205,6 @@ export function CreateOrderClient({
                 {tab === "ALL" ? "ทั้งหมด" : tab}
               </button>
             ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2 border-t border-[var(--line)] pt-3">
-            <button
-              type="button"
-              onClick={() => setQuickFilter("ALL")}
-              className={quickFilter === "ALL" ? "" : "secondary"}
-            >
-              All ({filterCount.ALL})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilter("IN_STOCK")}
-              className={quickFilter === "IN_STOCK" ? "" : "secondary"}
-            >
-              พร้อมขาย ({filterCount.IN_STOCK})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilter("LOW_STOCK")}
-              className={quickFilter === "LOW_STOCK" ? "" : "secondary"}
-            >
-              สต็อกต่ำ ({filterCount.LOW_STOCK})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilter("SOLD_OUT")}
-              className={quickFilter === "SOLD_OUT" ? "" : "secondary"}
-            >
-              หมด ({filterCount.SOLD_OUT})
-            </button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
