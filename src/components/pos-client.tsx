@@ -527,69 +527,60 @@ export function PosClient({
           </div>
           <p className="mt-1 text-xs text-[var(--muted)]">รองรับส่งบางรายการเข้าครัว โดยเลือกเช็กบ็อกซ์ในแต่ละรายการ</p>
           {cartLines.length > 0 ? (
-            <div className="mt-2 flex min-h-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+            <div className="mt-2 flex min-h-0 max-h-72 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
               <p className="m-0 text-xs font-semibold text-[var(--muted)]">รายการที่เพิ่มไว้ตอนนี้</p>
-              <ul className="mt-2 max-h-52 space-y-1 overflow-y-auto pr-1">
+              <ul className="mt-2 space-y-1 overflow-y-auto pr-1">
                 {cartLines.map((line) => (
                   <li
                     key={`summary-${line.lineId}`}
                     className="flex items-start justify-between gap-2 rounded-lg border border-[var(--line)] bg-white px-2 py-1"
                   >
-                    <div className="min-w-0">
-                      <p className="m-0 text-sm font-medium text-[var(--text)]">
-                        {line.name} x{line.qty}
-                      </p>
-                      <p className="m-0 text-xs text-[var(--muted)]">{modifierNote(line.modifier) || "ไม่ระบุเพิ่มเติม"}</p>
+                    <div className="flex min-w-0 items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={line.sendToKitchen}
+                        onChange={() => toggleSend(line.lineId)}
+                        className="mt-1 h-4 w-4 shrink-0 accent-[#E24A3B]"
+                      />
+                      <div className="min-w-0">
+                        <p className="m-0 text-sm font-medium text-[var(--text)]">
+                          {line.name} x{line.qty}
+                        </p>
+                        <p className="m-0 text-xs text-[var(--muted)]">{modifierNote(line.modifier) || "ไม่ระบุเพิ่มเติม"}</p>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      className="secondary shrink-0 px-2 py-1 text-xs"
-                      onClick={() => removeLine(line.lineId)}
-                    >
-                      ลบ
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="secondary h-7 w-7 p-0 text-xs"
+                        onClick={() => updateQty(line.lineId, -1)}
+                      >
+                        -
+                      </button>
+                      <p className="m-0 text-sm font-medium text-[var(--text)]">
+                        {line.qty}
+                      </p>
+                      <button
+                        type="button"
+                        className="secondary h-7 w-7 p-0 text-xs"
+                        onClick={() => updateQty(line.lineId, 1)}
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary px-2 py-1 text-xs"
+                        onClick={() => removeLine(line.lineId)}
+                      >
+                        ลบ
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
-
-          <div className="mt-2 flex-1 min-h-0 space-y-2 overflow-auto pr-1">
-            {cartLines.length === 0 ? <p className="text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
-            {cartLines.map((line) => (
-              <article key={line.lineId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
-                <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={line.sendToKitchen}
-                    onChange={() => toggleSend(line.lineId)}
-                    className="mt-1 h-4 w-4 accent-[#E24A3B]"
-                  />
-                  <div>
-                    <div className="font-semibold">{line.name}</div>
-                    <p className="m-0 text-xs text-[var(--muted)]">
-                      {formatCurrency(line.unitPrice, currency)} x {line.qty}
-                    </p>
-                    <p className="m-0 text-xs text-[var(--muted)]">{modifierNote(line.modifier) || "ไม่ระบุเพิ่มเติม"}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button className="secondary h-8 w-8 p-0" onClick={() => updateQty(line.lineId, -1)}>
-                      -
-                    </button>
-                    <span className="min-w-6 text-center text-sm font-semibold">{line.qty}</span>
-                    <button className="secondary h-8 w-8 p-0" onClick={() => updateQty(line.lineId, 1)}>
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <button type="button" className="secondary text-xs" onClick={() => removeLine(line.lineId)}>
-                    ลบรายการ
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          {cartLines.length === 0 ? <p className="mt-2 text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
 
           <div className="mt-2 space-y-2 border-t border-[var(--line)] pt-3">
             <div className="field">
