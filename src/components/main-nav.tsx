@@ -145,12 +145,22 @@ export function MainNav() {
 
   return (
     <nav className="nav px-4 py-3">
-      <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between rounded-xl border border-white/10 bg-[#0f1b2f] px-4 py-3 shadow-[0_10px_35px_rgba(3,10,23,0.35)]">
+      <div className="topnav-shell mx-auto flex w-full max-w-[1240px] items-center justify-between px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 bg-[#111f36]">
+          <div className="topnav-chip grid h-10 w-10 place-items-center rounded-lg">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 10C6.5 7 9.5 7 13 10" stroke="#7e8cff" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M7 15C10.5 12 13.5 12 17 15" stroke="#6de2f7" strokeWidth="2.2" strokeLinecap="round" />
+              <path
+                d="M3 10C6.5 7 9.5 7 13 10"
+                stroke="var(--topnav-logo-a)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M7 15C10.5 12 13.5 12 17 15"
+                stroke="var(--topnav-logo-b)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
 
@@ -162,10 +172,8 @@ export function MainNav() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      active
-                        ? "bg-[#0b1322] text-white"
-                        : "text-slate-300 hover:bg-[#15233a] hover:text-white"
+                    className={`topnav-link rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      active ? "topnav-link-active" : ""
                     }`}
                   >
                     {link.label}
@@ -173,7 +181,7 @@ export function MainNav() {
                 );
               })
             ) : (
-              <Link href="/auth/login" className="rounded-lg bg-[#0b1322] px-3 py-2 text-sm font-medium text-white">
+              <Link href="/auth/login" className="topnav-link topnav-link-active rounded-lg px-3 py-2 text-sm font-medium">
                 Login
               </Link>
             )}
@@ -186,7 +194,7 @@ export function MainNav() {
               id="systemTheme"
               value={theme}
               onChange={(event) => onThemeChange(event.target.value as AppThemeKey)}
-              className="h-9 rounded-lg border border-white/10 bg-[#111f36] px-3 text-xs text-slate-200"
+              className="topnav-control h-9 rounded-lg px-3 text-xs"
               title={selectedTheme.description}
             >
               {APP_THEME_PRESETS.map((item) => (
@@ -199,7 +207,7 @@ export function MainNav() {
 
           <button
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#111f36] text-slate-200"
+            className="topnav-icon grid h-9 w-9 place-items-center rounded-full"
             title={selectedTheme.description}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -218,11 +226,11 @@ export function MainNav() {
 
           {user ? (
             <>
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#7e8cff] to-[#56d6ef] text-sm font-semibold text-[#0e1a2d]">
+              <div className="topnav-avatar grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">
                 {initials(user.fullName)}
               </div>
               <button
-                className="h-9 rounded-lg border border-white/10 bg-[#111f36] px-3 text-sm text-slate-100 hover:bg-[#1a2b46]"
+                className="topnav-logout h-9 rounded-lg px-3 text-sm"
                 type="button"
                 onClick={logout}
               >

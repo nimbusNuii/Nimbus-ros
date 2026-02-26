@@ -25,6 +25,31 @@
   --bg-pattern: radial-gradient(circle at 15% 10%, #fff4dd 0%, #f4f4ef 40%, #f1ede3 100%);
   --modal-overlay-bg: rgba(21, 17, 10, 0.62);
   --shadow-rgb: 31, 24, 16;
+  --topnav-shell-bg: #0f1b2f;
+  --topnav-shell-border: rgba(255, 255, 255, 0.12);
+  --topnav-shell-shadow: 0 10px 35px rgba(3, 10, 23, 0.35);
+  --topnav-chip-bg: #111f36;
+  --topnav-chip-border: rgba(255, 255, 255, 0.12);
+  --topnav-link-text: #cbd5e1;
+  --topnav-link-hover-bg: #15233a;
+  --topnav-link-hover-text: #ffffff;
+  --topnav-link-active-bg: #0b1322;
+  --topnav-link-active-text: #ffffff;
+  --topnav-control-bg: #111f36;
+  --topnav-control-border: rgba(255, 255, 255, 0.12);
+  --topnav-control-text: #e2e8f0;
+  --topnav-icon-bg: #111f36;
+  --topnav-icon-border: rgba(255, 255, 255, 0.12);
+  --topnav-icon-text: #e2e8f0;
+  --topnav-avatar-from: #7e8cff;
+  --topnav-avatar-to: #56d6ef;
+  --topnav-avatar-text: #0e1a2d;
+  --topnav-logout-bg: #111f36;
+  --topnav-logout-border: rgba(255, 255, 255, 0.12);
+  --topnav-logout-text: #f1f5f9;
+  --topnav-logout-hover-bg: #1a2b46;
+  --topnav-logo-a: #7e8cff;
+  --topnav-logo-b: #6de2f7;
 }
 
 html[data-theme="brand"] {
@@ -48,6 +73,31 @@ html[data-theme="brand"] {
   --bg-pattern: radial-gradient(circle at 14% 10%, #fff7ef 0%, #f6efe9 42%, #efdfd5 100%);
   --modal-overlay-bg: rgba(33, 18, 14, 0.58);
   --shadow-rgb: 45, 30, 23;
+  --topnav-shell-bg: color-mix(in srgb, var(--brand-primary) 18%, #1a202c);
+  --topnav-shell-border: color-mix(in srgb, var(--brand-primary) 35%, white);
+  --topnav-shell-shadow: 0 10px 35px rgba(36, 22, 16, 0.34);
+  --topnav-chip-bg: color-mix(in srgb, var(--brand-primary) 24%, #1f2937);
+  --topnav-chip-border: color-mix(in srgb, var(--brand-primary) 20%, white);
+  --topnav-link-text: #fbe8dc;
+  --topnav-link-hover-bg: color-mix(in srgb, var(--brand-primary) 32%, #1f2937);
+  --topnav-link-hover-text: #ffffff;
+  --topnav-link-active-bg: var(--brand-primary);
+  --topnav-link-active-text: #ffffff;
+  --topnav-control-bg: color-mix(in srgb, var(--brand-primary) 26%, #1f2937);
+  --topnav-control-border: color-mix(in srgb, var(--brand-primary) 22%, white);
+  --topnav-control-text: #ffffff;
+  --topnav-icon-bg: color-mix(in srgb, var(--brand-primary) 26%, #1f2937);
+  --topnav-icon-border: color-mix(in srgb, var(--brand-primary) 22%, white);
+  --topnav-icon-text: #ffffff;
+  --topnav-avatar-from: color-mix(in srgb, var(--brand-primary) 72%, white);
+  --topnav-avatar-to: color-mix(in srgb, var(--brand-accent) 70%, #facc15);
+  --topnav-avatar-text: #1f130e;
+  --topnav-logout-bg: color-mix(in srgb, var(--brand-primary) 26%, #1f2937);
+  --topnav-logout-border: color-mix(in srgb, var(--brand-primary) 22%, white);
+  --topnav-logout-text: #fff7f0;
+  --topnav-logout-hover-bg: color-mix(in srgb, var(--brand-primary) 38%, #1f2937);
+  --topnav-logo-a: color-mix(in srgb, var(--brand-primary) 62%, white);
+  --topnav-logo-b: color-mix(in srgb, var(--brand-accent) 58%, #fde68a);
 }
 
 html[data-theme="ocean-ink"] {
@@ -71,6 +121,31 @@ html[data-theme="ocean-ink"] {
   --bg-pattern: radial-gradient(circle at 18% 12%, #f7fcff 0%, #eaf2f9 44%, #dde7f2 100%);
   --modal-overlay-bg: rgba(7, 23, 36, 0.58);
   --shadow-rgb: 12, 42, 64;
+  --topnav-shell-bg: #12324e;
+  --topnav-shell-border: rgba(181, 211, 236, 0.4);
+  --topnav-shell-shadow: 0 10px 35px rgba(8, 31, 50, 0.36);
+  --topnav-chip-bg: #163c5d;
+  --topnav-chip-border: rgba(184, 217, 244, 0.36);
+  --topnav-link-text: #d6e8f7;
+  --topnav-link-hover-bg: #1f4b74;
+  --topnav-link-hover-text: #ffffff;
+  --topnav-link-active-bg: #0e2236;
+  --topnav-link-active-text: #ffffff;
+  --topnav-control-bg: #183e61;
+  --topnav-control-border: rgba(184, 217, 244, 0.3);
+  --topnav-control-text: #e6f2ff;
+  --topnav-icon-bg: #183e61;
+  --topnav-icon-border: rgba(184, 217, 244, 0.3);
+  --topnav-icon-text: #e6f2ff;
+  --topnav-avatar-from: #7bb7ff;
+  --topnav-avatar-to: #66e7ef;
+  --topnav-avatar-text: #0f2940;
+  --topnav-logout-bg: #183e61;
+  --topnav-logout-border: rgba(184, 217, 244, 0.3);
+  --topnav-logout-text: #eef7ff;
+  --topnav-logout-hover-bg: #24537d;
+  --topnav-logo-a: #9cc9ff;
+  --topnav-logo-b: #8ef0ff;
 }
 
 html[data-theme="matcha-paper"] {
@@ -94,6 +169,31 @@ html[data-theme="matcha-paper"] {
   --bg-pattern: radial-gradient(circle at 20% 8%, #f8ffef 0%, #eef3e7 42%, #e1ead7 100%);
   --modal-overlay-bg: rgba(16, 28, 17, 0.56);
   --shadow-rgb: 27, 44, 30;
+  --topnav-shell-bg: #243b2d;
+  --topnav-shell-border: rgba(194, 222, 191, 0.35);
+  --topnav-shell-shadow: 0 10px 35px rgba(20, 38, 23, 0.34);
+  --topnav-chip-bg: #2a4735;
+  --topnav-chip-border: rgba(194, 222, 191, 0.32);
+  --topnav-link-text: #d8ead3;
+  --topnav-link-hover-bg: #355541;
+  --topnav-link-hover-text: #ffffff;
+  --topnav-link-active-bg: #17291f;
+  --topnav-link-active-text: #ffffff;
+  --topnav-control-bg: #2a4735;
+  --topnav-control-border: rgba(194, 222, 191, 0.28);
+  --topnav-control-text: #e8f7e3;
+  --topnav-icon-bg: #2a4735;
+  --topnav-icon-border: rgba(194, 222, 191, 0.28);
+  --topnav-icon-text: #e8f7e3;
+  --topnav-avatar-from: #9fd68d;
+  --topnav-avatar-to: #75dfc3;
+  --topnav-avatar-text: #173023;
+  --topnav-logout-bg: #2a4735;
+  --topnav-logout-border: rgba(194, 222, 191, 0.28);
+  --topnav-logout-text: #eefce7;
+  --topnav-logout-hover-bg: #3a5e48;
+  --topnav-logo-a: #b2e09f;
+  --topnav-logo-b: #89efd5;
 }
 
 html[data-theme="sunset-ledger"] {
@@ -117,6 +217,31 @@ html[data-theme="sunset-ledger"] {
   --bg-pattern: radial-gradient(circle at 12% 10%, #fff5e8 0%, #f7ede5 40%, #f2e0d3 100%);
   --modal-overlay-bg: rgba(34, 19, 14, 0.58);
   --shadow-rgb: 48, 28, 20;
+  --topnav-shell-bg: #4d2c21;
+  --topnav-shell-border: rgba(236, 199, 182, 0.34);
+  --topnav-shell-shadow: 0 10px 35px rgba(43, 24, 17, 0.35);
+  --topnav-chip-bg: #5a3325;
+  --topnav-chip-border: rgba(236, 199, 182, 0.3);
+  --topnav-link-text: #f4dacb;
+  --topnav-link-hover-bg: #6a3c2b;
+  --topnav-link-hover-text: #fffaf6;
+  --topnav-link-active-bg: #321b13;
+  --topnav-link-active-text: #ffffff;
+  --topnav-control-bg: #5a3325;
+  --topnav-control-border: rgba(236, 199, 182, 0.3);
+  --topnav-control-text: #fff1e8;
+  --topnav-icon-bg: #5a3325;
+  --topnav-icon-border: rgba(236, 199, 182, 0.3);
+  --topnav-icon-text: #fff1e8;
+  --topnav-avatar-from: #ffb47b;
+  --topnav-avatar-to: #ffd98a;
+  --topnav-avatar-text: #3b1f15;
+  --topnav-logout-bg: #5a3325;
+  --topnav-logout-border: rgba(236, 199, 182, 0.3);
+  --topnav-logout-text: #fff4ed;
+  --topnav-logout-hover-bg: #72422f;
+  --topnav-logo-a: #ffc198;
+  --topnav-logo-b: #ffe8ab;
 }
 
 html[data-theme="graphite-night"] {
@@ -140,6 +265,31 @@ html[data-theme="graphite-night"] {
   --bg-pattern: radial-gradient(circle at 18% 10%, #2a3138 0%, #1e2328 45%, #181d21 100%);
   --modal-overlay-bg: rgba(3, 6, 9, 0.72);
   --shadow-rgb: 5, 8, 12;
+  --topnav-shell-bg: #0f1419;
+  --topnav-shell-border: rgba(101, 116, 133, 0.45);
+  --topnav-shell-shadow: 0 10px 35px rgba(2, 5, 8, 0.5);
+  --topnav-chip-bg: #171d24;
+  --topnav-chip-border: rgba(101, 116, 133, 0.35);
+  --topnav-link-text: #d1d9e2;
+  --topnav-link-hover-bg: #242d37;
+  --topnav-link-hover-text: #ffffff;
+  --topnav-link-active-bg: #f08b3e;
+  --topnav-link-active-text: #1f262e;
+  --topnav-control-bg: #1a2129;
+  --topnav-control-border: rgba(101, 116, 133, 0.35);
+  --topnav-control-text: #dfe7ef;
+  --topnav-icon-bg: #1a2129;
+  --topnav-icon-border: rgba(101, 116, 133, 0.35);
+  --topnav-icon-text: #dfe7ef;
+  --topnav-avatar-from: #f8a765;
+  --topnav-avatar-to: #ffd17c;
+  --topnav-avatar-text: #2a1c11;
+  --topnav-logout-bg: #1a2129;
+  --topnav-logout-border: rgba(101, 116, 133, 0.35);
+  --topnav-logout-text: #f4f8fc;
+  --topnav-logout-hover-bg: #2a3440;
+  --topnav-logo-a: #f3ba89;
+  --topnav-logo-b: #ffd38f;
 }
 
 * {
@@ -296,6 +446,59 @@ label {
 .nav-link.active {
   background: var(--nav-active-bg);
   color: var(--nav-active-text);
+}
+
+.topnav-shell {
+  border-radius: 0.8rem;
+  border: 1px solid var(--topnav-shell-border);
+  background: var(--topnav-shell-bg);
+  box-shadow: var(--topnav-shell-shadow);
+}
+
+.topnav-chip {
+  border: 1px solid var(--topnav-chip-border);
+  background: var(--topnav-chip-bg);
+}
+
+.topnav-link {
+  color: var(--topnav-link-text);
+}
+
+.topnav-link:hover {
+  background: var(--topnav-link-hover-bg);
+  color: var(--topnav-link-hover-text);
+}
+
+.topnav-link.topnav-link-active {
+  background: var(--topnav-link-active-bg);
+  color: var(--topnav-link-active-text);
+}
+
+.topnav-control {
+  border: 1px solid var(--topnav-control-border);
+  background: var(--topnav-control-bg);
+  color: var(--topnav-control-text);
+}
+
+.topnav-icon {
+  border: 1px solid var(--topnav-icon-border);
+  background: var(--topnav-icon-bg);
+  color: var(--topnav-icon-text);
+}
+
+.topnav-avatar {
+  color: var(--topnav-avatar-text);
+  background: linear-gradient(135deg, var(--topnav-avatar-from), var(--topnav-avatar-to));
+}
+
+.topnav-logout {
+  border: 1px solid var(--topnav-logout-border);
+  background: var(--topnav-logout-bg);
+  color: var(--topnav-logout-text);
+}
+
+.topnav-logout:hover {
+  background: var(--topnav-logout-hover-bg);
 }
 
 .modal-overlay {
