@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
 
 type PrintChannel = "CASHIER_RECEIPT" | "KITCHEN_TICKET";
@@ -106,10 +106,12 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [queueingAction, setQueueingAction] = useState<PrintChannel | "BOTH" | null>(null);
+  const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [printers, setPrinters] = useState<PrinterOption[]>([]);
   const [cashierPrinter, setCashierPrinter] = useState("");
   const [kitchenPrinter, setKitchenPrinter] = useState("");
   const [printJobs, setPrintJobs] = useState<Partial<Record<PrintChannel, PrintJobLive>>>({});
+  const printMenuRef = useRef<HTMLDivElement | null>(null);
 
   const cashierSelectedPrinter = useMemo(
     () => printers.find((item) => item.target === cashierPrinter) || null,
@@ -130,6 +132,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
       setError("");
       setMessage("");
       setPrintJobs({});
+      setPrintMenuOpen(false);
 
       try {
         const [receiptResponse, printersResponse] = await Promise.all([
@@ -188,6 +191,23 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
       cancelled = true;
     };
   }, [orderId]);
+
+  useEffect(() => {
+    if (!printMenuOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!printMenuRef.current) return;
+      const target = event.target as Node;
+      if (!printMenuRef.current.contains(target)) {
+        setPrintMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [printMenuOpen]);
 
   useEffect(() => {
     const pendingEntries = Object.entries(printJobs).filter((entry) => entry[1]?.status === "PENDING");
@@ -317,6 +337,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     }
 
     setQueueingAction(channel);
+    setPrintMenuOpen(false);
     setError("");
     setMessage("");
 
@@ -342,6 +363,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     }
 
     setQueueingAction("BOTH");
+    setPrintMenuOpen(false);
     setError("");
     setMessage("");
 
@@ -416,23 +438,52 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
               <a className="secondary" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
                 ดาวน์โหลด PDF
               </a>
-              <button disabled={queueingAction !== null} onClick={() => void enqueueBoth()}>
-                {queueingAction === "BOTH" ? "กำลังส่ง 2 เครื่อง..." : "พิมพ์ 2 เครื่อง"}
-              </button>
-              <button
-                className="secondary"
-                disabled={queueingAction !== null}
-                onClick={() => void enqueue("CASHIER_RECEIPT")}
-              >
-                {queueingAction === "CASHIER_RECEIPT" ? "กำลังส่ง..." : "คิวใบเสร็จ"}
-              </button>
-              <button
-                className="secondary"
-                disabled={queueingAction !== null}
-                onClick={() => void enqueue("KITCHEN_TICKET")}
-              >
-                {queueingAction === "KITCHEN_TICKET" ? "กำลังส่ง..." : "คิวบิลครัว"}
-              </button>
+              <div className="relative" ref={printMenuRef}>
+                <button
+                  type="button"
+                  disabled={queueingAction !== null}
+                  onClick={() => setPrintMenuOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2"
+                >
+                  {queueingAction === "BOTH"
+                    ? "กำลังส่ง 2 เครื่อง..."
+                    : queueingAction === "CASHIER_RECEIPT"
+                      ? "กำลังส่งใบเสร็จ..."
+                      : queueingAction === "KITCHEN_TICKET"
+                        ? "กำลังส่งบิลครัว..."
+                        : "พิมพ์ใบเสร็จ"}
+                  <span className="text-xs">▾</span>
+                </button>
+
+                {printMenuOpen ? (
+                  <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg">
+                    <button
+                      type="button"
+                      className="secondary mb-1 w-full justify-start text-left"
+                      disabled={queueingAction !== null}
+                      onClick={() => void enqueueBoth()}
+                    >
+                      พิมพ์ 2 เครื่อง (ใบเสร็จ + ครัว)
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary mb-1 w-full justify-start text-left"
+                      disabled={queueingAction !== null}
+                      onClick={() => void enqueue("CASHIER_RECEIPT")}
+                    >
+                      พิมพ์เฉพาะใบเสร็จ
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary w-full justify-start text-left"
+                      disabled={queueingAction !== null}
+                      onClick={() => void enqueue("KITCHEN_TICKET")}
+                    >
+                      พิมพ์เฉพาะบิลครัว
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </section>
