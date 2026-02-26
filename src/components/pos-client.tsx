@@ -154,6 +154,7 @@ export function PosClient({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [receiptOrderId, setReceiptOrderId] = useState<string | null>(null);
+  const [recentReceiptsOpen, setRecentReceiptsOpen] = useState(false);
   const [recentReceipts, setRecentReceipts] = useState(initialRecentReceipts);
   const [modifierProduct, setModifierProduct] = useState<Product | null>(null);
   const [modifierState, setModifierState] = useState<CartModifier>(DEFAULT_MODIFIER);
@@ -671,6 +672,9 @@ export function PosClient({
               <p className="m-0 text-xs text-[var(--muted)]">
                 `Send to Kitchen` = บันทึกบิลชำระแล้วจากรายการที่เลือก และส่งคิวให้ครัวทันที | `Proceed to Payment` = ปิดบิลทั้งตะกร้าและชำระเงินทันที
               </p>
+              <button type="button" className="secondary w-full" onClick={() => setRecentReceiptsOpen(true)}>
+                ใบเสร็จย้อนหลังล่าสุด (10 รายการ)
+              </button>
             </div>
 
             {message ? <p className="mt-1 text-sm text-[var(--ok)]">{message}</p> : null}
@@ -678,63 +682,6 @@ export function PosClient({
           </div>
         </section>
       </div>
-
-      <section className="card mt-4">
-        <h2 className="mt-0 text-xl font-semibold">ใบเสร็จย้อนหลังล่าสุด (10 รายการ)</h2>
-        <div className="overflow-x-auto">
-          <table className="table min-w-[760px]">
-            <thead>
-              <tr>
-                <th>เวลา</th>
-                <th>เลขที่บิล</th>
-                <th>สถานะ</th>
-                <th>จำนวน</th>
-                <th>ลูกค้า</th>
-                <th>ชำระ</th>
-                <th>ยอดสุทธิ</th>
-                <th>ดู/พิมพ์</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentReceipts.map((row) => (
-                <tr key={row.id}>
-                  <td>{formatDateTime(row.createdAt)}</td>
-                  <td>{row.orderNumber}</td>
-                  <td>
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-medium ${
-                        row.status === "PAID"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : row.status === "OPEN"
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-rose-50 text-rose-700"
-                      }`}
-                    >
-                      {receiptStatusLabel(row.status)}
-                    </span>
-                  </td>
-                  <td>{row.itemCount}</td>
-                  <td>{customerNameLabel(row)}</td>
-                  <td>{row.paymentMethod}</td>
-                  <td>{formatCurrency(row.total, currency)}</td>
-                  <td>
-                    <button className="secondary" type="button" onClick={() => setReceiptOrderId(row.id)}>
-                      เปิด Modal
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {recentReceipts.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center text-[var(--muted)]">
-                    ยังไม่มีใบเสร็จ
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {modifierProduct ? (
         <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -872,6 +819,82 @@ export function PosClient({
           }`}
         >
           {toast.text}
+        </div>
+      ) : null}
+
+      {recentReceiptsOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setRecentReceiptsOpen(false);
+            }
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(1100px, 100%)" }}>
+            <div className="modal-header">
+              <h3 className="m-0 text-lg font-semibold">ใบเสร็จย้อนหลังล่าสุด (10 รายการ)</h3>
+              <button className="secondary" type="button" onClick={() => setRecentReceiptsOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="table min-w-[760px]">
+                <thead>
+                  <tr>
+                    <th>เวลา</th>
+                    <th>เลขที่บิล</th>
+                    <th>สถานะ</th>
+                    <th>จำนวน</th>
+                    <th>ลูกค้า</th>
+                    <th>ชำระ</th>
+                    <th>ยอดสุทธิ</th>
+                    <th>ดู/พิมพ์</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentReceipts.map((row) => (
+                    <tr key={row.id}>
+                      <td>{formatDateTime(row.createdAt)}</td>
+                      <td>{row.orderNumber}</td>
+                      <td>
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${
+                            row.status === "PAID"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : row.status === "OPEN"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-rose-50 text-rose-700"
+                          }`}
+                        >
+                          {receiptStatusLabel(row.status)}
+                        </span>
+                      </td>
+                      <td>{row.itemCount}</td>
+                      <td>{customerNameLabel(row)}</td>
+                      <td>{row.paymentMethod}</td>
+                      <td>{formatCurrency(row.total, currency)}</td>
+                      <td>
+                        <button className="secondary" type="button" onClick={() => setReceiptOrderId(row.id)}>
+                          เปิดใบเสร็จ
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentReceipts.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center text-[var(--muted)]">
+                        ยังไม่มีใบเสร็จ
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : null}
 
