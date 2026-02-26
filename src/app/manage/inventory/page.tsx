@@ -8,8 +8,6 @@ export default async function ManageInventoryPage() {
 
   return (
     <div>
-      <h1 className="page-title">ประวัติสต็อก</h1>
-      <p className="page-subtitle">ติดตามการตัดสต็อกจากการขาย และการปรับ/เติมสต็อก</p>
       <InventoryLogBoard />
     </div>
   );

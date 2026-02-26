@@ -11,8 +11,6 @@ export default async function ReceiptsPage() {
 
   return (
     <div>
-      <h1 className="page-title">ใบเสร็จย้อนหลัง</h1>
-      <p className="page-subtitle">ค้นหาและเปิดพรีวิวใบเสร็จเพื่อพิมพ์แบบไม่ออกจากหน้าเดิม</p>
       <ReceiptHistoryBoard currency={setting?.currency || "THB"} />
     </div>
   );

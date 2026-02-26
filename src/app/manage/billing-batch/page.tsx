@@ -25,8 +25,6 @@ export default async function ManageBillingBatchPage() {
 
   return (
     <div>
-      <h1 className="page-title">ลงบิลย้อนหลัง (ชำระแล้ว)</h1>
-      <p className="page-subtitle">เพิ่มทีละบิลแบบชำระแล้ว เลือกวันเวลา ลูกค้า และสินค้าแบบ Modal</p>
       <BillingBatchManager
         products={products.map((product) => ({
           id: product.id,

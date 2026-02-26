@@ -202,11 +202,6 @@ export function CreateOrderClient({
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="page-title">Create Order</h1>
-        <p className="page-subtitle">หน้ารับออเดอร์แบบเต็มจอสำหรับแคชเชียร์ ไม่มีแถบเมนูรบกวนการทำงาน</p>
-      </header>
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="card space-y-4">
           <div className="flex gap-2 overflow-x-auto pb-1">

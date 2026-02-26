@@ -73,8 +73,6 @@ export default async function PosPage() {
 
   return (
     <div>
-      <h1 className="page-title">หน้าร้าน (POS)</h1>
-      <p className="page-subtitle">โหมดแท็บเล็ต 12.9 นิ้ว: เลือกเมนูไว ปรับแต่งชัด ส่งครัวและชำระเงินได้ในหน้าเดียว</p>
 
       <PosClient
         products={products.map((product) => ({

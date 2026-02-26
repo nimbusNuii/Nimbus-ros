@@ -16,8 +16,6 @@ export default async function ManageCustomersPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการลูกค้า</h1>
-      <p className="page-subtitle">เพิ่ม/แก้ไขลูกค้าประจำหรือขาจร และกำหนดการใช้งานใน POS dropdown</p>
       <CustomerManager initialCustomers={customers} currency={settings?.currency || "THB"} />
     </div>
   );

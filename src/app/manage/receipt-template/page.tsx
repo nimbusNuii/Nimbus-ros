@@ -35,8 +35,6 @@ export default async function ReceiptTemplatePage() {
 
   return (
     <div>
-      <h1 className="page-title">Template ใบเสร็จ</h1>
-      <p className="page-subtitle">ปรับรูปแบบใบเสร็จ, ดูตัวอย่างธีมสำเร็จรูป และพรีวิวก่อนใช้งานจริง</p>
       <ReceiptTemplateForm
         initialTemplate={{
           ...safeTemplate,

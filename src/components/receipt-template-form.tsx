@@ -223,112 +223,105 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
         <section className="card">
-        <h2 style={{ marginTop: 0 }}>ตั้งค่า Template ใบเสร็จ</h2>
-        <p className="page-subtitle" style={{ marginTop: 0 }}>
-          ใช้ตัวแปร: {"{{businessName}}"}, {"{{orderNumber}}"}, {"{{date}}"}, {"{{total}}"}
-        </p>
-
-        <form onSubmit={onSubmit}>
-          <div className="field">
-            <label htmlFor="name">ชื่อ template</label>
-            <input
-              id="name"
-              name="name"
-              value={template.name}
-              onChange={(event) => setTemplate((prev) => ({ ...prev, name: event.target.value }))}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="headerText">ข้อความหัวใบเสร็จ</label>
-            <textarea
-              id="headerText"
-              name="headerText"
-              rows={4}
-              value={template.headerText}
-              onChange={(event) => setTemplate((prev) => ({ ...prev, headerText: event.target.value }))}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="footerText">ข้อความท้ายใบเสร็จ</label>
-            <textarea
-              id="footerText"
-              name="footerText"
-              rows={4}
-              value={template.footerText}
-              onChange={(event) => setTemplate((prev) => ({ ...prev, footerText: event.target.value }))}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="paperWidth">ความกว้างกระดาษ</label>
-            <select
-              id="paperWidth"
-              name="paperWidth"
-              value={template.paperWidth}
-              onChange={(event) => setTemplate((prev) => ({ ...prev, paperWidth: Number(event.target.value) }))}
-            >
-              <option value={80}>80 mm</option>
-              <option value={58}>58 mm</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="customCss">Custom CSS (optional)</label>
-            <textarea
-              id="customCss"
-              name="customCss"
-              rows={6}
-              value={template.customCss || ""}
-              onChange={(event) => setTemplate((prev) => ({ ...prev, customCss: event.target.value }))}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+          <h2 style={{ marginTop: 0 }}>ตั้งค่า Template ใบเสร็จ</h2>
+          <form onSubmit={onSubmit}>
+            <div className="field">
+              <label htmlFor="name">ชื่อ template</label>
               <input
-                type="checkbox"
-                name="showStoreInfo"
-                checked={template.showStoreInfo}
-                onChange={(event) => setTemplate((prev) => ({ ...prev, showStoreInfo: event.target.checked }))}
+                id="name"
+                name="name"
+                value={template.name}
+                onChange={(event) => setTemplate((prev) => ({ ...prev, name: event.target.value }))}
               />
-              แสดงข้อมูลร้าน
-            </label>
+            </div>
 
-            <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
-              <input
-                type="checkbox"
-                name="showVatNumber"
-                checked={template.showVatNumber}
-                onChange={(event) => setTemplate((prev) => ({ ...prev, showVatNumber: event.target.checked }))}
+            <div className="field">
+              <label htmlFor="headerText">ข้อความหัวใบเสร็จ</label>
+              <textarea
+                id="headerText"
+                name="headerText"
+                rows={4}
+                value={template.headerText}
+                onChange={(event) => setTemplate((prev) => ({ ...prev, headerText: event.target.value }))}
               />
-              แสดงเลขภาษี
-            </label>
+            </div>
 
-            <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
-              <input
-                type="checkbox"
-                name="showCostBreakdown"
-                checked={template.showCostBreakdown}
-                onChange={(event) => setTemplate((prev) => ({ ...prev, showCostBreakdown: event.target.checked }))}
+            <div className="field">
+              <label htmlFor="footerText">ข้อความท้ายใบเสร็จ</label>
+              <textarea
+                id="footerText"
+                name="footerText"
+                rows={4}
+                value={template.footerText}
+                onChange={(event) => setTemplate((prev) => ({ ...prev, footerText: event.target.value }))}
               />
-              แสดงต้นทุนประมาณการ
-            </label>
-          </div>
+            </div>
 
-          <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึก template"}</button>
-        </form>
+            <div className="field">
+              <label htmlFor="paperWidth">ความกว้างกระดาษ</label>
+              <select
+                id="paperWidth"
+                name="paperWidth"
+                value={template.paperWidth}
+                onChange={(event) => setTemplate((prev) => ({ ...prev, paperWidth: Number(event.target.value) }))}
+              >
+                <option value={80}>80 mm</option>
+                <option value={58}>58 mm</option>
+              </select>
+            </div>
 
-        {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+            <div className="field">
+              <label htmlFor="customCss">Custom CSS (optional)</label>
+              <textarea
+                id="customCss"
+                name="customCss"
+                rows={6}
+                value={template.customCss || ""}
+                onChange={(event) => setTemplate((prev) => ({ ...prev, customCss: event.target.value }))}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+                <input
+                  type="checkbox"
+                  name="showStoreInfo"
+                  checked={template.showStoreInfo}
+                  onChange={(event) => setTemplate((prev) => ({ ...prev, showStoreInfo: event.target.checked }))}
+                />
+                แสดงข้อมูลร้าน
+              </label>
+
+              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+                <input
+                  type="checkbox"
+                  name="showVatNumber"
+                  checked={template.showVatNumber}
+                  onChange={(event) => setTemplate((prev) => ({ ...prev, showVatNumber: event.target.checked }))}
+                />
+                แสดงเลขภาษี
+              </label>
+
+              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+                <input
+                  type="checkbox"
+                  name="showCostBreakdown"
+                  checked={template.showCostBreakdown}
+                  onChange={(event) => setTemplate((prev) => ({ ...prev, showCostBreakdown: event.target.checked }))}
+                />
+                แสดงต้นทุนประมาณการ
+              </label>
+            </div>
+
+            <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึก template"}</button>
+          </form>
+
+          {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
+          {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
         </section>
 
         <section className="card">
           <h2 style={{ marginTop: 0 }}>ตัวอย่างธีม: {previewTheme.label}</h2>
-          <p className="page-subtitle" style={{ marginTop: 0 }}>
-            นี่คือตัวอย่างก่อน apply เข้า template ปัจจุบัน
-          </p>
           <ReceiptDocument
             order={previewOrder}
             store={store}

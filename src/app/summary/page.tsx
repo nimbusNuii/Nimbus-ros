@@ -27,8 +27,6 @@ export default async function SummaryPage({
 
   return (
     <div>
-      <h1 className="page-title">หน้าสรุป</h1>
-      <p className="page-subtitle">สรุปยอดขาย ต้นทุน ค่าของ ค่าพนักงาน ค่าไฟ และกำไรสุทธิ</p>
 
       <form className="card mb-4">
         <div className="grid grid-3 items-end gap-3">

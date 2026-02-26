@@ -44,10 +44,6 @@ export function LoginForm({ nextPath }: LoginFormProps) {
 
   return (
     <section className="card" style={{ maxWidth: 420, margin: "30px auto" }}>
-      <h1 className="page-title" style={{ marginTop: 0 }}>
-        เข้าสู่ระบบ POS
-      </h1>
-      <p className="page-subtitle">เลือกผู้ใช้และ PIN เพื่อเข้าใช้งานหน้าที่ที่ได้รับสิทธิ์</p>
 
       <form onSubmit={onSubmit}>
         <div className="field">

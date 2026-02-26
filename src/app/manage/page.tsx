@@ -37,8 +37,6 @@ export default async function ManagePage() {
 
   return (
     <div>
-      <h1 className="page-title">หน้าจัดการ</h1>
-      <p className="page-subtitle">จัดการข้อมูลร้าน สินค้า ค่าใช้จ่าย และ template ใบเสร็จ</p>
 
       <section className="grid grid-3 mb-4">
         <Link href="/manage/products" className="card">

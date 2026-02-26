@@ -31,8 +31,6 @@ export default async function ManageProductsPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการสินค้า</h1>
-      <p className="page-subtitle">เพิ่มเมนู ปรับราคา และจัดการสต็อกสินค้า</p>
       <ProductManager
         initialProducts={products.map((product) => ({
           ...product,

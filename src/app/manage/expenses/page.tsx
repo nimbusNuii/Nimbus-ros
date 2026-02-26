@@ -15,8 +15,6 @@ export default async function ManageExpensesPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการค่าใช้จ่าย</h1>
-      <p className="page-subtitle">บันทึกค่าของ ค่าพนักงาน ค่าไฟ และอื่นๆ</p>
       <ExpenseManager
         initialExpenses={expenses.map((expense) => ({
           ...expense,

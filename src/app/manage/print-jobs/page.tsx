@@ -8,8 +8,6 @@ export default async function PrintJobsPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการคิวพิมพ์</h1>
-      <p className="page-subtitle">ดูคิวพิมพ์และกรองตาม channel/target สำหรับหลายเครื่องพิมพ์</p>
       <PrintJobsBoard />
     </div>
   );

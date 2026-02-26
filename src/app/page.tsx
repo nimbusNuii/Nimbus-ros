@@ -39,10 +39,6 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1 className="page-title">ระบบ POS สำหรับร้านอาหาร/คาเฟ่</h1>
-      <p className="page-subtitle">
-        รองรับหน้าร้าน หน้าครัว หน้าสรุป หน้าจัดการ และแก้ไข template ใบเสร็จได้
-      </p>
 
       <section className="grid grid-2">
         {modules.map((module) => (

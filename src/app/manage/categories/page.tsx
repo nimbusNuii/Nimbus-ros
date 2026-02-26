@@ -20,8 +20,6 @@ export default async function ManageCategoriesPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการหมวดหมู่สินค้า</h1>
-      <p className="page-subtitle">สร้างหมวดหมู่แบบแยก และนำไปเลือกใช้ในหน้าเพิ่มสินค้า</p>
       <CategoryManager
         initialCategories={categories.map((item) => ({
           id: item.id,

@@ -8,8 +8,6 @@ export default async function AuditPage() {
 
   return (
     <div>
-      <h1 className="page-title">Audit Log</h1>
-      <p className="page-subtitle">ตรวจสอบว่าใครทำอะไร เมื่อไหร่ และกระทบข้อมูลไหน</p>
       <AuditLogBoard />
     </div>
   );

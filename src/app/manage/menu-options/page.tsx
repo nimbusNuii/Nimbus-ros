@@ -13,8 +13,6 @@ export default async function ManageMenuOptionsPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการตัวเลือกเมนู</h1>
-      <p className="page-subtitle">เพิ่ม/ลดตัวเลือกปรับแต่ง เช่น ระดับเผ็ด เพิ่มพิเศษ และไม่ใส่วัตถุดิบ</p>
       <MenuOptionManager
         initialOptions={options.map((item) => ({
           id: item.id,

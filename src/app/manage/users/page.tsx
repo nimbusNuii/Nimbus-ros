@@ -13,8 +13,6 @@ export default async function ManageUsersPage() {
 
   return (
     <div>
-      <h1 className="page-title">จัดการผู้ใช้งาน</h1>
-      <p className="page-subtitle">กำหนดสิทธิ์ของแคชเชียร์/ครัว/ผู้จัดการ/แอดมิน และจัดการ PIN</p>
       <UserManager
         initialUsers={users.map((user) => ({
           id: user.id,
