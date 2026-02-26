@@ -29,6 +29,7 @@ async function getOrCreate() {
       appThemeKey: "sandstone",
       brandPrimary: "#b24a2b",
       brandAccent: "#8f381f",
+      vatEnabled: true,
       taxRate: 7,
       currency: "THB"
     }
@@ -61,6 +62,7 @@ export async function PUT(request: Request) {
       brandPrimary?: string;
       brandAccent?: string;
       receiptLogoUrl?: string;
+      vatEnabled?: boolean;
       taxRate?: number;
       currency?: string;
     };
@@ -83,6 +85,7 @@ export async function PUT(request: Request) {
         brandPrimary,
         brandAccent,
         receiptLogoUrl,
+        vatEnabled: body.vatEnabled !== false,
         taxRate: Number(body.taxRate ?? 7),
         currency: body.currency?.trim() || "THB"
       },
@@ -97,6 +100,7 @@ export async function PUT(request: Request) {
         brandPrimary,
         brandAccent,
         receiptLogoUrl,
+        vatEnabled: body.vatEnabled !== false,
         taxRate: Number(body.taxRate ?? 7),
         currency: body.currency?.trim() || "THB"
       }
@@ -117,6 +121,7 @@ export async function PUT(request: Request) {
         brandPrimary: updated.brandPrimary,
         brandAccent: updated.brandAccent,
         receiptLogoUrl: updated.receiptLogoUrl,
+        vatEnabled: updated.vatEnabled,
         taxRate: toNumber(updated.taxRate),
         currency: updated.currency
       }

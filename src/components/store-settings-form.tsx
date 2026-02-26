@@ -13,6 +13,7 @@ type StoreSettings = {
   brandPrimary: string;
   brandAccent: string;
   receiptLogoUrl: string | null;
+  vatEnabled: boolean;
   taxRate: number;
   currency: string;
 };
@@ -45,6 +46,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
       brandPrimary: String(form.get("brandPrimary") || "#b24a2b"),
       brandAccent: String(form.get("brandAccent") || "#8f381f"),
       receiptLogoUrl: String(form.get("receiptLogoUrl") || ""),
+      vatEnabled: Boolean(form.get("vatEnabled")),
       taxRate: Number(form.get("taxRate") || "0"),
       currency: String(form.get("currency") || "THB")
     };
@@ -95,11 +97,35 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
           </div>
           <div className="field">
             <label htmlFor="taxRate">ภาษี (%)</label>
-            <input id="taxRate" name="taxRate" type="number" step="0.01" defaultValue={state.taxRate} />
+            <input
+              id="taxRate"
+              name="taxRate"
+              type="number"
+              step="0.01"
+              value={state.taxRate}
+              onChange={(event) => setState((prev) => ({ ...prev, taxRate: Number(event.target.value) || 0 }))}
+              disabled={!state.vatEnabled}
+            />
+            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+              {state.vatEnabled ? "ระบบจะคำนวณ VAT จาก % นี้" : "ปิด VAT อยู่ จะไม่คิดภาษีในใบเสร็จใหม่"}
+            </p>
           </div>
           <div className="field">
             <label htmlFor="currency">สกุลเงิน</label>
             <input id="currency" name="currency" defaultValue={state.currency} />
+          </div>
+          <div className="field">
+            <label htmlFor="vatEnabled">เปิดใช้งาน VAT</label>
+            <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+              <input
+                id="vatEnabled"
+                name="vatEnabled"
+                type="checkbox"
+                checked={state.vatEnabled}
+                onChange={(event) => setState((prev) => ({ ...prev, vatEnabled: event.target.checked }))}
+              />
+              คิด VAT อัตโนมัติใน POS/ใบเสร็จ
+            </label>
           </div>
           <div className="field">
             <label htmlFor="appThemeKey">ธีมหลักของระบบ</label>

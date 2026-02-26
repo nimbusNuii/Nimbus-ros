@@ -18,6 +18,7 @@ async function main() {
       address: "Bangkok",
       phone: "000-000-0000",
       vatNumber: "0100000000000",
+      vatEnabled: true,
       taxRate: 7,
       currency: "THB"
     }

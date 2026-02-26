@@ -18,6 +18,7 @@ export default async function ManagePage() {
       create: {
         id: 1,
         businessName: "POS Shop",
+        vatEnabled: true,
         taxRate: 7,
         currency: "THB"
       }
@@ -119,6 +120,7 @@ export default async function ManagePage() {
           brandPrimary: settings.brandPrimary,
           brandAccent: settings.brandAccent,
           receiptLogoUrl: settings.receiptLogoUrl,
+          vatEnabled: settings.vatEnabled,
           taxRate: toNumber(settings.taxRate),
           currency: settings.currency
         }}

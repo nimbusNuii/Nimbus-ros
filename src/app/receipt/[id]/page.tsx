@@ -47,6 +47,7 @@ export default async function ReceiptPage({
       data: {
         id: 1,
         businessName: "POS Shop",
+        vatEnabled: true,
         taxRate: 7,
         currency: "THB"
       }

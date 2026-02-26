@@ -34,6 +34,7 @@ export default async function PosPage() {
       create: {
         id: 1,
         businessName: "POS Shop",
+        vatEnabled: true,
         taxRate: 7,
         currency: "THB"
       }
@@ -99,6 +100,7 @@ export default async function PosPage() {
           name: customer.name,
           type: customer.type
         }))}
+        vatEnabled={setting.vatEnabled}
         taxRate={toNumber(setting.taxRate)}
         currency={setting.currency}
         initialRecentReceipts={recentOrders.map((order) => ({

@@ -11,6 +11,7 @@ async function getOrCreateStore() {
       appThemeKey: "sandstone",
       brandPrimary: "#b24a2b",
       brandAccent: "#8f381f",
+      vatEnabled: true,
       taxRate: 7,
       currency: "THB"
     }

@@ -80,6 +80,7 @@ model StoreSetting {
   brandPrimary  String   @default("#b24a2b")
   brandAccent   String   @default("#8f381f")
   receiptLogoUrl String?
+  vatEnabled    Boolean  @default(true)
   taxRate       Decimal  @db.Decimal(5, 2)
   currency      String   @default("THB")
   updatedAt     DateTime @updatedAt

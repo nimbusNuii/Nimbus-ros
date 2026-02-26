@@ -155,7 +155,8 @@ export async function POST(request: Request) {
 
     const discount = Math.max(0, Number(body.discount) || 0);
     const setting = await prisma.storeSetting.findUnique({ where: { id: 1 } });
-    const taxRate = setting ? toNumber(setting.taxRate) : 0;
+    const vatEnabled = setting?.vatEnabled ?? true;
+    const taxRate = vatEnabled && setting ? toNumber(setting.taxRate) : 0;
 
     const taxable = Math.max(0, subtotal - discount);
     const tax = (taxable * taxRate) / 100;
@@ -279,6 +280,8 @@ export async function POST(request: Request) {
                 paymentMethod: body.paymentMethod ?? "CASH",
                 status: orderStatus,
                 scheduledFor,
+                vatEnabled,
+                taxRate,
                 customerId,
                 customerType,
                 customerName,

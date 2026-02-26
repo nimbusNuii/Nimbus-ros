@@ -36,6 +36,7 @@ type PosClientProps = {
   categories: Category[];
   menuOptions: MenuOption[];
   customers: Customer[];
+  vatEnabled: boolean;
   taxRate: number;
   currency: string;
   initialRecentReceipts: Array<{
@@ -137,11 +138,13 @@ export function PosClient({
   categories: categoryMaster,
   menuOptions,
   customers,
+  vatEnabled,
   taxRate,
   currency,
   initialRecentReceipts
 }: PosClientProps) {
   const [activeCategory, setActiveCategory] = useState("ALL");
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<ServiceMode>("DINE_IN");
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
@@ -197,7 +200,7 @@ export function PosClient({
   );
   const safeDiscount = Math.max(0, Math.min(discount, subtotal));
   const taxable = Math.max(0, subtotal - safeDiscount);
-  const tax = (taxable * taxRate) / 100;
+  const tax = vatEnabled ? (taxable * taxRate) / 100 : 0;
   const total = taxable + tax;
   const selectedLines = cartLines.filter((line) => line.sendToKitchen);
 
@@ -409,16 +412,25 @@ export function PosClient({
                 key={category}
                 type="button"
                 onClick={() => setActiveCategory(category)}
+                onMouseEnter={() => setHoveredCategory(category)}
+                onMouseLeave={() => setHoveredCategory((current) => (current === category ? null : current))}
+                onFocus={() => setHoveredCategory(category)}
+                onBlur={() => setHoveredCategory((current) => (current === category ? null : current))}
                 className={`secondary w-full justify-start rounded-xl border-l-4 px-3 py-2 text-left ${
                   activeCategory === category
                     ? "border-l-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]"
-                    : "border-l-transparent"
+                    : hoveredCategory === category
+                      ? "border-l-[color-mix(in_srgb,var(--brand)_45%,white)] bg-[color-mix(in_srgb,var(--brand)_5%,white)]"
+                      : "border-l-transparent"
                 }`}
               >
                 {category === "ALL" ? "ทั้งหมด" : category}
               </button>
             ))}
           </div>
+          <p className="m-0 text-xs text-[var(--muted)]">
+            {hoveredCategory ? `กำลังเลือก: ${hoveredCategory === "ALL" ? "ทั้งหมด" : hoveredCategory}` : "แตะหมวดเมนูเพื่อกรองสินค้า"}
+          </p>
 
           <div className="space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
             <p className="m-0 text-xs font-semibold text-[var(--muted)]">โหมดออเดอร์</p>
@@ -451,53 +463,70 @@ export function PosClient({
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visibleProducts.map((product) => (
-              <button
+              <article
                 key={product.id}
-                onClick={() => addLineFromProduct(product)}
-                className={`secondary group flex min-h-52 flex-col items-start rounded-xl border p-3 text-left transition duration-150 hover:bg-[#f9fafb] ${
+                className={`group flex min-h-52 flex-col rounded-xl border border-[var(--line)] bg-white p-3 text-left transition duration-150 hover:bg-[#f9fafb] ${
                   pulseProductId === product.id ? "scale-[0.98]" : ""
-                }`}
-                disabled={product.stockQty <= 0}
+                } ${product.stockQty <= 0 ? "opacity-70" : ""}`}
               >
-                {product.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="h-24 w-full rounded-lg border border-[var(--line)] object-cover"
-                  />
-                ) : (
-                  <div className="grid h-24 w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
-                    ไม่มีรูปสินค้า
+                <button
+                  type="button"
+                  className="secondary flex w-full flex-1 flex-col items-start rounded-lg border border-transparent bg-transparent p-0 text-left"
+                  onClick={() => addLineFromProduct(product)}
+                  disabled={product.stockQty <= 0}
+                >
+                  {product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="h-24 w-full rounded-lg border border-[var(--line)] object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-24 w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
+                      ไม่มีรูปสินค้า
+                    </div>
+                  )}
+                  <div className="mt-2 w-full space-y-1">
+                    <div className="line-clamp-2 font-semibold text-[#111827]">{product.name}</div>
+                    <div className="text-xs text-[var(--muted)]">{product.category || "Uncategorized"}</div>
+                    <div className={`text-xs ${product.stockQty > 0 ? "text-[var(--muted)]" : "text-red-600"}`}>
+                      คงเหลือ {product.stockQty}
+                    </div>
+                    <div className="text-base font-semibold">{formatCurrency(product.price, currency)}</div>
                   </div>
-                )}
-                <div className="mt-2 w-full space-y-1">
-                  <div className="line-clamp-2 font-semibold text-[#111827]">{product.name}</div>
-                  <div className="text-xs text-[var(--muted)]">{product.category || "Uncategorized"}</div>
-                  <div className={`text-xs ${product.stockQty > 0 ? "text-[var(--muted)]" : "text-red-600"}`}>
-                    คงเหลือ {product.stockQty}
-                  </div>
-                  <div className="text-base font-semibold">{formatCurrency(product.price, currency)}</div>
-                </div>
-                <div className="mt-auto w-full pt-2">
+                </button>
+
+                <div className="mt-auto grid w-full grid-cols-2 gap-2 pt-2">
                   <button
                     type="button"
                     className="secondary w-full text-xs"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openModifier(product);
-                    }}
+                    onClick={() => addLineFromProduct(product)}
+                    disabled={product.stockQty <= 0}
                   >
-                    ปรับแต่งเมนู
+                    เพิ่มลงตะกร้า
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary w-full text-xs"
+                    onClick={() => openModifier(product)}
+                    disabled={product.stockQty <= 0}
+                  >
+                    ปรับแต่ง
                   </button>
                 </div>
-              </button>
+              </article>
             ))}
           </div>
         </section>
 
         <section className="card flex max-h-[calc(100vh-150px)] flex-col">
-          <h2 className="m-0 text-xl font-semibold">ตะกร้า</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="m-0 text-xl font-semibold">ตะกร้า</h2>
+            <span className="rounded-full border border-[var(--line)] px-2 py-1 text-xs text-[var(--muted)]">
+              {cartLines.reduce((sum, item) => sum + item.qty, 0)} ชิ้น
+            </span>
+          </div>
           <p className="mt-1 text-xs text-[var(--muted)]">รองรับส่งบางรายการเข้าครัว โดยเลือกเช็กบ็อกซ์ในแต่ละรายการ</p>
 
           <div className="mt-2 flex-1 space-y-2 overflow-auto pr-1">
@@ -590,7 +619,7 @@ export function PosClient({
                   <td>{formatCurrency(safeDiscount, currency)}</td>
                 </tr>
                 <tr>
-                  <td>ภาษี ({taxRate}%)</td>
+                  <td>{vatEnabled ? `ภาษี (${taxRate}%)` : "ภาษี (ปิด VAT)"}</td>
                   <td>{formatCurrency(tax, currency)}</td>
                 </tr>
                 <tr>
