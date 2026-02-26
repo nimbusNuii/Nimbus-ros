@@ -536,13 +536,28 @@ export function PosClient({
           {cartLines.length > 0 ? (
             <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
               <p className="m-0 text-xs font-semibold text-[var(--muted)]">รายการที่เพิ่มไว้ตอนนี้</p>
-              <div className="mt-1 flex flex-wrap gap-1">
+              <ul className="mt-2 space-y-1">
                 {cartLines.map((line) => (
-                  <span key={`summary-${line.lineId}`} className="pill">
-                    {line.name} x{line.qty}
-                  </span>
+                  <li
+                    key={`summary-${line.lineId}`}
+                    className="flex items-start justify-between gap-2 rounded-lg border border-[var(--line)] bg-white px-2 py-1"
+                  >
+                    <div className="min-w-0">
+                      <p className="m-0 text-sm font-medium text-[var(--text)]">
+                        {line.name} x{line.qty}
+                      </p>
+                      <p className="m-0 text-xs text-[var(--muted)]">{modifierNote(line.modifier) || "ไม่ระบุเพิ่มเติม"}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary shrink-0 px-2 py-1 text-xs"
+                      onClick={() => removeLine(line.lineId)}
+                    >
+                      ลบ
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ) : null}
 

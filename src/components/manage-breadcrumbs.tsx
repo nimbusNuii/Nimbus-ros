@@ -8,6 +8,7 @@ const labelBySegment: Record<string, string> = {
   products: "สินค้า",
   categories: "หมวดหมู่สินค้า",
   "menu-options": "ตัวเลือกเมนู",
+  "billing-batch": "ลงบิลย้อนหลัง/ล่วงหน้า",
   customers: "ลูกค้า",
   expenses: "ค่าใช้จ่าย",
   users: "ผู้ใช้งาน",
