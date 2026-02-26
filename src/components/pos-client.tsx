@@ -518,7 +518,7 @@ export function PosClient({
           </div>
         </section>
 
-        <section className="card flex max-h-[calc(100vh-150px)] flex-col">
+        <section className="card flex flex-col overflow-hidden xl:sticky xl:top-[88px] xl:h-[calc(100dvh-104px)] xl:max-h-[calc(100dvh-104px)]">
           <div className="flex items-center justify-between gap-2">
             <h2 className="m-0 text-xl font-semibold">ตะกร้า</h2>
             <span className="rounded-full border border-[var(--line)] px-2 py-1 text-xs text-[var(--muted)]">
@@ -527,9 +527,9 @@ export function PosClient({
           </div>
           <p className="mt-1 text-xs text-[var(--muted)]">รองรับส่งบางรายการเข้าครัว โดยเลือกเช็กบ็อกซ์ในแต่ละรายการ</p>
           {cartLines.length > 0 ? (
-            <div className="mt-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+            <div className="mt-2 flex min-h-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
               <p className="m-0 text-xs font-semibold text-[var(--muted)]">รายการที่เพิ่มไว้ตอนนี้</p>
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 max-h-52 space-y-1 overflow-y-auto pr-1">
                 {cartLines.map((line) => (
                   <li
                     key={`summary-${line.lineId}`}
@@ -554,7 +554,7 @@ export function PosClient({
             </div>
           ) : null}
 
-          <div className="mt-2 flex-1 space-y-2 overflow-auto pr-1">
+          <div className="mt-2 flex-1 min-h-0 space-y-2 overflow-auto pr-1">
             {cartLines.length === 0 ? <p className="text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
             {cartLines.map((line) => (
               <article key={line.lineId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
