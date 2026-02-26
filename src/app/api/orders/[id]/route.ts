@@ -217,6 +217,11 @@ export async function PATCH(
       orderId: updated.id,
       kitchenState: "NEW"
     });
+    publishRealtime("print.updated", {
+      orderId: updated.id,
+      channel: "KITCHEN_TICKET",
+      status: "PENDING"
+    });
 
     return NextResponse.json({
       id: updated.id,

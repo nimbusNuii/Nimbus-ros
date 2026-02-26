@@ -5,6 +5,7 @@ import { requireApiRole } from "@/lib/auth";
 import { toNumber } from "@/lib/format";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, printChannelMeta, suggestedTarget } from "@/lib/print";
+import { publishRealtime } from "@/lib/realtime";
 
 const VALID_CHANNELS: PrintChannel[] = ["CASHIER_RECEIPT", "KITCHEN_TICKET"];
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   const statusParam = (searchParams.get("status") as PrintJobStatus | "ALL" | null) || "PENDING";
   const channel = (searchParams.get("channel") as PrintChannel | null) || null;
   const printerTarget = searchParams.get("printerTarget");
-  const limit = Math.min(100, Number(searchParams.get("limit") || "20"));
+  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || "20")));
 
   const jobs = await prisma.printJob.findMany({
     where: {
@@ -135,6 +136,14 @@ export async function POST(request: Request) {
         printerTarget: job.printerTarget,
         channelLabel: printChannelMeta[channel].label
       }
+    });
+
+    publishRealtime("print.updated", {
+      jobId: job.id,
+      orderId: job.orderId,
+      channel: job.channel,
+      status: job.status,
+      printerTarget: job.printerTarget
     });
 
     return NextResponse.json(job);

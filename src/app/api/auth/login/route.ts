@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, hashPin, roleRedirectPath, setSessionCookie } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +12,21 @@ export async function POST(request: Request) {
 
     if (!username || !pin) {
       return NextResponse.json({ error: "username and pin required" }, { status: 400 });
+    }
+
+    const forwardedFor = request.headers.get("x-forwarded-for") || "";
+    const ip = forwardedFor.split(",")[0]?.trim() || "unknown";
+    const limiter = checkRateLimit(`login:${ip}:${username}`, 60_000, 10);
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        { error: "Too many login attempts, please try again later" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(limiter.retryAfterSec)
+          }
+        }
+      );
     }
 
     const user = await prisma.appUser.findUnique({

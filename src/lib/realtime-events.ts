@@ -4,7 +4,8 @@ export type RealtimeEventType =
   | "order.updated"
   | "kitchen.updated"
   | "stock.updated"
-  | "product.updated";
+  | "product.updated"
+  | "print.updated";
 
 export type RealtimeEvent = {
   id: string;
@@ -12,4 +13,3 @@ export type RealtimeEvent = {
   at: string;
   payload?: Record<string, unknown>;
 };
-

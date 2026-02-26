@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { toNumber } from "@/lib/format";
+import { publishRealtime } from "@/lib/realtime";
 
 const VALID_STATUS: PrintJobStatus[] = ["PENDING", "PRINTED", "FAILED"];
 
@@ -109,6 +110,15 @@ export async function PATCH(
         status: updated.status,
         errorMessage: updated.errorMessage
       }
+    });
+
+    publishRealtime("print.updated", {
+      jobId: updated.id,
+      orderId: updated.orderId,
+      channel: updated.channel,
+      status: updated.status,
+      errorMessage: updated.errorMessage,
+      updatedAt: updated.updatedAt.toISOString()
     });
 
     return NextResponse.json(updated);

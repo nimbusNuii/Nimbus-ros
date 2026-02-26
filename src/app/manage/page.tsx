@@ -40,16 +40,8 @@ export default async function ManagePage() {
   await requirePageRole(["MANAGER", "ADMIN"]);
 
   const [settings, lowStockProducts] = await Promise.all([
-    prisma.storeSetting.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
-        businessName: "POS Shop",
-        vatEnabled: true,
-        taxRate: 7,
-        currency: "THB"
-      }
+    prisma.storeSetting.findUnique({
+      where: { id: 1 }
     }),
     prisma.product.findMany({
       where: {
@@ -111,18 +103,18 @@ export default async function ManagePage() {
 
       <StoreSettingsForm
         initialSettings={{
-          businessName: settings.businessName,
-          branchName: settings.branchName,
-          address: settings.address,
-          phone: settings.phone,
-          vatNumber: settings.vatNumber,
-          appThemeKey: settings.appThemeKey,
-          brandPrimary: settings.brandPrimary,
-          brandAccent: settings.brandAccent,
-          receiptLogoUrl: settings.receiptLogoUrl,
-          vatEnabled: settings.vatEnabled,
-          taxRate: toNumber(settings.taxRate),
-          currency: settings.currency
+          businessName: settings?.businessName || "POS Shop",
+          branchName: settings?.branchName || null,
+          address: settings?.address || null,
+          phone: settings?.phone || null,
+          vatNumber: settings?.vatNumber || null,
+          appThemeKey: settings?.appThemeKey || "sandstone",
+          brandPrimary: settings?.brandPrimary || "#b24a2b",
+          brandAccent: settings?.brandAccent || "#8f381f",
+          receiptLogoUrl: settings?.receiptLogoUrl || null,
+          vatEnabled: settings?.vatEnabled ?? true,
+          taxRate: toNumber(settings?.taxRate ?? 7),
+          currency: settings?.currency || "THB"
         }}
       />
     </div>

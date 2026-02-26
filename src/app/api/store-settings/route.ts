@@ -20,20 +20,30 @@ function normalizeLogoUrl(value: string | undefined) {
 }
 
 async function getOrCreate() {
-  return prisma.storeSetting.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      id: 1,
-      businessName: "POS Shop",
-      appThemeKey: "sandstone",
-      brandPrimary: "#b24a2b",
-      brandAccent: "#8f381f",
-      vatEnabled: true,
-      taxRate: 7,
-      currency: "THB"
-    }
+  const settings = await prisma.storeSetting.findUnique({
+    where: { id: 1 }
   });
+
+  if (settings) {
+    return settings;
+  }
+
+  return {
+    id: 1,
+    businessName: "POS Shop",
+    branchName: null,
+    address: null,
+    phone: null,
+    vatNumber: null,
+    appThemeKey: "sandstone",
+    brandPrimary: "#b24a2b",
+    brandAccent: "#8f381f",
+    receiptLogoUrl: null,
+    vatEnabled: true,
+    taxRate: 7,
+    currency: "THB",
+    updatedAt: new Date()
+  };
 }
 
 export async function GET(request: Request) {

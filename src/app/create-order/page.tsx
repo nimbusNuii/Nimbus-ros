@@ -32,16 +32,8 @@ export default async function CreateOrderPage() {
       },
       orderBy: [{ name: "asc" }]
     }),
-    prisma.storeSetting.upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        id: 1,
-        businessName: "POS Shop",
-        vatEnabled: true,
-        taxRate: 7,
-        currency: "THB"
-      }
+    prisma.storeSetting.findUnique({
+      where: { id: 1 }
     })
   ]);
 
@@ -64,9 +56,9 @@ export default async function CreateOrderPage() {
         name: customer.name,
         type: customer.type
       }))}
-      vatEnabled={setting.vatEnabled}
-      taxRate={toNumber(setting.taxRate)}
-      currency={setting.currency}
+      vatEnabled={setting?.vatEnabled ?? true}
+      taxRate={toNumber(setting?.taxRate ?? 7)}
+      currency={setting?.currency || "THB"}
     />
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
+import { useRealtime } from "@/lib/use-realtime";
 
 type PrintChannel = "CASHIER_RECEIPT" | "KITCHEN_TICKET";
 type PrintJobStatus = "PENDING" | "PRINTED" | "FAILED";
@@ -282,14 +283,72 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
 
     void poll();
     const timer = window.setInterval(() => {
-      void poll();
-    }, 2000);
+      if (document.visibilityState === "visible") {
+        void poll();
+      }
+    }, 8000);
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
   }, [printJobs]);
+
+  useRealtime((event) => {
+    if (event.type !== "print.updated" || !orderId) return;
+
+    const payload = event.payload || {};
+    const payloadOrderId = typeof payload.orderId === "string" ? payload.orderId : "";
+    if (payloadOrderId && payloadOrderId !== orderId) return;
+
+    const payloadJobId = typeof payload.jobId === "string" ? payload.jobId : "";
+    const payloadChannel =
+      payload.channel === "CASHIER_RECEIPT" || payload.channel === "KITCHEN_TICKET" ? payload.channel : null;
+    const payloadStatus =
+      payload.status === "PENDING" || payload.status === "PRINTED" || payload.status === "FAILED"
+        ? payload.status
+        : null;
+    const payloadError = typeof payload.errorMessage === "string" ? payload.errorMessage : null;
+    const payloadUpdatedAt =
+      typeof payload.updatedAt === "string" ? payload.updatedAt : new Date().toISOString();
+
+    if (!payloadStatus) return;
+
+    setPrintJobs((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const channel of ["CASHIER_RECEIPT", "KITCHEN_TICKET"] as PrintChannel[]) {
+        const current = prev[channel];
+        if (!current) continue;
+        if (payloadJobId && current.id !== payloadJobId) continue;
+        if (!payloadJobId && payloadChannel && channel !== payloadChannel) continue;
+
+        next[channel] = {
+          id: current.id,
+          status: payloadStatus,
+          errorMessage: payloadError,
+          updatedAt: payloadUpdatedAt
+        };
+        changed = true;
+      }
+
+      if (!changed && payloadChannel && !payloadJobId) {
+        const current = prev[payloadChannel];
+        if (current) {
+          next[payloadChannel] = {
+            id: current.id,
+            status: payloadStatus,
+            errorMessage: payloadError,
+            updatedAt: payloadUpdatedAt
+          };
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  });
 
   function jobStatusText(channel: PrintChannel) {
     const job = printJobs[channel];

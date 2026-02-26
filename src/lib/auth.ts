@@ -6,7 +6,13 @@ import { NextResponse } from "next/server";
 
 export const SESSION_COOKIE_NAME = "pos_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
-const SESSION_SECRET = process.env.POS_SESSION_SECRET || "dev-pos-secret-change-me";
+const SESSION_SECRET =
+  process.env.POS_SESSION_SECRET ||
+  (process.env.NODE_ENV === "production" ? "" : "dev-pos-secret-change-me");
+
+if (!SESSION_SECRET) {
+  throw new Error("Missing POS_SESSION_SECRET in production");
+}
 
 export type SessionPayload = {
   userId: string;

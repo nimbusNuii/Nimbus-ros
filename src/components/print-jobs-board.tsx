@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime } from "@/lib/format";
+import { useRealtime } from "@/lib/use-realtime";
 
 type PrintJob = {
   id: string;
@@ -60,11 +61,29 @@ export function PrintJobsBoard() {
   useEffect(() => {
     void load();
     const timer = setInterval(() => {
-      void load();
-    }, 5000);
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    }, 15000);
 
-    return () => clearInterval(timer);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void load();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [load]);
+
+  useRealtime((event) => {
+    if (event.type === "print.updated" || event.type === "order.created" || event.type === "order.updated") {
+      void load();
+    }
+  });
 
   async function updateStatus(jobId: string, status: PrintJob["status"]) {
     const response = await fetch(`/api/print/jobs/${jobId}`, {

@@ -366,6 +366,11 @@ export async function POST(request: Request) {
       source: "order.created",
       productIds: changedProductIds
     });
+    publishRealtime("print.updated", {
+      orderId: order.id,
+      channel: "KITCHEN_TICKET",
+      status: "PENDING"
+    });
 
     return NextResponse.json({
       id: order.id,

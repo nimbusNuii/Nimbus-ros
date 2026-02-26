@@ -86,7 +86,7 @@ export function MainNav() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,7 +95,7 @@ export function MainNav() {
       let defaultTheme = DEFAULT_APP_THEME;
 
       try {
-        const response = await fetch("/api/brand-theme", { cache: "no-store" });
+        const response = await fetch("/api/brand-theme", { cache: "force-cache" });
         const payload = (await response.json()) as {
           appThemeKey?: string;
           brandPrimary?: string;
