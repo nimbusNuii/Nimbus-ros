@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ReceiptDocument } from "@/components/receipt-document";
 import {
   getReceiptThemePreset,
@@ -39,6 +39,7 @@ type ReceiptTemplateFormProps = {
 export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateFormProps) {
   const [template, setTemplate] = useState(initialTemplate);
   const [previewThemeKey, setPreviewThemeKey] = useState(RECEIPT_THEME_PRESETS[0].key);
+  const [themePresetModalOpen, setThemePresetModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -83,9 +84,25 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
   function applyThemePreset(preset: ReceiptThemePreset) {
     setTemplate((current) => mergeTemplateWithTheme(current, preset));
     setPreviewThemeKey(preset.key);
+    setThemePresetModalOpen(false);
     setMessage(`โหลดธีม ${preset.label} แล้ว กดบันทึกเพื่อใช้งานจริง`);
     setError("");
   }
+
+  useEffect(() => {
+    if (!themePresetModalOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setThemePresetModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [themePresetModalOpen]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -134,73 +151,25 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
   return (
     <div className="grid">
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>Theme Presets</h2>
-        <p className="page-subtitle" style={{ marginTop: 0 }}>
-          ดูตัวอย่างแต่ละธีมก่อน แล้วค่อยกดใช้งานกับ template ปัจจุบัน
-        </p>
-
-        <div className="grid grid-2">
-          {RECEIPT_THEME_PRESETS.map((preset) => (
-            <article
-              key={preset.key}
-              style={{
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                padding: 12,
-                background: previewThemeKey === preset.key ? "#fff4de" : "#fff"
-              }}
-            >
-              <h3 style={{ margin: "0 0 6px" }}>{preset.label}</h3>
-              <p style={{ margin: "0 0 10px", color: "var(--muted)" }}>{preset.description}</p>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                {preset.tags.map((tag) => (
-                  <span key={`${preset.key}-${tag}`} className="pill">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--muted)" }}>Header</p>
-              <pre
-                style={{
-                  margin: "0 0 8px",
-                  padding: 8,
-                  borderRadius: 8,
-                  border: "1px solid var(--line)",
-                  background: "#fffdf8",
-                  whiteSpace: "pre-wrap",
-                  fontSize: 12
-                }}
-              >
-                {preset.template.headerText}
-              </pre>
-              <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--muted)" }}>Footer</p>
-              <pre
-                style={{
-                  margin: "0 0 10px",
-                  padding: 8,
-                  borderRadius: 8,
-                  border: "1px solid var(--line)",
-                  background: "#fffdf8",
-                  whiteSpace: "pre-wrap",
-                  fontSize: 12
-                }}
-              >
-                {preset.template.footerText}
-              </pre>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setPreviewThemeKey(preset.key)}
-                >
-                  ดูตัวอย่าง
-                </button>
-                <button type="button" onClick={() => applyThemePreset(preset)}>
-                  ใช้ธีมนี้
-                </button>
-              </div>
-            </article>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="m-0 text-xl font-semibold">Theme Presets</h2>
+            <p className="mb-0 mt-1 text-sm text-[var(--muted)]">เลือกจาก Modal แล้วค่อยนำมาใช้กับ template ปัจจุบัน</p>
+          </div>
+          <button type="button" onClick={() => setThemePresetModalOpen(true)}>
+            เลือก Theme Preset
+          </button>
+        </div>
+        <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+          <p className="m-0 text-sm font-semibold text-[var(--text)]">ธีมที่กำลังพรีวิว: {previewTheme.label}</p>
+          <p className="mb-0 mt-1 text-sm text-[var(--muted)]">{previewTheme.description}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {previewTheme.tags.map((tag) => (
+              <span key={`preview-${previewTheme.key}-${tag}`} className="pill">
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -324,6 +293,72 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
           <ReceiptDocument order={previewOrder} store={store} template={template} />
         </section>
       </div>
+
+      {themePresetModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setThemePresetModalOpen(false);
+            }
+          }}
+        >
+          <div className="modal-panel">
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">Theme Presets</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">เลือกธีมแล้วดูตัวอย่างก่อนใช้งานจริง</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setThemePresetModalOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {RECEIPT_THEME_PRESETS.map((preset) => (
+                <article
+                  key={preset.key}
+                  className={`rounded-xl border p-3 ${
+                    previewThemeKey === preset.key
+                      ? "border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]"
+                      : "border-[var(--line)] bg-white"
+                  }`}
+                >
+                  <h4 className="m-0 text-sm font-semibold">{preset.label}</h4>
+                  <p className="mb-0 mt-1 text-xs text-[var(--muted)]">{preset.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {preset.tags.map((tag) => (
+                      <span key={`${preset.key}-${tag}`} className="pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+                      <p className="m-0 text-[11px] text-[var(--muted)]">Header</p>
+                      <p className="m-0 mt-1 text-xs text-[var(--text)]">{preset.template.headerText}</p>
+                    </div>
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+                      <p className="m-0 text-[11px] text-[var(--muted)]">Footer</p>
+                      <p className="m-0 mt-1 text-xs text-[var(--text)]">{preset.template.footerText}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" className="secondary" onClick={() => setPreviewThemeKey(preset.key)}>
+                      ดูตัวอย่าง
+                    </button>
+                    <button type="button" onClick={() => applyThemePreset(preset)}>
+                      ใช้ธีมนี้
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

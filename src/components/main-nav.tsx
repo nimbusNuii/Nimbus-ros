@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  APP_THEME_PRESETS,
   APP_THEME_STORAGE_KEY,
   DEFAULT_APP_THEME,
   isAppThemeKey,
@@ -42,9 +41,7 @@ export function MainNav() {
   const pathname = usePathname();
   const [user, setUser] = useState<null | { fullName: string; role: UserRole }>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
-  const [theme, setTheme] = useState<AppThemeKey>(DEFAULT_APP_THEME);
-  const [themeModalOpen, setThemeModalOpen] = useState(false);
-  const selectedTheme = APP_THEME_PRESETS.find((item) => item.key === theme) ?? APP_THEME_PRESETS[0];
+  const [, setTheme] = useState<AppThemeKey>(DEFAULT_APP_THEME);
 
   function applyTheme(themeKey: AppThemeKey) {
     document.documentElement.setAttribute("data-theme", themeKey);
@@ -131,155 +128,78 @@ export function MainNav() {
     };
   }, []);
 
-  function onThemeChange(nextTheme: AppThemeKey) {
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-    window.localStorage.setItem(APP_THEME_STORAGE_KEY, nextTheme);
-    setThemeModalOpen(false);
-  }
-
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/auth/login";
   }
 
-  useEffect(() => {
-    if (!themeModalOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setThemeModalOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [themeModalOpen]);
-
   const visibleLinks = user ? navItems.filter((item) => item.roles.includes(user.role)) : [];
 
   return (
-    <>
-      <nav className="nav px-4 py-2">
-        <div className="topnav-shell mx-auto flex w-full max-w-[1500px] items-center justify-between px-3 py-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="topnav-chip grid h-9 w-9 place-items-center rounded-xl">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M3 10C6.5 7 9.5 7 13 10"
-                  stroke="var(--topnav-logo-a)"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M7 15C10.5 12 13.5 12 17 15"
-                  stroke="var(--topnav-logo-b)"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-
-            <div className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap">
-              {authLoaded && user ? (
-                visibleLinks.map((link) => {
-                  const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`topnav-link rounded-xl px-3 py-2 text-sm font-medium transition ${
-                        active ? "topnav-link-active" : ""
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })
-              ) : (
-                <Link
-                  href="/auth/login"
-                  className="topnav-link topnav-link-active rounded-xl px-3 py-2 text-sm font-medium"
-                >
-                  Login
-                </Link>
-              )}
-            </div>
+    <nav className="nav px-4 py-2">
+      <div className="topnav-shell mx-auto flex w-full max-w-[1500px] items-center justify-between px-3 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="topnav-chip grid h-9 w-9 place-items-center rounded-xl">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M3 10C6.5 7 9.5 7 13 10"
+                stroke="var(--topnav-logo-a)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M7 15C10.5 12 13.5 12 17 15"
+                stroke="var(--topnav-logo-b)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="topnav-control h-9 rounded-xl px-3 text-xs"
-              title={selectedTheme.description}
-              onClick={() => setThemeModalOpen(true)}
-            >
-              Theme: {selectedTheme.label}
-            </button>
-
-            {user ? (
-              <>
-                <div className="topnav-avatar grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">
-                  {initials(user.fullName)}
-                </div>
-                <button
-                  className="topnav-logout h-9 rounded-xl px-3 text-sm"
-                  type="button"
-                  onClick={logout}
-                >
-                  Logout
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </nav>
-
-      {themeModalOpen ? (
-        <div
-          className="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setThemeModalOpen(false);
-            }
-          }}
-        >
-          <div className="modal-panel">
-            <div className="modal-header">
-              <div>
-                <h3 className="m-0 text-lg font-semibold">Theme Presets</h3>
-                <p className="m-0 mt-1 text-sm text-[var(--muted)]">เลือกธีมของระบบจาก preset ที่เตรียมไว้</p>
-              </div>
-              <button type="button" className="secondary" onClick={() => setThemeModalOpen(false)}>
-                ปิด
-              </button>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {APP_THEME_PRESETS.map((item) => {
-                const active = item.key === theme;
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap">
+            {authLoaded && user ? (
+              visibleLinks.map((link) => {
+                const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
                 return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    className={`secondary flex flex-col items-start rounded-xl border p-3 text-left ${
-                      active ? "border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)]" : ""
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`topnav-link rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      active ? "topnav-link-active" : ""
                     }`}
-                    onClick={() => onThemeChange(item.key)}
                   >
-                    <span className="text-sm font-semibold text-[var(--text)]">{item.label}</span>
-                    <span className="mt-1 text-xs text-[var(--muted)]">{item.description}</span>
-                  </button>
+                    {link.label}
+                  </Link>
                 );
-              })}
-            </div>
+              })
+            ) : (
+              <Link
+                href="/auth/login"
+                className="topnav-link topnav-link-active rounded-xl px-3 py-2 text-sm font-medium"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
-      ) : null}
-    </>
+
+        <div className="flex items-center gap-2">
+          {user ? (
+            <>
+              <div className="topnav-avatar grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">
+                {initials(user.fullName)}
+              </div>
+              <button
+                className="topnav-logout h-9 rounded-xl px-3 text-sm"
+                type="button"
+                onClick={logout}
+              >
+                Logout
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </nav>
   );
 }
