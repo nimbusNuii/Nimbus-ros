@@ -31,9 +31,7 @@ export async function GET(request: Request) {
         in: ["NEW", "PREPARING", "READY"]
       },
       order: {
-        status: {
-          in: ["PAID", "OPEN"]
-        }
+        status: "PAID"
       }
     },
     include: {

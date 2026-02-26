@@ -160,7 +160,6 @@ export function PosClient({
   const [removedLine, setRemovedLine] = useState<CartLine | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [pulseProductId, setPulseProductId] = useState<string | null>(null);
-  const [scheduledFor, setScheduledFor] = useState("");
   const [billAt, setBillAt] = useState("");
 
   const selectedCustomer = useMemo(
@@ -325,7 +324,7 @@ export function PosClient({
     }));
   }
 
-  async function submitOrder(lines: CartLine[], action: "KITCHEN" | "PAYMENT" | "ADVANCE") {
+  async function submitOrder(lines: CartLine[], action: "KITCHEN" | "PAYMENT") {
     if (!lines.length || submitting) return;
     setSubmitting(true);
     setError("");
@@ -343,8 +342,7 @@ export function PosClient({
           })),
           discount: action === "PAYMENT" ? safeDiscount : 0,
           paymentMethod,
-          orderStatus: action === "ADVANCE" ? "OPEN" : "PAID",
-          scheduledFor: action === "ADVANCE" && scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
+          orderStatus: "PAID",
           billAt: action !== "KITCHEN" && billAt ? new Date(billAt).toISOString() : undefined,
           customerId: selectedCustomer?.id,
           customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
@@ -368,9 +366,6 @@ export function PosClient({
       if (action === "PAYMENT") {
         setDiscount(0);
       }
-      if (action === "ADVANCE") {
-        setScheduledFor("");
-      }
       if (action !== "KITCHEN") {
         setBillAt("");
       }
@@ -378,9 +373,7 @@ export function PosClient({
       setMessage(
         action === "KITCHEN"
           ? `ส่งครัวแล้ว ${data.orderNumber}`
-          : action === "ADVANCE"
-            ? `บันทึกบิลล่วงหน้าแล้ว ${data.orderNumber}`
-            : `ชำระเงินแล้ว ${data.orderNumber}`
+          : `ชำระเงินแล้ว ${data.orderNumber}`
       );
       setReceiptOrderId(data.id);
       setRecentReceipts((prev) =>
@@ -662,19 +655,6 @@ export function PosClient({
             </table>
 
             <div className="field mb-0">
-              <label htmlFor="scheduledFor">บิลล่วงหน้า (วัน/เวลา)</label>
-              <input
-                id="scheduledFor"
-                type="datetime-local"
-                value={scheduledFor}
-                onChange={(event) => setScheduledFor(event.target.value)}
-              />
-              <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-                ถ้าระบุวันเวลา ระบบจะบันทึกเป็นสถานะบิลล่วงหน้า และยังไม่คิดยอดขายในสรุป
-              </p>
-            </div>
-
-            <div className="field mb-0">
               <label htmlFor="billAt">ลงบิลย้อนหลัง (วัน/เวลา)</label>
               <input id="billAt" type="datetime-local" value={billAt} onChange={(event) => setBillAt(event.target.value)} />
               <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
@@ -698,15 +678,8 @@ export function PosClient({
                 {submitting ? "กำลังบันทึก..." : "Proceed to Payment"}
               </button>
               <p className="m-0 text-xs text-[var(--muted)]">
-                `Send to Kitchen` = ส่งคิวให้ครัวทันที (ยังไม่ปิดบิล) | `Proceed to Payment` = ปิดบิลและชำระเงินทันที
+                `Send to Kitchen` = บันทึกบิลชำระแล้วจากรายการที่เลือก และส่งคิวให้ครัวทันที | `Proceed to Payment` = ปิดบิลทั้งตะกร้าและชำระเงินทันที
               </p>
-              <button
-                onClick={() => void submitOrder(cartLines, "ADVANCE")}
-                disabled={submitting || cartLines.length === 0}
-                className="secondary w-full"
-              >
-                {submitting ? "กำลังบันทึก..." : "บันทึกบิลล่วงหน้า"}
-              </button>
             </div>
 
             {message ? <p className="mt-1 text-sm text-[var(--ok)]">{message}</p> : null}

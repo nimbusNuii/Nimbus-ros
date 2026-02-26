@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 
 type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
-type BillingMode = "BACKDATE" | "ADVANCE";
 
 type Product = {
   id: string;
@@ -45,7 +44,6 @@ function toDateTimeLocalValue(date = new Date()) {
 }
 
 export function BillingBatchManager({ products, customers, currency }: BillingBatchManagerProps) {
-  const [mode, setMode] = useState<BillingMode>("BACKDATE");
   const [dateTime, setDateTime] = useState(toDateTimeLocalValue());
   const [customerId, setCustomerId] = useState("WALK_IN");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -133,9 +131,8 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
       customerType: "WALK_IN" | "REGULAR";
       customerName: string;
       note?: string;
-      orderStatus: "PAID" | "OPEN";
+      orderStatus: "PAID";
       billAt?: string;
-      scheduledFor?: string;
     } = {
       items: validItems,
       discount: Math.max(0, Number(discount) || 0),
@@ -144,14 +141,10 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
       customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
       customerName: selectedCustomer?.name || "ลูกค้าขาจร",
       note: note.trim() || undefined,
-      orderStatus: mode === "ADVANCE" ? "OPEN" : "PAID"
+      orderStatus: "PAID"
     };
 
-    if (mode === "ADVANCE") {
-      payload.scheduledFor = new Date(dateTime).toISOString();
-    } else {
-      payload.billAt = new Date(dateTime).toISOString();
-    }
+    payload.billAt = new Date(dateTime).toISOString();
 
     setSubmitting(true);
 
@@ -167,11 +160,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
         throw new Error(data.error || "Cannot create order");
       }
 
-      setMessage(
-        mode === "ADVANCE"
-          ? `บันทึกบิลล่วงหน้าสำเร็จ ${data.orderNumber} (จะขึ้นที่ครัว)`
-          : `บันทึกบิลย้อนหลังสำเร็จ ${data.orderNumber}`
-      );
+      setMessage(`บันทึกบิลชำระแล้วสำเร็จ ${data.orderNumber}`);
       setItems([]);
       setNote("");
       setDiscount(0);
@@ -187,20 +176,10 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
     <section className="card space-y-4">
       <div>
         <h2 className="m-0 text-xl font-semibold">เพิ่มบิลทีละรายการ</h2>
-        <p className="mb-0 mt-1 text-sm text-[var(--muted)]">
-          เลือกบิลย้อนหลังหรือบิลล่วงหน้า แล้วเพิ่มสินค้าแบบ Modal ก่อนกดบันทึก
-        </p>
+        <p className="mb-0 mt-1 text-sm text-[var(--muted)]">บิลทั้งหมดจะบันทึกเป็นชำระแล้ว และเพิ่มสินค้าแบบ Modal</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="field mb-0">
-          <label htmlFor="billingMode">ประเภทบิล</label>
-          <select id="billingMode" value={mode} onChange={(event) => setMode(event.target.value as BillingMode)}>
-            <option value="BACKDATE">ย้อนหลัง (ชำระแล้ว)</option>
-            <option value="ADVANCE">ล่วงหน้า (ยังไม่ชำระ, ส่งครัวได้)</option>
-          </select>
-        </div>
-
         <div className="field mb-0">
           <label htmlFor="billingDateTime">วัน/เวลา</label>
           <input id="billingDateTime" type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} />

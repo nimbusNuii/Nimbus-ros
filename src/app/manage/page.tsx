@@ -66,8 +66,8 @@ export default async function ManagePage() {
           <p className="mb-0 text-[var(--muted)]">ปรับหัวท้ายใบเสร็จ ความกว้างกระดาษ และสไตล์</p>
         </Link>
         <Link href="/manage/billing-batch" className="card">
-          <h3 className="mt-0">ลงบิลย้อนหลัง/ล่วงหน้า</h3>
-          <p className="mb-0 text-[var(--muted)]">เพิ่มทีละบิล เลือกวันเวลา ลูกค้า และสินค้าแบบ Modal</p>
+          <h3 className="mt-0">ลงบิลย้อนหลัง (ชำระแล้ว)</h3>
+          <p className="mb-0 text-[var(--muted)]">เพิ่มทีละบิลแบบชำระแล้ว เลือกวันเวลา ลูกค้า และสินค้าแบบ Modal</p>
         </Link>
         <Link href="/manage/print-jobs" className="card">
           <h3 className="mt-0">คิวพิมพ์</h3>

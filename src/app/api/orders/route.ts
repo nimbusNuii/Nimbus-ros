@@ -12,8 +12,6 @@ type OrderInput = {
   items: Array<{ productId: string; qty: number; note?: string }>;
   discount?: number;
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
-  orderStatus?: "PAID" | "OPEN";
-  scheduledFor?: string;
   billAt?: string;
   customerId?: string;
   customerType?: CustomerType;
@@ -98,19 +96,15 @@ export async function POST(request: Request) {
       }))
       .filter((item) => item.productId);
 
-    const orderStatus = body.orderStatus === "OPEN" ? "OPEN" : "PAID";
-    const scheduledFor =
-      orderStatus === "OPEN" && body.scheduledFor ? new Date(body.scheduledFor) : null;
+    const orderStatus = "PAID";
+    const scheduledFor = null;
     const billAt = body.billAt ? new Date(body.billAt) : null;
 
-    if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
-      return NextResponse.json({ error: "scheduledFor is invalid datetime" }, { status: 400 });
-    }
     if (billAt && Number.isNaN(billAt.getTime())) {
       return NextResponse.json({ error: "billAt is invalid datetime" }, { status: 400 });
     }
 
-    const sequenceDateReference = billAt ?? (orderStatus === "OPEN" && scheduledFor ? scheduledFor : new Date());
+    const sequenceDateReference = billAt ?? new Date();
     const orderDateKey = toOrderDateKey(sequenceDateReference);
 
     const customerNameRaw = body.customerName?.trim() || "";
@@ -272,39 +266,37 @@ export async function POST(request: Request) {
             });
           }
 
-          if (orderStatus === "PAID") {
-            await tx.printJob.create({
-              data: {
-                orderId: createdOrder.id,
-                status: "PENDING",
+          await tx.printJob.create({
+            data: {
+              orderId: createdOrder.id,
+              status: "PENDING",
+              channel: "KITCHEN_TICKET",
+              printerTarget: suggestedTarget("KITCHEN_TICKET"),
+              payload: buildPrintPayload({
                 channel: "KITCHEN_TICKET",
-                printerTarget: suggestedTarget("KITCHEN_TICKET"),
-                payload: buildPrintPayload({
-                  channel: "KITCHEN_TICKET",
-                  businessName: storeName,
-                  order: {
-                    id: createdOrder.id,
-                    orderNumber: createdOrder.orderNumber,
-                    createdAt: createdOrder.createdAt,
-                    subtotal,
-                    discount,
-                    tax,
-                    total,
-                    items: normalizedItems.map((item) => {
-                      const product = productMap.get(item.productId)!;
-                      return {
-                        nameSnapshot: product.name,
-                        qty: item.qty,
-                        lineTotal: toNumber(product.price) * item.qty,
-                        note: item.note
-                      };
-                    })
-                  },
-                  footerText: receiptFooter
-                })
-              }
-            });
-          }
+                businessName: storeName,
+                order: {
+                  id: createdOrder.id,
+                  orderNumber: createdOrder.orderNumber,
+                  createdAt: createdOrder.createdAt,
+                  subtotal,
+                  discount,
+                  tax,
+                  total,
+                  items: normalizedItems.map((item) => {
+                    const product = productMap.get(item.productId)!;
+                    return {
+                      nameSnapshot: product.name,
+                      qty: item.qty,
+                      lineTotal: toNumber(product.price) * item.qty,
+                      note: item.note
+                    };
+                  })
+                },
+                footerText: receiptFooter
+              })
+            }
+          });
 
           await writeAuditLog(
             {
