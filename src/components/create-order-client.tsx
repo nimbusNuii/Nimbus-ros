@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 
 type Product = {
@@ -58,9 +58,6 @@ export function CreateOrderClient({
   taxRate,
   currency
 }: CreateOrderClientProps) {
-  const discountInputRef = useRef<HTMLInputElement | null>(null);
-  const customerSelectRef = useRef<HTMLSelectElement | null>(null);
-
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("ALL");
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
@@ -297,19 +294,7 @@ export function CreateOrderClient({
         </section>
 
         <aside className="card flex flex-col xl:sticky xl:top-6 xl:h-[calc(100dvh-48px)]">
-          <div className="grid grid-cols-3 gap-2">
-            <button type="button" className="secondary px-2 text-xs" onClick={() => discountInputRef.current?.focus()}>
-              Discount
-            </button>
-            <button type="button" className="secondary px-2 text-xs" onClick={() => void createOrder()}>
-              Save & Receive
-            </button>
-            <button type="button" className="secondary px-2 text-xs" onClick={() => customerSelectRef.current?.focus()}>
-              Customer
-            </button>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <h2 className="m-0 text-2xl font-semibold text-[var(--text)]">Current Order ({itemCount})</h2>
             <button type="button" className="secondary px-2 py-1 text-xs" onClick={clearCart} disabled={cartLines.length === 0}>
               Delete All
@@ -349,47 +334,56 @@ export function CreateOrderClient({
           </div>
 
           <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
-            <div className="field mb-0">
-              <label htmlFor="create-order-customer">ลูกค้า</label>
-              <select
-                id="create-order-customer"
-                ref={customerSelectRef}
-                value={selectedCustomerId}
-                onChange={(event) => setSelectedCustomerId(event.target.value)}
-              >
-                <option value="WALK_IN">ลูกค้าขาจร</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="field mb-0 space-y-1">
+                <label htmlFor="create-order-customer" className="text-[11px]">
+                  ลูกค้า
+                </label>
+                <select
+                  id="create-order-customer"
+                  value={selectedCustomerId}
+                  onChange={(event) => setSelectedCustomerId(event.target.value)}
+                  className="h-9 px-2 py-1 text-xs"
+                >
+                  <option value="WALK_IN">ลูกค้าขาจร</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="field mb-0">
-              <label htmlFor="create-order-payment">ชำระเงิน</label>
-              <select
-                id="create-order-payment"
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-              >
-                <option value="CASH">เงินสด</option>
-                <option value="CARD">บัตร</option>
-                <option value="TRANSFER">โอนเงิน</option>
-                <option value="QR">QR</option>
-              </select>
-            </div>
+              <div className="field mb-0 space-y-1">
+                <label htmlFor="create-order-payment" className="text-[11px]">
+                  ชำระเงิน
+                </label>
+                <select
+                  id="create-order-payment"
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                  className="h-9 px-2 py-1 text-xs"
+                >
+                  <option value="CASH">เงินสด</option>
+                  <option value="CARD">บัตร</option>
+                  <option value="TRANSFER">โอนเงิน</option>
+                  <option value="QR">QR</option>
+                </select>
+              </div>
 
-            <div className="field mb-0">
-              <label htmlFor="create-order-discount">ส่วนลด</label>
-              <input
-                id="create-order-discount"
-                ref={discountInputRef}
-                type="number"
-                min={0}
-                value={discount}
-                onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
-              />
+              <div className="field mb-0 space-y-1">
+                <label htmlFor="create-order-discount" className="text-[11px]">
+                  ส่วนลด
+                </label>
+                <input
+                  id="create-order-discount"
+                  type="number"
+                  min={0}
+                  value={discount}
+                  onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
+                  className="h-9 px-2 py-1 text-xs"
+                />
+              </div>
             </div>
 
             <table className="table">
