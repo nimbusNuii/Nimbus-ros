@@ -39,41 +39,45 @@ export default async function ManagePage() {
       <h1 className="page-title">หน้าจัดการ</h1>
       <p className="page-subtitle">จัดการข้อมูลร้าน สินค้า ค่าใช้จ่าย และ template ใบเสร็จ</p>
 
-      <section className="grid grid-3" style={{ marginBottom: 16 }}>
+      <section className="grid grid-3 mb-4">
         <Link href="/manage/products" className="card">
-          <h3 style={{ marginTop: 0 }}>สินค้า</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>เพิ่มเมนู ตั้งราคาขาย และต้นทุนต่อหน่วย</p>
+          <h3 className="mt-0">สินค้า</h3>
+          <p className="mb-0 text-[var(--muted)]">เพิ่มเมนู ตั้งราคาขาย และต้นทุนต่อหน่วย</p>
+        </Link>
+        <Link href="/manage/customers" className="card">
+          <h3 className="mt-0">ลูกค้า</h3>
+          <p className="mb-0 text-[var(--muted)]">จัดการรายชื่อลูกค้า และใช้เป็น dropdown ในหน้าขาย</p>
         </Link>
         <Link href="/manage/expenses" className="card">
-          <h3 style={{ marginTop: 0 }}>ค่าใช้จ่าย</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>บันทึกค่าของ ค่าพนักงาน ค่าไฟ และค่าใช้จ่ายอื่น</p>
+          <h3 className="mt-0">ค่าใช้จ่าย</h3>
+          <p className="mb-0 text-[var(--muted)]">บันทึกค่าของ ค่าพนักงาน ค่าไฟ และค่าใช้จ่ายอื่น</p>
         </Link>
         <Link href="/manage/receipt-template" className="card">
-          <h3 style={{ marginTop: 0 }}>Template ใบเสร็จ</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>ปรับหัวท้ายใบเสร็จ ความกว้างกระดาษ และสไตล์</p>
+          <h3 className="mt-0">Template ใบเสร็จ</h3>
+          <p className="mb-0 text-[var(--muted)]">ปรับหัวท้ายใบเสร็จ ความกว้างกระดาษ และสไตล์</p>
         </Link>
         <Link href="/manage/print-jobs" className="card">
-          <h3 style={{ marginTop: 0 }}>คิวพิมพ์</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>ติดตามงานพิมพ์ใบเสร็จที่รอส่งเครื่องพิมพ์</p>
+          <h3 className="mt-0">คิวพิมพ์</h3>
+          <p className="mb-0 text-[var(--muted)]">ติดตามงานพิมพ์ใบเสร็จที่รอส่งเครื่องพิมพ์</p>
         </Link>
         <Link href="/manage/users" className="card">
-          <h3 style={{ marginTop: 0 }}>ผู้ใช้งาน</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>กำหนดสิทธิ์และจัดการ PIN ของผู้ใช้ระบบ</p>
+          <h3 className="mt-0">ผู้ใช้งาน</h3>
+          <p className="mb-0 text-[var(--muted)]">กำหนดสิทธิ์และจัดการ PIN ของผู้ใช้ระบบ</p>
         </Link>
         <Link href="/manage/inventory" className="card">
-          <h3 style={{ marginTop: 0 }}>ประวัติสต็อก</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>ตรวจสอบรายการตัด/ปรับ/เติมสต็อกย้อนหลัง</p>
+          <h3 className="mt-0">ประวัติสต็อก</h3>
+          <p className="mb-0 text-[var(--muted)]">ตรวจสอบรายการตัด/ปรับ/เติมสต็อกย้อนหลัง</p>
         </Link>
         <Link href="/manage/audit" className="card">
-          <h3 style={{ marginTop: 0 }}>Audit Log</h3>
-          <p style={{ margin: 0, color: "var(--muted)" }}>ดูประวัติการแก้ไขข้อมูลและการใช้งานของผู้ใช้</p>
+          <h3 className="mt-0">Audit Log</h3>
+          <p className="mb-0 text-[var(--muted)]">ดูประวัติการแก้ไขข้อมูลและการใช้งานของผู้ใช้</p>
         </Link>
       </section>
 
-      <section className="card" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>แจ้งเตือนสต็อกต่ำ (≤ {LOW_STOCK_THRESHOLD})</h2>
+      <section className="card mb-4">
+        <h2 className="mt-0">แจ้งเตือนสต็อกต่ำ (≤ {LOW_STOCK_THRESHOLD})</h2>
         {lowStockProducts.length === 0 ? (
-          <p style={{ color: "var(--ok)", marginBottom: 0 }}>สต็อกอยู่ในระดับปกติ</p>
+          <p className="mb-0 text-[var(--ok)]">สต็อกอยู่ในระดับปกติ</p>
         ) : (
           <table className="table">
             <thead>
@@ -88,7 +92,7 @@ export default async function ManagePage() {
                 <tr key={product.id}>
                   <td>{product.name}</td>
                   <td>{product.category || "-"}</td>
-                  <td style={{ color: "crimson", fontWeight: 600 }}>{product.stockQty}</td>
+                  <td className="font-semibold text-red-600">{product.stockQty}</td>
                 </tr>
               ))}
             </tbody>

@@ -11,6 +11,7 @@ type OrderInput = {
   items: Array<{ productId: string; qty: number; note?: string }>;
   discount?: number;
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
+  customerId?: string;
   customerType?: CustomerType;
   customerName?: string;
   note?: string;
@@ -77,11 +78,25 @@ export async function POST(request: Request) {
       }))
       .filter((item) => item.productId);
 
-    const customerType: CustomerType = body.customerType === "REGULAR" ? "REGULAR" : "WALK_IN";
     const customerNameRaw = body.customerName?.trim() || "";
-    const customerName = customerType === "REGULAR" ? customerNameRaw : customerNameRaw || "ลูกค้าขาจร";
+    const customerIdRaw = body.customerId?.trim() || null;
+    let customerType: CustomerType = body.customerType === "REGULAR" ? "REGULAR" : "WALK_IN";
+    let customerName = customerType === "REGULAR" ? customerNameRaw : customerNameRaw || "ลูกค้าขาจร";
+    let customerId: string | null = null;
 
-    if (customerType === "REGULAR" && !customerName) {
+    if (customerIdRaw) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerIdRaw }
+      });
+
+      if (!customer || !customer.isActive) {
+        return NextResponse.json({ error: "ไม่พบลูกค้า หรือถูกปิดใช้งาน" }, { status: 404 });
+      }
+
+      customerId = customer.id;
+      customerType = customer.type;
+      customerName = customer.name;
+    } else if (customerType === "REGULAR" && !customerName) {
       return NextResponse.json({ error: "กรุณาระบุชื่อลูกค้าประจำ" }, { status: 400 });
     }
 
@@ -150,6 +165,7 @@ export async function POST(request: Request) {
             data: {
               orderNumber,
               paymentMethod: body.paymentMethod ?? "CASH",
+              customerId,
               customerType,
               customerName,
               note: body.note?.trim() || null,
@@ -248,6 +264,7 @@ export async function POST(request: Request) {
               metadata: {
                 orderNumber: createdOrder.orderNumber,
                 paymentMethod: body.paymentMethod ?? "CASH",
+                customerId,
                 customerType,
                 customerName,
                 items: normalizedItems.length,
@@ -285,6 +302,7 @@ export async function POST(request: Request) {
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
       paymentMethod: order.paymentMethod,
+      customerId: order.customerId,
       customerType: order.customerType,
       customerName: order.customerName,
       itemCount: normalizedItems.reduce((sum, item) => sum + item.qty, 0),

@@ -8,6 +8,7 @@ type Product = {
   sku: string | null;
   name: string;
   category: string | null;
+  imageUrl: string | null;
   price: number;
   cost: number;
   stockQty: number;
@@ -29,20 +30,18 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-
     setSaving(true);
     setError("");
 
     try {
       const response = await fetch("/api/products", {
         method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           sku: form.get("sku"),
           name: form.get("name"),
           category: form.get("category"),
+          imageUrl: form.get("imageUrl"),
           price: Number(form.get("price")),
           cost: Number(form.get("cost")),
           stockQty: Number(form.get("stockQty"))
@@ -73,9 +72,7 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
     try {
       const response = await fetch(`/api/products/${productId}/stock`, {
         method: "PATCH",
-        headers: {
-          "content-type": "application/json"
-        },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           deltaQty,
           reason: deltaQty > 0 ? "RESTOCK" : "ADJUST"
@@ -99,10 +96,10 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
   }
 
   return (
-    <div className="grid grid-2">
+    <div className="grid gap-4 xl:grid-cols-2">
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>เพิ่มสินค้า</h2>
-        <form onSubmit={onSubmit}>
+        <h2 className="mt-0 text-xl font-semibold">เพิ่มสินค้า</h2>
+        <form onSubmit={onSubmit} className="space-y-2">
           <div className="field">
             <label htmlFor="sku">SKU</label>
             <input id="sku" name="sku" />
@@ -114,6 +111,10 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
           <div className="field">
             <label htmlFor="category">หมวดหมู่</label>
             <input id="category" name="category" />
+          </div>
+          <div className="field">
+            <label htmlFor="imageUrl">รูปสินค้า (URL)</label>
+            <input id="imageUrl" name="imageUrl" placeholder="https://example.com/product.jpg" />
           </div>
           <div className="field">
             <label htmlFor="price">ราคาขาย *</label>
@@ -129,58 +130,75 @@ export function ProductManager({ initialProducts, currency }: ProductManagerProp
           </div>
           <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกสินค้า"}</button>
         </form>
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+        {error ? <p className="mt-2 text-red-600">{error}</p> : null}
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>รายการสินค้า</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ชื่อ</th>
-              <th>หมวดหมู่</th>
-              <th>ราคา</th>
-              <th>ต้นทุน</th>
-              <th>สต็อก</th>
-              <th>ปรับสต็อก</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>{product.name}</td>
-                <td>{product.category || "-"}</td>
-                <td>{formatCurrency(product.price, currency)}</td>
-                <td>{formatCurrency(product.cost, currency)}</td>
-                <td>{product.stockQty}</td>
-                <td>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input
-                      type="number"
-                      step={1}
-                      value={stockAdjust[product.id] || 0}
-                      onChange={(event) =>
-                        setStockAdjust((prev) => ({
-                          ...prev,
-                          [product.id]: Math.trunc(Number(event.target.value))
-                        }))
-                      }
-                      style={{ width: 90 }}
-                    />
-                    <button
-                      type="button"
-                      className="secondary"
-                      disabled={adjustingId === product.id}
-                      onClick={() => adjustStock(product.id)}
-                    >
-                      {adjustingId === product.id ? "..." : "บันทึก"}
-                    </button>
-                  </div>
-                </td>
+        <h2 className="mt-0 text-xl font-semibold">รายการสินค้า</h2>
+        <div className="overflow-x-auto">
+          <table className="table min-w-[880px]">
+            <thead>
+              <tr>
+                <th>รูป</th>
+                <th>ชื่อ</th>
+                <th>หมวดหมู่</th>
+                <th>ราคา</th>
+                <th>ต้นทุน</th>
+                <th>สต็อก</th>
+                <th>ปรับสต็อก</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td>
+                    {product.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-12 w-12 rounded-md border border-[var(--line)] object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-12 w-12 place-items-center rounded-md border border-dashed border-[var(--line)] text-[10px] text-[var(--muted)]">
+                        No Img
+                      </div>
+                    )}
+                  </td>
+                  <td>{product.name}</td>
+                  <td>{product.category || "-"}</td>
+                  <td>{formatCurrency(product.price, currency)}</td>
+                  <td>{formatCurrency(product.cost, currency)}</td>
+                  <td>{product.stockQty}</td>
+                  <td>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step={1}
+                        value={stockAdjust[product.id] || 0}
+                        onChange={(event) =>
+                          setStockAdjust((prev) => ({
+                            ...prev,
+                            [product.id]: Math.trunc(Number(event.target.value))
+                          }))
+                        }
+                        className="w-20"
+                      />
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={adjustingId === product.id}
+                        onClick={() => adjustStock(product.id)}
+                      >
+                        {adjustingId === product.id ? "..." : "บันทึก"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

@@ -42,6 +42,8 @@ export async function GET(request: Request) {
       id: order.id,
       orderNumber: order.orderNumber,
       paymentMethod: order.paymentMethod,
+      customerType: order.customerType,
+      customerName: order.customerName,
       createdAt: order.createdAt,
       subtotal: toNumber(order.subtotal),
       discount: toNumber(order.discount),

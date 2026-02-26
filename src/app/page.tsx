@@ -42,8 +42,8 @@ export default async function HomePage() {
       <section className="grid grid-2">
         {modules.map((module) => (
           <Link key={module.href} href={module.href} className="card">
-            <h2 style={{ marginTop: 0 }}>{module.title}</h2>
-            <p style={{ color: "var(--muted)", marginBottom: 0 }}>{module.desc}</p>
+            <h2 className="mt-0">{module.title}</h2>
+            <p className="mb-0 text-[var(--muted)]">{module.desc}</p>
           </Link>
         ))}
       </section>

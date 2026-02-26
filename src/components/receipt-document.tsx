@@ -15,6 +15,8 @@ export type ReceiptDocumentProps = {
     orderNumber: string;
     createdAt: string | Date;
     paymentMethod: string;
+    customerType?: "WALK_IN" | "REGULAR";
+    customerName?: string | null;
     subtotal: number;
     discount: number;
     tax: number;
@@ -96,6 +98,7 @@ export function ReceiptDocument({ order, store, template }: ReceiptDocumentProps
       <div className="mb-2 border-y border-dashed border-neutral-500 py-2 text-[13px]">
         <div>เลขที่: {order.orderNumber}</div>
         <div>เวลา: {formatDateTime(order.createdAt)}</div>
+        <div>ลูกค้า: {order.customerName || (order.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร")}</div>
         <div>ชำระ: {order.paymentMethod}</div>
       </div>
 

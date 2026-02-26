@@ -69,7 +69,7 @@ export function KitchenBoard() {
   const [loading, setLoading] = useState(true);
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [mode, setMode] = useState<KitchenViewMode>("ORDER");
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -112,7 +112,6 @@ export function KitchenBoard() {
       if (!response.ok) {
         throw new Error("update item failed");
       }
-
       await load();
     } catch {
       setError("อัปเดตสถานะเมนูไม่สำเร็จ");
@@ -135,7 +134,6 @@ export function KitchenBoard() {
       if (!response.ok) {
         throw new Error("update order failed");
       }
-
       await load();
     } catch {
       setError("อัปเดตสถานะออเดอร์ไม่สำเร็จ");
@@ -216,13 +214,13 @@ export function KitchenBoard() {
 
   return (
     <>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <section className="card mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 style={{ margin: 0 }}>รูปแบบการทำอาหาร</h3>
-            <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>เลือกได้ว่าจะเลื่อนสถานะแบบทีละออเดอร์ หรือทีละเมนู</p>
+            <h3 className="m-0 text-lg font-semibold">รูปแบบการทำอาหาร</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">เลือกได้ว่าจะเลื่อนสถานะแบบทีละออเดอร์ หรือทีละเมนู</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <button type="button" className={mode === "ORDER" ? "" : "secondary"} onClick={() => setMode("ORDER")}>
               ทีละคำสั่งซื้อ
             </button>
@@ -231,47 +229,37 @@ export function KitchenBoard() {
             </button>
           </div>
         </div>
-        {error ? <p style={{ marginBottom: 0, color: "crimson" }}>{error}</p> : null}
+        {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
 
       <div className="grid grid-3">
         {STATES.map((state) => (
           <section className="card" key={state}>
-            <h3 style={{ marginTop: 0 }}>{stateLabel[state]}</h3>
+            <h3 className="mt-0">{stateLabel[state]}</h3>
 
             {mode === "ORDER" ? (
               <>
-                {groupedOrders[state].length === 0 ? <p style={{ color: "var(--muted)" }}>ไม่มีออเดอร์</p> : null}
+                {groupedOrders[state].length === 0 ? <p className="text-[var(--muted)]">ไม่มีออเดอร์</p> : null}
                 {groupedOrders[state].map((order) => (
                   <article
                     key={order.id}
-                    style={{
-                      border: "1px solid var(--line)",
-                      borderRadius: 12,
-                      padding: 10,
-                      marginBottom: 10,
-                      background: "var(--surface-strong)"
-                    }}
+                    className="mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3"
                   >
-                    <div style={{ fontSize: 13, color: "var(--muted)" }}>{order.orderNumber}</div>
+                    <div className="text-xs text-[var(--muted)]">{order.orderNumber}</div>
                     <strong>{customerLabel(order)}</strong>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>{formatDateTime(order.createdAt)}</div>
-                    <div style={{ marginTop: 8, fontSize: 13, color: "var(--muted)" }}>
+                    <div className="mt-1 text-xs text-[var(--muted)]">{formatDateTime(order.createdAt)}</div>
+                    <div className="mt-2 text-xs text-[var(--muted)]">
                       เมนู {order.items.length} รายการ (รอทำ {order.counts.NEW}, กำลังทำ {order.counts.PREPARING}, พร้อมเสิร์ฟ {order.counts.READY})
                     </div>
-                    <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+                    <div className="mt-2 grid gap-1">
                       {order.items.map((item) => (
-                        <div key={item.id} style={{ fontSize: 13 }}>
+                        <div key={item.id} className="text-sm">
                           {item.name} x{item.qty}
-                          {item.note ? <span style={{ color: "var(--muted)" }}> ({item.note})</span> : null}
+                          {item.note ? <span className="text-[var(--muted)]"> ({item.note})</span> : null}
                         </div>
                       ))}
                     </div>
-                    <button
-                      onClick={() => moveOrder(order.id)}
-                      disabled={Boolean(updatingKey)}
-                      style={{ width: "100%", marginTop: 10 }}
-                    >
+                    <button onClick={() => moveOrder(order.id)} disabled={Boolean(updatingKey)} className="mt-2 w-full">
                       {updatingKey === `order:${order.id}`
                         ? "กำลังอัปเดต..."
                         : state === "READY"
@@ -285,26 +273,17 @@ export function KitchenBoard() {
               </>
             ) : (
               <>
-                {groupedItems[state].length === 0 ? <p style={{ color: "var(--muted)" }}>ไม่มีรายการ</p> : null}
+                {groupedItems[state].length === 0 ? <p className="text-[var(--muted)]">ไม่มีรายการ</p> : null}
                 {groupedItems[state].map((item) => (
-                  <article
-                    key={item.id}
-                    style={{
-                      border: "1px solid var(--line)",
-                      borderRadius: 12,
-                      padding: 10,
-                      marginBottom: 10,
-                      background: "var(--surface-strong)"
-                    }}
-                  >
-                    <div style={{ fontSize: 13, color: "var(--muted)" }}>{item.order.orderNumber}</div>
+                  <article key={item.id} className="mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                    <div className="text-xs text-[var(--muted)]">{item.order.orderNumber}</div>
                     <strong>
                       {item.name} x{item.qty}
                     </strong>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>{customerLabel(item.order)}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{formatDateTime(item.order.createdAt)}</div>
-                    {item.note ? <div style={{ marginTop: 6 }}>หมายเหตุ: {item.note}</div> : null}
-                    <button onClick={() => moveItem(item)} disabled={Boolean(updatingKey)} style={{ width: "100%", marginTop: 8 }}>
+                    <div className="mt-1 text-xs text-[var(--muted)]">{customerLabel(item.order)}</div>
+                    <div className="text-xs text-[var(--muted)]">{formatDateTime(item.order.createdAt)}</div>
+                    {item.note ? <div className="mt-1 text-sm">หมายเหตุ: {item.note}</div> : null}
+                    <button onClick={() => moveItem(item)} disabled={Boolean(updatingKey)} className="mt-2 w-full">
                       {updatingKey === `item:${item.id}`
                         ? "กำลังอัปเดต..."
                         : item.kitchenState === "READY"

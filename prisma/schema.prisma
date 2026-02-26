@@ -98,6 +98,7 @@ model Product {
   sku           String?        @unique
   name          String
   category      String?
+  imageUrl      String?
   price         Decimal        @db.Decimal(10, 2)
   cost          Decimal        @db.Decimal(10, 2)
   stockQty      Int            @default(0)
@@ -115,6 +116,7 @@ model Order {
   orderNumber   String        @unique
   status        OrderStatus   @default(PAID)
   paymentMethod PaymentMethod
+  customerId    String?
   customerType  CustomerType  @default(WALK_IN)
   customerName  String?
   note          String?
@@ -127,8 +129,24 @@ model Order {
   items         OrderItem[]
   inventoryLogs InventoryLog[]
   printJobs     PrintJob[]
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([customerId])
+}
+
+model Customer {
+  id        String       @id @default(cuid())
+  name      String
+  type      CustomerType @default(REGULAR)
+  phone     String?
+  note      String?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  orders    Order[]
+
+  @@index([name, type])
 }
 
 model OrderItem {

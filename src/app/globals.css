@@ -325,14 +325,6 @@ main {
   color: var(--muted);
 }
 
-.card {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 26px rgba(var(--shadow-rgb), 0.12);
-}
-
 .grid {
   display: grid;
   gap: 16px;
@@ -346,53 +338,6 @@ main {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: var(--brand);
-  color: #fff;
-  padding: 9px 13px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: var(--brand-dark);
-}
-
-button.secondary {
-  border-color: var(--line);
-  background: var(--secondary-bg);
-  color: var(--secondary-text);
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: var(--input-bg);
-  color: var(--text);
-}
-
-label {
-  font-size: 0.95rem;
-  color: var(--muted);
-  display: block;
-}
-
-.field {
-  margin-bottom: 10px;
-}
-
 .pill {
   display: inline-flex;
   align-items: center;
@@ -403,17 +348,64 @@ label {
   color: var(--muted);
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
+@layer components {
+  .card {
+    @apply rounded-2xl border p-4;
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: 0 10px 26px rgba(var(--shadow-rgb), 0.12);
+  }
 
-.table th,
-.table td {
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  padding: 8px 6px;
-  font-size: 0.92rem;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    @apply inline-flex items-center justify-center rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+    background: var(--brand);
+    color: #fff;
+  }
+
+  button:hover {
+    background: var(--brand-dark);
+  }
+
+  button.secondary {
+    border-color: var(--line);
+    background: var(--secondary-bg);
+    color: var(--secondary-text);
+  }
+
+  input,
+  select,
+  textarea {
+    @apply w-full rounded-lg border px-3 py-2;
+    border-color: var(--line);
+    background: var(--input-bg);
+    color: var(--text);
+  }
+
+  label {
+    @apply block text-sm;
+    color: var(--muted);
+  }
+
+  .field {
+    @apply mb-2 space-y-1;
+  }
+
+  .table {
+    @apply w-full border-collapse;
+  }
+
+  .table th,
+  .table td {
+    @apply border-b px-2 py-2 text-left text-sm;
+    border-color: var(--line);
+  }
 }
 
 .nav {

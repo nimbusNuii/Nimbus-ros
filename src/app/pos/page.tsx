@@ -8,8 +8,15 @@ export const dynamic = "force-dynamic";
 export default async function PosPage() {
   await requirePageRole(["CASHIER", "MANAGER", "ADMIN"]);
 
-  const [products, setting, recentOrders] = await Promise.all([
+  const [products, customers, setting, recentOrders] = await Promise.all([
     prisma.product.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
+    prisma.customer.findMany({
+      where: {
+        isActive: true,
+        type: "REGULAR"
+      },
+      orderBy: [{ type: "asc" }, { name: "asc" }]
+    }),
     prisma.storeSetting.upsert({
       where: { id: 1 },
       update: {},
@@ -48,9 +55,15 @@ export default async function PosPage() {
           id: product.id,
           name: product.name,
           category: product.category,
+          imageUrl: product.imageUrl,
           price: toNumber(product.price),
           cost: toNumber(product.cost),
           stockQty: product.stockQty
+        }))}
+        customers={customers.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          type: customer.type
         }))}
         taxRate={toNumber(setting.taxRate)}
         currency={setting.currency}

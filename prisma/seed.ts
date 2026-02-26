@@ -39,10 +39,42 @@ async function main() {
   }
 
   const products = [
-    { name: "Americano", category: "Coffee", price: 70, cost: 24, sku: "COF-AMR", stockQty: 120 },
-    { name: "Latte", category: "Coffee", price: 85, cost: 30, sku: "COF-LAT", stockQty: 100 },
-    { name: "Croissant", category: "Bakery", price: 60, cost: 20, sku: "BAK-CRO", stockQty: 80 },
-    { name: "Pad Krapow", category: "Main", price: 95, cost: 35, sku: "FOOD-PK", stockQty: 60 }
+    {
+      name: "Americano",
+      category: "Coffee",
+      price: 70,
+      cost: 24,
+      sku: "COF-AMR",
+      stockQty: 120,
+      imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      name: "Latte",
+      category: "Coffee",
+      price: 85,
+      cost: 30,
+      sku: "COF-LAT",
+      stockQty: 100,
+      imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      name: "Croissant",
+      category: "Bakery",
+      price: 60,
+      cost: 20,
+      sku: "BAK-CRO",
+      stockQty: 80,
+      imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80"
+    },
+    {
+      name: "Pad Krapow",
+      category: "Main",
+      price: 95,
+      cost: 35,
+      sku: "FOOD-PK",
+      stockQty: 60,
+      imageUrl: "https://images.unsplash.com/photo-1562967916-eb82221dfb22?auto=format&fit=crop&w=600&q=80"
+    }
   ];
 
   for (const product of products) {
@@ -51,6 +83,7 @@ async function main() {
       update: {
         name: product.name,
         category: product.category,
+        imageUrl: product.imageUrl,
         price: product.price,
         cost: product.cost,
         stockQty: product.stockQty,
@@ -60,6 +93,7 @@ async function main() {
         sku: product.sku,
         name: product.name,
         category: product.category,
+        imageUrl: product.imageUrl,
         price: product.price,
         cost: product.cost,
         stockQty: product.stockQty,
@@ -89,6 +123,43 @@ async function main() {
         fullName: user.fullName,
         role: user.role,
         pinHash: hashPin(user.pin),
+        isActive: true
+      }
+    });
+  }
+
+  const customers = [
+    { name: "ลูกค้าขาจร", type: "WALK_IN", phone: null, note: "ลูกค้าทั่วไป" },
+    { name: "คุณสมชาย", type: "REGULAR", phone: "0811111111", note: "ลูกค้าประจำช่วงเช้า" },
+    { name: "บริษัท ABC", type: "REGULAR", phone: "020000000", note: "รับใบกำกับภาษี" }
+  ] as const;
+
+  for (const customer of customers) {
+    const existing = await prisma.customer.findFirst({
+      where: {
+        name: customer.name,
+        type: customer.type
+      }
+    });
+
+    if (existing) {
+      await prisma.customer.update({
+        where: { id: existing.id },
+        data: {
+          phone: customer.phone,
+          note: customer.note,
+          isActive: true
+        }
+      });
+      continue;
+    }
+
+    await prisma.customer.create({
+      data: {
+        name: customer.name,
+        type: customer.type,
+        phone: customer.phone,
+        note: customer.note,
         isActive: true
       }
     });

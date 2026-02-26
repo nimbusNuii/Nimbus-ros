@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       sku?: string;
       name?: string;
       category?: string;
+      imageUrl?: string;
       price?: number;
       cost?: number;
       stockQty?: number;
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
         sku: body.sku?.trim() || null,
         name: body.name.trim(),
         category: body.category?.trim() || null,
+        imageUrl: body.imageUrl?.trim() || null,
         price: Number(body.price),
         cost: Number(body.cost),
         stockQty: Math.max(0, Math.floor(Number(body.stockQty) || 0))
@@ -62,6 +64,7 @@ export async function POST(request: Request) {
       metadata: {
         name: created.name,
         sku: created.sku,
+        imageUrl: created.imageUrl,
         price: toNumber(created.price),
         cost: toNumber(created.cost),
         stockQty: created.stockQty
