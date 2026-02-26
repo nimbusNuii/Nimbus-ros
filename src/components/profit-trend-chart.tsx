@@ -28,24 +28,25 @@ export function ProfitTrendChart({ title, points, currency }: ProfitTrendChartPr
 
   return (
     <section className="card">
-      <h2 style={{ marginTop: 0 }}>{title}</h2>
-      <p style={{ color: "var(--muted)", marginTop: 0 }}>กำไรรวมช่วงนี้ {formatCurrency(totalNet, currency)}</p>
-      <div style={{ display: "flex", alignItems: "end", gap: 5, minHeight: 190, overflowX: "auto", paddingBottom: 8 }}>
+      <h2 className="mt-0 text-xl font-semibold">{title}</h2>
+      <p className="mt-0 text-sm text-[var(--muted)]">กำไรรวมช่วงนี้ {formatCurrency(totalNet, currency)}</p>
+      <div className="flex min-h-[190px] items-end gap-2 overflow-x-auto pb-2">
         {points.map((point) => {
           const height = Math.max(4, Math.round((Math.abs(point.netProfit) / maxAbs) * 130));
           const positive = point.netProfit >= 0;
 
           return (
-            <div key={point.label} style={{ minWidth: 28, textAlign: "center" }}>
+            <div key={point.label} className="min-w-8 text-center">
               <div
                 title={`${point.label} : ${formatCurrency(point.netProfit, currency)}`}
                 style={{
                   height,
-                  borderRadius: 6,
-                  background: positive ? "linear-gradient(180deg, #1f6f3f 0%, #2b9a56 100%)" : "linear-gradient(180deg, #9f1a1a 0%, #dc3a3a 100%)"
+                  borderRadius: 8,
+                  background: positive ? "#16a34a" : "#dc2626"
                 }}
+                className="transition-all duration-200 ease-in-out"
               />
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{shortLabel(point.label)}</div>
+              <div className="mt-1 text-[11px] text-[var(--muted)]">{shortLabel(point.label)}</div>
             </div>
           );
         })}

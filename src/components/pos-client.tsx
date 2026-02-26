@@ -690,7 +690,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
       ) : null}
 
       {removedLine ? (
-        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-[var(--line)] bg-white p-3 text-sm shadow-sm">
+        <div className="toast-slide-in fixed bottom-4 right-4 z-50 rounded-xl border border-[var(--line)] bg-white p-3 text-sm shadow-sm">
           ลบ {removedLine.name} แล้ว
           <button className="secondary ml-2 text-xs" onClick={undoRemove}>
             Undo
@@ -700,7 +700,7 @@ export function PosClient({ products, customers, taxRate, currency, initialRecen
 
       {toast ? (
         <div
-          className={`fixed right-4 top-20 z-50 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ${
+          className={`toast-slide-in fixed right-4 top-20 z-50 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ${
             toast.tone === "success"
               ? "border-green-200 bg-green-50 text-green-700"
               : "border-amber-200 bg-amber-50 text-amber-700"

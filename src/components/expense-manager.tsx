@@ -64,10 +64,10 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
   }
 
   return (
-    <div className="grid grid-2">
+    <div className="grid gap-4 xl:grid-cols-2">
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>เพิ่มค่าใช้จ่าย</h2>
-        <form onSubmit={onSubmit}>
+        <h2 className="mt-0 text-xl font-semibold">เพิ่มค่าใช้จ่าย</h2>
+        <form onSubmit={onSubmit} className="space-y-2">
           <div className="field">
             <label htmlFor="type">ประเภท *</label>
             <select id="type" name="type" required>
@@ -92,29 +92,38 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
 
           <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกค่าใช้จ่าย"}</button>
         </form>
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>ประวัติค่าใช้จ่ายล่าสุด</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ประเภท</th>
-              <th>วันที่</th>
-              <th>จำนวน</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map((expense) => (
-              <tr key={expense.id}>
-                <td>{typeLabel[expense.type]}</td>
-                <td>{formatDateTime(expense.incurredOn)}</td>
-                <td>{formatCurrency(expense.amount, currency)}</td>
+        <h2 className="mt-0 text-xl font-semibold">ประวัติค่าใช้จ่ายล่าสุด</h2>
+        <div className="overflow-x-auto">
+          <table className="table min-w-[560px]">
+            <thead>
+              <tr>
+                <th>ประเภท</th>
+                <th>วันที่</th>
+                <th>จำนวน</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {expenses.map((expense) => (
+                <tr key={expense.id}>
+                  <td>{typeLabel[expense.type]}</td>
+                  <td>{formatDateTime(expense.incurredOn)}</td>
+                  <td className="font-semibold">{formatCurrency(expense.amount, currency)}</td>
+                </tr>
+              ))}
+              {expenses.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center text-[var(--muted)]">
+                    ยังไม่มีข้อมูล
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

@@ -93,84 +93,101 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
   }
 
   return (
-    <div className="grid grid-2">
-      <section className="card">
-        <h2 style={{ marginTop: 0 }}>ผู้ใช้งานระบบ</h2>
-        {!isAdmin ? <p style={{ color: "var(--muted)" }}>บัญชี manager ดูรายการได้ แต่แก้ไขได้เฉพาะ admin</p> : null}
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+    <div className="grid gap-4 xl:grid-cols-2">
+      <section className="card space-y-3">
+        <h2 className="mt-0 text-xl font-semibold">ผู้ใช้งานระบบ</h2>
+        {!isAdmin ? <p className="text-sm text-[var(--muted)]">บัญชี manager ดูรายการได้ แต่แก้ไขได้เฉพาะ admin</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>username</th>
-              <th>ชื่อ</th>
-              <th>บทบาท</th>
-              <th>สถานะ</th>
-              <th>จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.username}</td>
-                <td>{user.fullName}</td>
-                <td>{roleLabel[user.role]}</td>
-                <td>{user.isActive ? "ใช้งาน" : "ปิด"}</td>
-                <td>
-                  {isAdmin ? (
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <select
-                        value={user.role}
-                        onChange={(event) =>
-                          updateUser(user.id, {
-                            role: event.target.value as Role
-                          })
-                        }
-                        disabled={editingId === user.id}
-                        style={{ width: 120 }}
-                      >
-                        <option value="CASHIER">Cashier</option>
-                        <option value="KITCHEN">Kitchen</option>
-                        <option value="MANAGER">Manager</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-
-                      <button
-                        className="secondary"
-                        type="button"
-                        disabled={editingId === user.id}
-                        onClick={() => updateUser(user.id, { isActive: !user.isActive })}
-                      >
-                        {user.isActive ? "ปิด" : "เปิด"}
-                      </button>
-
-                      <button
-                        className="secondary"
-                        type="button"
-                        disabled={editingId === user.id}
-                        onClick={() => {
-                          const pin = window.prompt(`ตั้ง PIN ใหม่ให้ ${user.username}`)?.trim();
-                          if (!pin) return;
-                          void updateUser(user.id, { pin });
-                        }}
-                      >
-                        เปลี่ยน PIN
-                      </button>
-                    </div>
-                  ) : (
-                    <span style={{ color: "var(--muted)" }}>read-only</span>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="table min-w-[820px]">
+            <thead>
+              <tr>
+                <th>username</th>
+                <th>ชื่อ</th>
+                <th>บทบาท</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.username}</td>
+                  <td>{user.fullName}</td>
+                  <td>{roleLabel[user.role]}</td>
+                  <td>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        user.isActive ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"
+                      }`}
+                    >
+                      {user.isActive ? "ใช้งาน" : "ปิด"}
+                    </span>
+                  </td>
+                  <td>
+                    {isAdmin ? (
+                      <div className="flex flex-wrap gap-2">
+                        <select
+                          value={user.role}
+                          onChange={(event) =>
+                            updateUser(user.id, {
+                              role: event.target.value as Role
+                            })
+                          }
+                          disabled={editingId === user.id}
+                          className="w-32"
+                        >
+                          <option value="CASHIER">Cashier</option>
+                          <option value="KITCHEN">Kitchen</option>
+                          <option value="MANAGER">Manager</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
+
+                        <button
+                          className="secondary"
+                          type="button"
+                          disabled={editingId === user.id}
+                          onClick={() => updateUser(user.id, { isActive: !user.isActive })}
+                        >
+                          {user.isActive ? "ปิด" : "เปิด"}
+                        </button>
+
+                        <button
+                          className="secondary"
+                          type="button"
+                          disabled={editingId === user.id}
+                          onClick={() => {
+                            const pin = window.prompt(`ตั้ง PIN ใหม่ให้ ${user.username}`)?.trim();
+                            if (!pin) return;
+                            void updateUser(user.id, { pin });
+                          }}
+                        >
+                          เปลี่ยน PIN
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-[var(--muted)]">read-only</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center text-[var(--muted)]">
+                    ยังไม่มีผู้ใช้งาน
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>เพิ่มผู้ใช้ใหม่</h2>
-        {!isAdmin ? <p style={{ color: "var(--muted)" }}>เฉพาะ admin ที่สร้างผู้ใช้ได้</p> : null}
-        <form onSubmit={createUser}>
+        <h2 className="mt-0 text-xl font-semibold">เพิ่มผู้ใช้ใหม่</h2>
+        {!isAdmin ? <p className="text-sm text-[var(--muted)]">เฉพาะ admin ที่สร้างผู้ใช้ได้</p> : null}
+        <form onSubmit={createUser} className="space-y-2">
           <div className="field">
             <label htmlFor="username">username *</label>
             <input id="username" name="username" required disabled={!isAdmin || saving} />

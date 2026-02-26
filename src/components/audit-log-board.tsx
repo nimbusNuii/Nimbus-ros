@@ -100,10 +100,10 @@ export function AuditLogBoard() {
   }
 
   return (
-    <div className="grid" style={{ gap: 14 }}>
+    <div className="grid gap-4">
       <section className="card">
         <form onSubmit={onSearch}>
-          <div className="grid grid-3" style={{ alignItems: "end" }}>
+          <div className="grid grid-3 items-end gap-3">
             <div className="field">
               <label htmlFor="action">Action</label>
               <input id="action" value={action} onChange={(event) => setAction(event.target.value)} placeholder="เช่น ORDER_CREATED" />
@@ -123,7 +123,7 @@ export function AuditLogBoard() {
             <button type="submit" disabled={loading}>
               ค้นหา
             </button>
-            <a className="nav-link" href={`/api/audit-logs/export?${queryString}`} target="_blank" rel="noreferrer">
+            <a className="secondary" href={`/api/audit-logs/export?${queryString}`} target="_blank" rel="noreferrer">
               export csv
             </a>
           </div>
@@ -131,43 +131,45 @@ export function AuditLogBoard() {
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>Audit Logs</h2>
-        {loading ? <p style={{ color: "var(--muted)" }}>กำลังโหลด...</p> : null}
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+        <h2 className="mt-0 text-xl font-semibold">Audit Logs</h2>
+        {loading ? <p className="text-sm text-[var(--muted)]">กำลังโหลด...</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         {!loading ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>เวลา</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>Actor</th>
-                <th>Metadata</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
-                  <td>{formatDateTime(log.createdAt)}</td>
-                  <td>{log.action}</td>
-                  <td>
-                    {log.entity}
-                    {log.entityId ? ` (${log.entityId.slice(0, 8)})` : ""}
-                  </td>
-                  <td>{log.actor?.fullName || log.actorUsername || "-"}</td>
-                  <td style={{ maxWidth: 420, whiteSpace: "pre-wrap", fontSize: 12 }}>{safeString(log.metadata)}</td>
-                </tr>
-              ))}
-              {logs.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="table min-w-[920px]">
+              <thead>
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)" }}>
-                    ไม่พบรายการ
-                  </td>
+                  <th>เวลา</th>
+                  <th>Action</th>
+                  <th>Entity</th>
+                  <th>Actor</th>
+                  <th>Metadata</th>
                 </tr>
-              ) : null}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id}>
+                    <td>{formatDateTime(log.createdAt)}</td>
+                    <td>{log.action}</td>
+                    <td>
+                      {log.entity}
+                      {log.entityId ? ` (${log.entityId.slice(0, 8)})` : ""}
+                    </td>
+                    <td>{log.actor?.fullName || log.actorUsername || "-"}</td>
+                    <td className="max-w-[420px] whitespace-pre-wrap text-xs">{safeString(log.metadata)}</td>
+                  </tr>
+                ))}
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center text-[var(--muted)]">
+                      ไม่พบรายการ
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </section>
     </div>

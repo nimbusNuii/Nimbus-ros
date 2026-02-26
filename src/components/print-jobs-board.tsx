@@ -83,9 +83,9 @@ export function PrintJobsBoard() {
   if (loading) return <p>กำลังโหลดคิวพิมพ์...</p>;
 
   return (
-    <section className="card">
-      <h2 style={{ marginTop: 0 }}>Print Queue</h2>
-      <div className="grid grid-3" style={{ marginBottom: 12, alignItems: "end" }}>
+    <section className="card space-y-3">
+      <h2 className="mt-0 text-xl font-semibold">Print Queue</h2>
+      <div className="grid grid-3 items-end gap-3">
         <div className="field">
           <label htmlFor="statusFilter">Status</label>
           <select id="statusFilter" value={status} onChange={(event) => setStatus(event.target.value as PrintJob["status"] | "ALL")}>
@@ -120,43 +120,47 @@ export function PrintJobsBoard() {
           ค้นหา
         </button>
       </div>
-      {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
-      {jobs.length === 0 ? <p style={{ color: "var(--muted)" }}>ไม่มีคิวพิมพ์ค้าง</p> : null}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {jobs.length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีคิวพิมพ์ค้าง</p> : null}
 
-      <table className="table">
-        <thead>
-          <tr>
-            <th>เวลา</th>
-            <th>Order</th>
-            <th>Channel</th>
-            <th>Target</th>
-            <th>สถานะ</th>
-            <th>เปลี่ยนสถานะ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {jobs.map((job) => (
-            <tr key={job.id}>
-              <td>{formatDateTime(job.createdAt)}</td>
-              <td>{job.order.orderNumber}</td>
-              <td>{channelLabel[job.channel]}</td>
-              <td>{job.printerTarget || "-"}</td>
-              <td>{statusLabel[job.status]}</td>
-              <td style={{ display: "flex", gap: 8 }}>
-                <button className="secondary" onClick={() => updateStatus(job.id, "PRINTED")}>
-                  พิมพ์แล้ว
-                </button>
-                <button className="secondary" onClick={() => updateStatus(job.id, "FAILED")}>
-                  ล้มเหลว
-                </button>
-                <button className="secondary" onClick={() => updateStatus(job.id, "PENDING")}>
-                  retry
-                </button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="table min-w-[920px]">
+          <thead>
+            <tr>
+              <th>เวลา</th>
+              <th>Order</th>
+              <th>Channel</th>
+              <th>Target</th>
+              <th>สถานะ</th>
+              <th>เปลี่ยนสถานะ</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {jobs.map((job) => (
+              <tr key={job.id}>
+                <td>{formatDateTime(job.createdAt)}</td>
+                <td>{job.order.orderNumber}</td>
+                <td>{channelLabel[job.channel]}</td>
+                <td>{job.printerTarget || "-"}</td>
+                <td>{statusLabel[job.status]}</td>
+                <td>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="secondary" onClick={() => updateStatus(job.id, "PRINTED")}>
+                      พิมพ์แล้ว
+                    </button>
+                    <button className="secondary" onClick={() => updateStatus(job.id, "FAILED")}>
+                      ล้มเหลว
+                    </button>
+                    <button className="secondary" onClick={() => updateStatus(job.id, "PENDING")}>
+                      retry
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

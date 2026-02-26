@@ -101,10 +101,10 @@ export function InventoryLogBoard() {
   }
 
   return (
-    <div className="grid" style={{ gap: 14 }}>
+    <div className="grid gap-4">
       <section className="card">
         <form onSubmit={onFilter}>
-          <div className="grid grid-3" style={{ alignItems: "end" }}>
+          <div className="grid grid-3 items-end gap-3">
             <div className="field">
               <label htmlFor="reason">ประเภท</label>
               <select id="reason" value={reason} onChange={(event) => setReason(event.target.value)}>
@@ -144,7 +144,7 @@ export function InventoryLogBoard() {
             <button type="button" className="secondary" onClick={() => void refresh()} disabled={loading}>
               รีเฟรช
             </button>
-            <a className="nav-link" href={`/api/inventory-logs/export?${query}`} target="_blank" rel="noreferrer">
+            <a className="secondary" href={`/api/inventory-logs/export?${query}`} target="_blank" rel="noreferrer">
               export csv
             </a>
           </div>
@@ -152,46 +152,48 @@ export function InventoryLogBoard() {
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>ประวัติสต็อก</h2>
-        {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
-        {loading ? <p style={{ color: "var(--muted)" }}>กำลังโหลด...</p> : null}
+        <h2 className="mt-0 text-xl font-semibold">ประวัติสต็อก</h2>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {loading ? <p className="text-sm text-[var(--muted)]">กำลังโหลด...</p> : null}
 
         {!loading ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>เวลา</th>
-                <th>สินค้า</th>
-                <th>ประเภท</th>
-                <th>จำนวน</th>
-                <th>Order</th>
-                <th>ผู้ทำรายการ</th>
-                <th>หมายเหตุ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
-                  <td>{formatDateTime(log.createdAt)}</td>
-                  <td>{productMap.get(log.productId)?.name || log.product.name}</td>
-                  <td>{reasonLabel[log.reason]}</td>
-                  <td style={{ color: log.deltaQty < 0 ? "crimson" : "var(--ok)", fontWeight: 600 }}>
-                    {log.deltaQty > 0 ? `+${log.deltaQty}` : log.deltaQty}
-                  </td>
-                  <td>{log.order?.orderNumber || "-"}</td>
-                  <td>{log.actor || "-"}</td>
-                  <td>{log.note || "-"}</td>
-                </tr>
-              ))}
-              {logs.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="table min-w-[900px]">
+              <thead>
                 <tr>
-                  <td colSpan={7} style={{ color: "var(--muted)", textAlign: "center" }}>
-                    ไม่พบรายการ
-                  </td>
+                  <th>เวลา</th>
+                  <th>สินค้า</th>
+                  <th>ประเภท</th>
+                  <th>จำนวน</th>
+                  <th>Order</th>
+                  <th>ผู้ทำรายการ</th>
+                  <th>หมายเหตุ</th>
                 </tr>
-              ) : null}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id}>
+                    <td>{formatDateTime(log.createdAt)}</td>
+                    <td>{productMap.get(log.productId)?.name || log.product.name}</td>
+                    <td>{reasonLabel[log.reason]}</td>
+                    <td className={`font-semibold ${log.deltaQty < 0 ? "text-red-600" : "text-[var(--ok)]"}`}>
+                      {log.deltaQty > 0 ? `+${log.deltaQty}` : log.deltaQty}
+                    </td>
+                    <td>{log.order?.orderNumber || "-"}</td>
+                    <td>{log.actor || "-"}</td>
+                    <td>{log.note || "-"}</td>
+                  </tr>
+                ))}
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-[var(--muted)]">
+                      ไม่พบรายการ
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </section>
     </div>
