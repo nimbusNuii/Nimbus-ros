@@ -96,7 +96,7 @@ function createLineId() {
 }
 
 function customerNameLabel(item: { customerType: "WALK_IN" | "REGULAR"; customerName: string | null }) {
-  return item.customerName || (item.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร");
+  return item.customerName || (item.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้า");
 }
 
 function receiptStatusLabel(status: "PAID" | "OPEN" | "CANCELLED") {
@@ -347,7 +347,7 @@ export function PosClient({
           billAt: action !== "KITCHEN" && billAt ? new Date(billAt).toISOString() : undefined,
           customerId: selectedCustomer?.id,
           customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
-          customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร",
+          customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้า",
           note: `บริการ: ${serviceMode === "DINE_IN" ? "ทานที่ร้าน" : "กลับบ้าน"}`
         })
       });
@@ -591,7 +591,7 @@ export function PosClient({
                 value={selectedCustomerId}
                 onChange={(event) => setSelectedCustomerId(event.target.value)}
               >
-                <option value="WALK_IN">ลูกค้าขาจร</option>
+                <option value="WALK_IN">ลูกค้า</option>
                 {customers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {customer.name} ({customer.type === "REGULAR" ? "ลูกค้าประจำ" : "ขาจร"})

@@ -249,7 +249,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
             <label htmlFor="customerType">ประเภท</label>
             <select id="customerType" name="type" defaultValue="REGULAR">
               <option value="REGULAR">ลูกค้าประจำ</option>
-              <option value="WALK_IN">ลูกค้าขาจร</option>
+              <option value="WALK_IN">ลูกค้า</option>
             </select>
           </div>
           <div className="field">
@@ -308,7 +308,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
                         }
                       >
                         <option value="REGULAR">ลูกค้าประจำ</option>
-                        <option value="WALK_IN">ลูกค้าขาจร</option>
+                        <option value="WALK_IN">ลูกค้า</option>
                       </select>
                     </td>
                     <td>

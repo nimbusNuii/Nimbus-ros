@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     const customerNameRaw = body.customerName?.trim() || "";
     const customerIdRaw = body.customerId?.trim() || null;
     let customerType: CustomerType = body.customerType === "REGULAR" ? "REGULAR" : "WALK_IN";
-    let customerName = customerType === "REGULAR" ? customerNameRaw : customerNameRaw || "ลูกค้าขาจร";
+    let customerName = customerType === "REGULAR" ? customerNameRaw : customerNameRaw || "ลูกค้า";
     let customerId: string | null = null;
 
     if (customerIdRaw) {

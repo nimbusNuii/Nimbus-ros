@@ -164,7 +164,7 @@ export function CreateOrderClient({
           orderStatus: "PAID",
           customerId: selectedCustomer?.id,
           customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
-          customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้าขาจร",
+          customerName: selectedCustomer ? selectedCustomer.name : "ลูกค้า",
           note: "Create Order Screen"
         })
       });
@@ -186,25 +186,24 @@ export function CreateOrderClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
-        <Link href="/" className="secondary rounded-lg px-3 py-2 text-sm">
-          กลับหน้าหลัก
-        </Link>
-      </div>
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="card space-y-4">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {categoryTabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveCategory(tab)}
-                className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-4 py-2 text-sm`}
-              >
-                {tab === "ALL" ? "ทั้งหมด" : tab}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {categoryTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveCategory(tab)}
+                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-4 py-2 text-sm`}
+                >
+                  {tab === "ALL" ? "ทั้งหมด" : tab}
+                </button>
+              ))}
+            </div>
+            <Link href="/" className="secondary shrink-0 rounded-lg px-3 py-2 text-sm">
+              กลับหน้าหลัก
+            </Link>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -299,7 +298,7 @@ export function CreateOrderClient({
                   onChange={(event) => setSelectedCustomerId(event.target.value)}
                   className="h-9 px-2 py-1 text-xs"
                 >
-                  <option value="WALK_IN">ลูกค้าขาจร</option>
+                  <option value="WALK_IN">ลูกค้า</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
                       {customer.name}

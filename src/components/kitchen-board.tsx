@@ -49,7 +49,7 @@ const stateLabel: Record<KitchenStatus, string> = {
 };
 
 function customerLabel(order: KitchenItem["order"]) {
-  return order.customerName || (order.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้าขาจร");
+  return order.customerName || (order.customerType === "REGULAR" ? "ลูกค้าประจำ" : "ลูกค้า");
 }
 
 function inferStation(name: string): StationFilter {

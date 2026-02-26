@@ -139,7 +139,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
       paymentMethod,
       customerId: selectedCustomer?.id,
       customerType: selectedCustomer ? selectedCustomer.type : "WALK_IN",
-      customerName: selectedCustomer?.name || "ลูกค้าขาจร",
+      customerName: selectedCustomer?.name || "ลูกค้า",
       note: note.trim() || undefined,
       orderStatus: "PAID"
     };
@@ -188,7 +188,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
         <div className="field mb-0">
           <label htmlFor="billingCustomer">ลูกค้า</label>
           <select id="billingCustomer" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
-            <option value="WALK_IN">ลูกค้าขาจร</option>
+            <option value="WALK_IN">ลูกค้า</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
                 {customer.name}
