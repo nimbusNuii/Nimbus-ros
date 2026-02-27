@@ -247,6 +247,7 @@ export function ProductManager({
 
       setProducts((prev) => [data, ...prev].slice(0, pageSize));
       goPage(1);
+      router.refresh();
       event.currentTarget.reset();
       setImageData("");
       setImageInfo("");

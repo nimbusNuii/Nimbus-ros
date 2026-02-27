@@ -131,6 +131,7 @@ export function UserManager({
 
       setUsers((prev) => [data, ...prev].slice(0, pageSize));
       goPage(1);
+      router.refresh();
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create user");
@@ -158,6 +159,7 @@ export function UserManager({
       }
 
       setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, ...data } : user)));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot update user");
     } finally {

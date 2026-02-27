@@ -250,6 +250,7 @@ export function CustomerManager({
         setSelectedHistoryCustomerId(created.id);
       }
       goPage(1);
+      router.refresh();
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create customer");
@@ -299,6 +300,7 @@ export function CustomerManager({
       if (selectedHistoryCustomerId === customerId && updated.type !== "REGULAR") {
         setSelectedHistoryCustomerId("");
       }
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot update customer");
     } finally {
