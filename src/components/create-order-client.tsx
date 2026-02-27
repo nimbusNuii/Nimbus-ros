@@ -292,7 +292,7 @@ export function CreateOrderClient({
         </div>
 
         <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className={`grid gap-2 ${isMobile ? "grid-cols-3 gap-1" : "grid-cols-3"}`}>
             <div className="field mb-0 space-y-1">
               <label htmlFor={`create-order-customer${idSuffix}`} className="text-[11px]">
                 ลูกค้า
@@ -301,7 +301,7 @@ export function CreateOrderClient({
                 id={`create-order-customer${idSuffix}`}
                 value={selectedCustomerId}
                 onChange={(event) => setSelectedCustomerId(event.target.value)}
-                className="h-9 px-2 py-1 text-xs"
+                className={`h-9 px-2 py-1 text-xs ${isMobile ? "min-w-0 px-1.5 text-[11px]" : ""}`}
               >
                 <option value="WALK_IN">ลูกค้า</option>
                 {customers.map((customer) => (
@@ -320,7 +320,7 @@ export function CreateOrderClient({
                 id={`create-order-payment${idSuffix}`}
                 value={paymentMethod}
                 onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-                className="h-9 px-2 py-1 text-xs"
+                className={`h-9 px-2 py-1 text-xs ${isMobile ? "min-w-0 px-1.5 text-[11px]" : ""}`}
               >
                 <option value="CASH">เงินสด</option>
                 <option value="CARD">บัตร</option>
@@ -339,7 +339,7 @@ export function CreateOrderClient({
                 min={0}
                 value={discount}
                 onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
-                className="h-9 px-2 py-1 text-xs"
+                className={`h-9 px-2 py-1 text-xs ${isMobile ? "min-w-0 px-1.5 text-[11px]" : ""}`}
               />
             </div>
           </div>
