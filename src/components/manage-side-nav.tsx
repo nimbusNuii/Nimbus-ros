@@ -11,6 +11,10 @@ type MenuGroup = {
   }>;
 };
 
+type ManageSideNavProps = {
+  onNavigate?: () => void;
+};
+
 const menuGroups: MenuGroup[] = [
   {
     title: "ภาพรวม",
@@ -44,11 +48,11 @@ const menuGroups: MenuGroup[] = [
   }
 ];
 
-export function ManageSideNav() {
+export function ManageSideNav({ onNavigate }: ManageSideNavProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="card lg:sticky lg:top-6 lg:max-h-[calc(100dvh-96px)] lg:overflow-auto">
+    <aside className="card xl:sticky xl:top-6 xl:max-h-[calc(100dvh-96px)] xl:overflow-auto">
       <div className="space-y-3">
         {menuGroups.map((group) => (
           <section key={group.title}>
@@ -60,6 +64,7 @@ export function ManageSideNav() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => onNavigate?.()}
                     className={`block rounded-lg border px-3 py-2 text-sm transition-colors ${
                       active
                         ? "border-[color-mix(in_srgb,var(--brand)_45%,white)] bg-[color-mix(in_srgb,var(--brand)_12%,white)] text-[var(--text)]"
