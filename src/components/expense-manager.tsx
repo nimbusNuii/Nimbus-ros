@@ -166,7 +166,7 @@ export function ExpenseManager({
           </button>
         </div>
         <form
-          className="mb-3 grid gap-2 md:grid-cols-3 lg:grid-cols-4"
+          className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -195,7 +195,22 @@ export function ExpenseManager({
             ล้างตัวกรอง
           </button>
         </form>
-        <div className="overflow-x-auto">
+
+        <div className="space-y-2 md:hidden">
+          {expenses.map((expense) => (
+            <article key={expense.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="m-0 text-sm font-semibold">{typeLabel[expense.type]}</p>
+                <p className="m-0 text-sm font-semibold">{formatCurrency(expense.amount, currency)}</p>
+              </div>
+              <p className="m-0 mt-1 text-xs text-[var(--muted)]">{formatDateTime(expense.incurredOn)}</p>
+              <p className="m-0 mt-2 text-sm text-[var(--text)]">{expense.note || "-"}</p>
+            </article>
+          ))}
+          {expenses.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีข้อมูล</p> : null}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="table min-w-[560px]">
             <thead>
               <tr>
