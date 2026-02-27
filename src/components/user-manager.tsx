@@ -174,7 +174,7 @@ export function UserManager({
         {!isAdmin ? <p className="text-sm text-[var(--muted)]">บัญชี manager ดูรายการได้ แต่แก้ไขได้เฉพาะ admin</p> : null}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <form
-          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -198,7 +198,73 @@ export function UserManager({
           </button>
         </form>
 
-        <div className="overflow-x-auto">
+        <div className="space-y-2 md:hidden">
+          {users.map((user) => (
+            <article key={user.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="m-0 truncate text-sm font-semibold">{user.username}</p>
+                  <p className="m-0 mt-0.5 text-xs text-[var(--muted)]">{user.fullName}</p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                    user.isActive ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"
+                  }`}
+                >
+                  {user.isActive ? "ใช้งาน" : "ปิด"}
+                </span>
+              </div>
+              <p className="m-0 mt-2 text-xs text-[var(--muted)]">บทบาท: {roleLabel[user.role]}</p>
+
+              {isAdmin ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <select
+                    value={user.role}
+                    onChange={(event) =>
+                      updateUser(user.id, {
+                        role: event.target.value as Role
+                      })
+                    }
+                    disabled={editingId === user.id}
+                    className="w-full"
+                  >
+                    <option value="CASHIER">Cashier</option>
+                    <option value="KITCHEN">Kitchen</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={editingId === user.id}
+                    onClick={() => updateUser(user.id, { isActive: !user.isActive })}
+                  >
+                    {user.isActive ? "ปิด" : "เปิด"}
+                  </button>
+
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={editingId === user.id}
+                    onClick={() => {
+                      const pin = window.prompt(`ตั้ง PIN ใหม่ให้ ${user.username}`)?.trim();
+                      if (!pin) return;
+                      void updateUser(user.id, { pin });
+                    }}
+                  >
+                    เปลี่ยน PIN
+                  </button>
+                </div>
+              ) : (
+                <p className="m-0 mt-2 text-xs text-[var(--muted)]">read-only</p>
+              )}
+            </article>
+          ))}
+          {users.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีผู้ใช้งาน</p> : null}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="table min-w-[820px]">
             <thead>
               <tr>
