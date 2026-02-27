@@ -380,10 +380,10 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        className="h-28 w-full rounded-lg border border-[var(--line)] object-cover"
+                        className="aspect-square w-full rounded-lg border border-[var(--line)] object-cover"
                       />
                     ) : (
-                      <div className="grid h-28 w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
+                      <div className="grid aspect-square w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
                         ไม่มีรูปสินค้า
                       </div>
                     )}

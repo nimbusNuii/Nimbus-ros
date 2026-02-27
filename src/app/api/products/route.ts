@@ -6,9 +6,7 @@ import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { publishRealtime } from "@/lib/realtime";
 import { parseBooleanFlag, parseLimit, parsePage } from "@/lib/query-utils";
-
-const DATA_URL_IMAGE_PATTERN = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i;
-const MAX_IMAGE_DATA_LENGTH = 450_000;
+import { normalizeImageValue } from "@/lib/image-data-url";
 type ProductSort = "category_name" | "name_asc" | "name_desc" | "stock_asc" | "stock_desc" | "price_asc" | "price_desc";
 
 function parseSort(value: string | null): ProductSort {
@@ -32,27 +30,6 @@ function orderByFromSort(sort: ProductSort): Prisma.ProductOrderByWithRelationIn
   if (sort === "price_asc") return [{ price: "asc" }, { name: "asc" }];
   if (sort === "price_desc") return [{ price: "desc" }, { name: "asc" }];
   return [{ category: "asc" }, { name: "asc" }];
-}
-
-function normalizeImageValue(raw?: string) {
-  const value = raw?.trim() || "";
-  if (!value) return null;
-
-  if (value.startsWith("data:image/")) {
-    if (!DATA_URL_IMAGE_PATTERN.test(value)) {
-      throw new Error("Invalid base64 image");
-    }
-    if (value.length > MAX_IMAGE_DATA_LENGTH) {
-      throw new Error("Image too large");
-    }
-    return value;
-  }
-
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    return value;
-  }
-
-  throw new Error("Unsupported image format");
 }
 
 export async function GET(request: Request) {

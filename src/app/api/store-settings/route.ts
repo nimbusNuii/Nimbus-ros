@@ -4,6 +4,7 @@ import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { isAppThemeKey, type AppThemeKey } from "@/lib/app-theme-presets";
+import { normalizeImageValue } from "@/lib/image-data-url";
 
 function normalizeHexColor(value: string | undefined, fallback: string) {
   const normalized = value?.trim().toLowerCase();
@@ -12,11 +13,7 @@ function normalizeHexColor(value: string | undefined, fallback: string) {
 }
 
 function normalizeLogoUrl(value: string | undefined) {
-  const normalized = value?.trim();
-  if (!normalized) return null;
-  if (normalized.startsWith("data:image/")) return normalized;
-  if (/^https?:\/\//i.test(normalized)) return normalized;
-  return null;
+  return normalizeImageValue(value);
 }
 
 async function getOrCreate() {
@@ -141,7 +138,10 @@ export async function PUT(request: Request) {
       ...updated,
       taxRate: toNumber(updated.taxRate)
     });
-  } catch {
-    return NextResponse.json({ error: "Cannot update store settings" }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Cannot update store settings" },
+      { status: 400 }
+    );
   }
 }

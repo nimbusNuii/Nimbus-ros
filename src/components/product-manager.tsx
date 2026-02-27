@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
 import { PaginationControls } from "@/components/pagination-controls";
+import { optimizeSquareImageFile } from "@/lib/client-image-upload";
 
 type Product = {
   id: string;
@@ -44,50 +45,16 @@ type ProductSort =
   | "price_asc"
   | "price_desc";
 
-const IMAGE_MAX_SIDE = 720;
-const TARGET_DATA_URL_LENGTH = 320_000;
-const MIN_QUALITY = 0.55;
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Cannot read image file"));
-    reader.readAsDataURL(file);
-  });
-}
-
-function loadImage(source: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Cannot load image"));
-    image.src = source;
-  });
-}
-
-async function resizeImageFile(file: File) {
-  const src = await readFileAsDataUrl(file);
-  const image = await loadImage(src);
-  const ratio = Math.min(1, IMAGE_MAX_SIDE / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * ratio));
-  const height = Math.max(1, Math.round(image.height * ratio));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Cannot process image");
-
-  ctx.drawImage(image, 0, 0, width, height);
-  let quality = 0.82;
-  let output = canvas.toDataURL("image/jpeg", quality);
-  while (output.length > TARGET_DATA_URL_LENGTH && quality > MIN_QUALITY) {
-    quality -= 0.08;
-    output = canvas.toDataURL("image/jpeg", quality);
-  }
-
-  return output;
-}
+type EditProductForm = {
+  id: string;
+  sku: string;
+  name: string;
+  categoryId: string;
+  price: string;
+  cost: string;
+  stockQty: string;
+  isActive: boolean;
+};
 
 export function ProductManager({
   initialProducts,
@@ -112,6 +79,13 @@ export function ProductManager({
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [editForm, setEditForm] = useState<EditProductForm | null>(null);
+  const [editImageData, setEditImageData] = useState("");
+  const [editImageInfo, setEditImageInfo] = useState("");
+  const [editFileInputKey, setEditFileInputKey] = useState(0);
+  const [processingEditImage, setProcessingEditImage] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
   const [queryInput, setQueryInput] = useState(initialQuery);
   const [sortInput, setSortInput] = useState<ProductSort>(initialSort);
 
@@ -206,16 +180,60 @@ export function ProductManager({
     setProcessingImage(true);
     setError("");
     try {
-      const resized = await resizeImageFile(file);
-      const sizeKb = Math.round((resized.length * 0.75) / 1024);
-      setImageData(resized);
-      setImageInfo(`ไฟล์ถูกย่อและแปลงแล้ว ~${sizeKb} KB`);
+      const resized = await optimizeSquareImageFile(file);
+      const sizeKb = (resized.bytes / 1024).toFixed(1);
+      setImageData(resized.dataUrl);
+      setImageInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
     } catch (err) {
       setImageData("");
       setImageInfo("");
       setError(err instanceof Error ? err.message : "Cannot process image");
     } finally {
       setProcessingImage(false);
+    }
+  }
+
+  function openEdit(product: Product) {
+    setEditError("");
+    setEditForm({
+      id: product.id,
+      sku: product.sku || "",
+      name: product.name,
+      categoryId: product.categoryId || "",
+      price: String(product.price),
+      cost: String(product.cost),
+      stockQty: String(product.stockQty),
+      isActive: product.isActive
+    });
+    setEditImageData(product.imageUrl || "");
+    setEditImageInfo(product.imageUrl ? "ใช้รูปเดิม" : "");
+    setEditFileInputKey((prev) => prev + 1);
+  }
+
+  function closeEdit() {
+    setEditForm(null);
+    setEditImageData("");
+    setEditImageInfo("");
+    setEditError("");
+    setProcessingEditImage(false);
+    setSavingEdit(false);
+  }
+
+  async function onEditImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setProcessingEditImage(true);
+    setEditError("");
+    try {
+      const resized = await optimizeSquareImageFile(file);
+      const sizeKb = (resized.bytes / 1024).toFixed(1);
+      setEditImageData(resized.dataUrl);
+      setEditImageInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Cannot process image");
+    } finally {
+      setProcessingEditImage(false);
     }
   }
 
@@ -256,6 +274,43 @@ export function ProductManager({
       setError(err instanceof Error ? err.message : "Cannot create product");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSubmitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editForm || savingEdit) return;
+
+    setSavingEdit(true);
+    setEditError("");
+    setError("");
+    try {
+      const response = await fetch(`/api/products/${editForm.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sku: editForm.sku,
+          name: editForm.name,
+          categoryId: editForm.categoryId || null,
+          imageData: editImageData,
+          price: Number(editForm.price),
+          cost: Number(editForm.cost),
+          stockQty: Number(editForm.stockQty),
+          isActive: editForm.isActive
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? "Cannot update product");
+      }
+
+      setProducts((prev) => prev.map((product) => (product.id === data.id ? data : product)));
+      closeEdit();
+      router.refresh();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Cannot update product");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -330,14 +385,14 @@ export function ProductManager({
               disabled={processingImage}
             />
             <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-              ระบบจะย่อรูปอัตโนมัติและเก็บเป็น base64 เพื่อให้ใช้งานเร็วขึ้น
+              ระบบจะครอปเป็น 1:1 และบีบไฟล์ไม่เกิน 10KB (base64)
             </p>
           </div>
           {imageData ? (
             <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
               <p className="mb-2 text-xs text-[var(--muted)]">{imageInfo}</p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageData} alt="Preview" className="h-28 w-full rounded-lg object-cover" />
+              <img src={imageData} alt="Preview" className="h-28 w-28 rounded-lg object-cover" />
               <button
                 type="button"
                 className="secondary mt-2"
@@ -399,7 +454,7 @@ export function ProductManager({
           </button>
         </form>
         <div className="overflow-x-auto">
-          <table className="table min-w-[880px]">
+          <table className="table min-w-[980px]">
             <thead>
               <tr>
                 <th>รูป</th>
@@ -409,6 +464,7 @@ export function ProductManager({
                 <th>ต้นทุน</th>
                 <th>สต็อก</th>
                 <th>ปรับสต็อก</th>
+                <th>จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -432,7 +488,10 @@ export function ProductManager({
                   <td>{product.category || "-"}</td>
                   <td>{formatCurrency(product.price, currency)}</td>
                   <td>{formatCurrency(product.cost, currency)}</td>
-                  <td>{product.stockQty}</td>
+                  <td>
+                    {product.stockQty}
+                    {!product.isActive ? <div className="text-xs text-[var(--muted)]">ปิดใช้งาน</div> : null}
+                  </td>
                   <td>
                     <div className="flex gap-2">
                       <input
@@ -457,6 +516,11 @@ export function ProductManager({
                       </button>
                     </div>
                   </td>
+                  <td>
+                    <button type="button" className="secondary" onClick={() => openEdit(product)}>
+                      แก้ไข
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -469,6 +533,157 @@ export function ProductManager({
           onPageChange={goPage}
         />
       </section>
+
+      {editForm ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeEdit();
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(560px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">แก้ไขสินค้า</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">แก้ชื่อ รูป หมวด ราคา ต้นทุน สต็อก และสถานะได้</p>
+              </div>
+              <button type="button" className="secondary" onClick={closeEdit}>
+                ปิด
+              </button>
+            </div>
+
+            <form className="space-y-3" onSubmit={onSubmitEdit}>
+              <div className="field mb-0">
+                <label htmlFor="editSku">SKU</label>
+                <input
+                  id="editSku"
+                  value={editForm.sku}
+                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, sku: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="editName">ชื่อสินค้า *</label>
+                <input
+                  id="editName"
+                  required
+                  value={editForm.name}
+                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, name: event.target.value } : prev))}
+                />
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="editCategoryId">หมวดหมู่</label>
+                <select
+                  id="editCategoryId"
+                  value={editForm.categoryId}
+                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, categoryId: event.target.value } : prev))}
+                >
+                  <option value="">ไม่ระบุหมวดหมู่</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="editImageFile">รูปสินค้า (ไฟล์)</label>
+                <input
+                  key={editFileInputKey}
+                  id="editImageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={onEditImageFileChange}
+                  disabled={processingEditImage}
+                />
+                <p className="mb-0 mt-1 text-xs text-[var(--muted)]">ระบบจะครอปเป็น 1:1 และบีบไฟล์ไม่เกิน 10KB (base64)</p>
+              </div>
+
+              {editImageData ? (
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                  <p className="mb-2 text-xs text-[var(--muted)]">{editImageInfo || "รูปที่ใช้งานปัจจุบัน"}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editImageData} alt="Edit preview" className="h-28 w-28 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    className="secondary mt-2"
+                    onClick={() => {
+                      setEditImageData("");
+                      setEditImageInfo("ลบรูปแล้ว");
+                      setEditFileInputKey((prev) => prev + 1);
+                    }}
+                  >
+                    ลบรูป
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="field mb-0">
+                  <label htmlFor="editPrice">ราคาขาย *</label>
+                  <input
+                    id="editPrice"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    required
+                    value={editForm.price}
+                    onChange={(event) => setEditForm((prev) => (prev ? { ...prev, price: event.target.value } : prev))}
+                  />
+                </div>
+                <div className="field mb-0">
+                  <label htmlFor="editCost">ต้นทุน *</label>
+                  <input
+                    id="editCost"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    required
+                    value={editForm.cost}
+                    onChange={(event) => setEditForm((prev) => (prev ? { ...prev, cost: event.target.value } : prev))}
+                  />
+                </div>
+                <div className="field mb-0">
+                  <label htmlFor="editStockQty">สต็อก *</label>
+                  <input
+                    id="editStockQty"
+                    type="number"
+                    min={0}
+                    step={1}
+                    required
+                    value={editForm.stockQty}
+                    onChange={(event) => setEditForm((prev) => (prev ? { ...prev, stockQty: event.target.value } : prev))}
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                <input
+                  type="checkbox"
+                  checked={editForm.isActive}
+                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, isActive: event.target.checked } : prev))}
+                />
+                เปิดใช้งานสินค้า
+              </label>
+
+              {editError ? <p className="m-0 text-sm text-red-600">{editError}</p> : null}
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="secondary" onClick={closeEdit}>
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={savingEdit || processingEditImage}>
+                  {savingEdit ? "กำลังบันทึก..." : processingEditImage ? "กำลังย่อรูป..." : "บันทึกการแก้ไข"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

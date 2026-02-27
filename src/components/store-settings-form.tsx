@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { APP_THEME_PRESETS } from "@/lib/app-theme-presets";
+import { optimizeSquareImageFile } from "@/lib/client-image-upload";
 
 type StoreSettings = {
   businessName: string;
@@ -22,52 +23,6 @@ type StoreSettingsFormProps = {
   initialSettings: StoreSettings;
 };
 
-const IMAGE_MAX_SIDE = 720;
-const TARGET_DATA_URL_LENGTH = 320_000;
-const MIN_QUALITY = 0.55;
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Cannot read image file"));
-    reader.readAsDataURL(file);
-  });
-}
-
-function loadImage(source: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Cannot load image"));
-    image.src = source;
-  });
-}
-
-async function resizeImageFile(file: File) {
-  const src = await readFileAsDataUrl(file);
-  const image = await loadImage(src);
-  const ratio = Math.min(1, IMAGE_MAX_SIDE / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * ratio));
-  const height = Math.max(1, Math.round(image.height * ratio));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Cannot process image");
-
-  ctx.drawImage(image, 0, 0, width, height);
-  let quality = 0.82;
-  let output = canvas.toDataURL("image/jpeg", quality);
-  while (output.length > TARGET_DATA_URL_LENGTH && quality > MIN_QUALITY) {
-    quality -= 0.08;
-    output = canvas.toDataURL("image/jpeg", quality);
-  }
-
-  return output;
-}
-
 export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
   const [state, setState] = useState(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -87,10 +42,10 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
     setProcessingLogo(true);
     setError("");
     try {
-      const resized = await resizeImageFile(file);
-      const sizeKb = Math.round((resized.length * 0.75) / 1024);
-      setState((prev) => ({ ...prev, receiptLogoUrl: resized }));
-      setLogoInfo(`ไฟล์ถูกย่อและแปลงแล้ว ~${sizeKb} KB`);
+      const resized = await optimizeSquareImageFile(file);
+      const sizeKb = (resized.bytes / 1024).toFixed(1);
+      setState((prev) => ({ ...prev, receiptLogoUrl: resized.dataUrl }));
+      setLogoInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot process image");
     } finally {
@@ -224,7 +179,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             />
             <input type="hidden" name="receiptLogoUrl" value={state.receiptLogoUrl || ""} />
             <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-              ระบบจะย่อรูปอัตโนมัติและเก็บเป็น base64 เหมือนรูปสินค้า
+              ระบบจะครอปเป็น 1:1 และบีบไฟล์ไม่เกิน 10KB (base64)
             </p>
           </div>
           <div className="field">
@@ -282,7 +237,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             ตัวอย่างโลโก้บนใบเสร็จ {logoInfo ? `(${logoInfo})` : ""}
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={state.receiptLogoUrl} alt="Receipt logo preview" className="mx-auto max-h-20 w-auto object-contain" />
+          <img src={state.receiptLogoUrl} alt="Receipt logo preview" className="mx-auto h-24 w-24 rounded-lg object-cover" />
           <button
             type="button"
             className="secondary mt-2"
