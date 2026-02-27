@@ -187,7 +187,7 @@ export function PrintJobsBoard() {
   return (
     <section className="card space-y-3">
       <h2 className="mt-0 text-xl font-semibold">Print Queue</h2>
-      <form onSubmit={onSearch} className="grid items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <form onSubmit={onSearch} className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="field">
           <label htmlFor="statusFilter">Status</label>
           <select id="statusFilter" value={statusInput} onChange={(event) => setStatusInput(event.target.value as PrintStatusFilter)}>
@@ -234,22 +234,54 @@ export function PrintJobsBoard() {
             <option value="created_asc">เก่าสุดก่อน</option>
           </select>
         </div>
-        <button type="submit" disabled={loading}>
-          ค้นหา
-        </button>
-        <button className="secondary" type="button" onClick={resetFilters} disabled={loading}>
-          ล้างตัวกรอง
-        </button>
-        <button className="secondary" type="button" onClick={() => void load()} disabled={loading}>
-          รีเฟรช
-        </button>
+        <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
+          <button type="submit" disabled={loading}>
+            ค้นหา
+          </button>
+          <button className="secondary" type="button" onClick={resetFilters} disabled={loading}>
+            ล้างตัวกรอง
+          </button>
+          <button className="secondary" type="button" onClick={() => void load()} disabled={loading}>
+            รีเฟรช
+          </button>
+        </div>
       </form>
 
       {loading ? <p className="text-sm text-[var(--muted)]">กำลังโหลดคิวพิมพ์...</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {!loading && jobs.length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีคิวพิมพ์ค้าง</p> : null}
 
-      <div className="overflow-x-auto">
+      <div className="space-y-2 md:hidden">
+        {jobs.map((job) => (
+          <article key={job.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="m-0 text-sm font-semibold text-[var(--text)]">{job.order.orderNumber}</p>
+                <p className="m-0 text-xs text-[var(--muted)]">{formatDateTime(job.createdAt)}</p>
+              </div>
+              <span className="text-xs font-medium text-[var(--muted)]">{statusLabel[job.status]}</span>
+            </div>
+            <div className="mt-2 grid gap-1 text-xs text-[var(--muted)]">
+              <p className="m-0">ช่องทาง: {channelLabel[job.channel]}</p>
+              <p className="m-0">เครื่องพิมพ์: {job.printerTarget || "-"}</p>
+              {job.errorMessage ? <p className="m-0 text-red-600">error: {job.errorMessage}</p> : null}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button className="secondary" onClick={() => void updateStatus(job.id, "PRINTED")}>
+                พิมพ์แล้ว
+              </button>
+              <button className="secondary" onClick={() => void updateStatus(job.id, "FAILED")}>
+                ล้มเหลว
+              </button>
+              <button className="secondary" onClick={() => void updateStatus(job.id, "PENDING")}>
+                retry
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="table min-w-[920px]">
           <thead>
             <tr>
