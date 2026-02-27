@@ -263,7 +263,7 @@ export function CategoryManager({
           </button>
         </div>
         <form
-          className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -285,7 +285,61 @@ export function CategoryManager({
           </button>
         </form>
 
-        <div className="overflow-x-auto">
+        <div className="space-y-2 md:hidden">
+          {categories.map((item) => {
+            const draft = drafts[item.id];
+            return (
+              <article key={item.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="m-0 text-sm font-semibold">หมวดหมู่</p>
+                  <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-xs text-[var(--muted)]">
+                    สินค้า {item.productCount}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="field mb-0">
+                    <label>ชื่อหมวดหมู่</label>
+                    <input value={draft?.name || ""} onChange={(event) => setDraftValue(item.id, "name", event.target.value)} />
+                  </div>
+                  <div className="field mb-0">
+                    <label>ลำดับ</label>
+                    <input
+                      type="number"
+                      step={1}
+                      value={draft?.sortOrder ?? 0}
+                      onChange={(event) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(event.target.value) || 0))}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setDraftValue(item.id, "isActive", !draft?.isActive)}
+                  >
+                    {draft?.isActive ? "ใช้งาน" : "ปิด"}
+                  </button>
+                  <button type="button" onClick={() => void saveCategory(item.id)} disabled={savingId === item.id}>
+                    {savingId === item.id ? "..." : "บันทึก"}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={savingId === item.id || item.productCount > 0}
+                    onClick={() => void removeCategory(item.id)}
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {categories.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีหมวดหมู่</p> : null}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="table min-w-[680px]">
             <thead>
               <tr>
