@@ -198,7 +198,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
         <p className="mb-0 mt-1 text-sm text-[var(--muted)]">บิลทั้งหมดจะบันทึกเป็นชำระแล้ว และเพิ่มสินค้าแบบ Modal</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="field mb-0">
           <label htmlFor="billingDateTime">วัน/เวลา</label>
           <input id="billingDateTime" type="datetime-local" value={dateTime} onChange={(event) => setDateTime(event.target.value)} />
@@ -237,7 +237,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
           />
         </div>
 
-        <div className="field mb-0">
+        <div className="field mb-0 sm:col-span-2 xl:col-span-4">
           <label htmlFor="billingNote">หมายเหตุบิล</label>
           <input id="billingNote" value={note} onChange={(event) => setNote(event.target.value)} />
         </div>
@@ -329,7 +329,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
             }
           }}
         >
-          <div className="modal-panel" style={{ width: "min(980px, 100%)" }}>
+          <div className="modal-panel w-full max-w-5xl">
             <div className="modal-header">
               <div>
                 <h3 className="m-0 text-lg font-semibold">เลือกสินค้า</h3>
@@ -356,14 +356,14 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                   key={tab}
                   type="button"
                   onClick={() => setActiveCategory(tab)}
-                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-4 py-2 text-sm`}
+                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm`}
                 >
                   {tab === "ALL" ? "ทั้งหมด" : tab}
                 </button>
               ))}
             </div>
 
-            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
+            <div className="grid max-h-[62vh] gap-2 overflow-auto [grid-template-columns:repeat(auto-fill,minmax(120px,1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
               {filteredProducts.map((product) => (
                 <article
                   key={product.id}
@@ -411,6 +411,9 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                   ) : null}
                 </article>
               ))}
+              {filteredProducts.length === 0 ? (
+                <p className="col-span-full text-center text-sm text-[var(--muted)]">ไม่พบสินค้าในหมวดนี้</p>
+              ) : null}
             </div>
           </div>
         </div>
