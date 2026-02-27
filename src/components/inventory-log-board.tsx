@@ -210,7 +210,7 @@ export function InventoryLogBoard() {
     <div className="grid gap-4">
       <section className="card">
         <form onSubmit={onFilter}>
-          <div className="grid items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="field">
               <label htmlFor="reason">ประเภท</label>
               <select id="reason" value={reasonInput} onChange={(event) => setReasonInput(event.target.value)}>
@@ -261,20 +261,22 @@ export function InventoryLogBoard() {
               </select>
             </div>
 
-            <button type="submit" disabled={loading}>
-              ค้นหา
-            </button>
+            <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
+              <button type="submit" disabled={loading}>
+                ค้นหา
+              </button>
 
-            <button type="button" className="secondary" onClick={resetFilters} disabled={loading}>
-              ล้างตัวกรอง
-            </button>
+              <button type="button" className="secondary" onClick={resetFilters} disabled={loading}>
+                ล้างตัวกรอง
+              </button>
 
-            <button type="button" className="secondary" onClick={() => void loadLogs()} disabled={loading}>
-              รีเฟรช
-            </button>
-            <a className="secondary" href={`/api/inventory-logs/export?${exportQuery}`} target="_blank" rel="noreferrer">
-              export csv
-            </a>
+              <button type="button" className="secondary" onClick={() => void loadLogs()} disabled={loading}>
+                รีเฟรช
+              </button>
+              <a className="secondary" href={`/api/inventory-logs/export?${exportQuery}`} target="_blank" rel="noreferrer">
+                export csv
+              </a>
+            </div>
           </div>
         </form>
       </section>
@@ -285,7 +287,32 @@ export function InventoryLogBoard() {
         {loading ? <p className="text-sm text-[var(--muted)]">กำลังโหลด...</p> : null}
 
         {!loading ? (
-          <div className="overflow-x-auto">
+          <div className="space-y-2 md:hidden">
+            {logs.map((log) => (
+              <article key={log.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="m-0 text-sm font-semibold text-[var(--text)]">{productMap.get(log.productId)?.name || log.product.name}</p>
+                    <p className="m-0 text-xs text-[var(--muted)]">{formatDateTime(log.createdAt)}</p>
+                  </div>
+                  <span className={`text-sm font-semibold ${log.deltaQty < 0 ? "text-red-600" : "text-[var(--ok)]"}`}>
+                    {log.deltaQty > 0 ? `+${log.deltaQty}` : log.deltaQty}
+                  </span>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-[var(--muted)]">
+                  <p className="m-0">ประเภท: {reasonLabel[log.reason]}</p>
+                  <p className="m-0">Order: {log.order?.orderNumber || "-"}</p>
+                  <p className="m-0">ผู้ทำรายการ: {log.actor || "-"}</p>
+                  <p className="m-0">หมายเหตุ: {log.note || "-"}</p>
+                </div>
+              </article>
+            ))}
+            {logs.length === 0 ? <p className="text-center text-sm text-[var(--muted)]">ไม่พบรายการ</p> : null}
+          </div>
+        ) : null}
+
+        {!loading ? (
+          <div className="hidden overflow-x-auto md:block">
             <table className="table min-w-[900px]">
               <thead>
                 <tr>
