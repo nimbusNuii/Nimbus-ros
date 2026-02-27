@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { APP_THEME_PRESETS } from "@/lib/app-theme-presets";
-import { optimizeSquareImageFile } from "@/lib/client-image-upload";
+import { ImageCropModal } from "@/components/image-crop-modal";
 
 type StoreSettings = {
   businessName: string;
@@ -31,26 +31,20 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
   const [logoInfo, setLogoInfo] = useState("");
   const [processingLogo, setProcessingLogo] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [cropLogoFile, setCropLogoFile] = useState<File | null>(null);
 
   async function onLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
       setLogoInfo("");
+      setCropLogoFile(null);
+      setProcessingLogo(false);
       return;
     }
 
-    setProcessingLogo(true);
     setError("");
-    try {
-      const resized = await optimizeSquareImageFile(file);
-      const sizeKb = (resized.bytes / 1024).toFixed(1);
-      setState((prev) => ({ ...prev, receiptLogoUrl: resized.dataUrl }));
-      setLogoInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot process image");
-    } finally {
-      setProcessingLogo(false);
-    }
+    setProcessingLogo(true);
+    setCropLogoFile(file);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -244,6 +238,8 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             onClick={() => {
               setState((prev) => ({ ...prev, receiptLogoUrl: null }));
               setLogoInfo("");
+              setCropLogoFile(null);
+              setProcessingLogo(false);
               setFileInputKey((prev) => prev + 1);
             }}
           >
@@ -251,6 +247,24 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
           </button>
         </div>
       ) : null}
+      <ImageCropModal
+        open={Boolean(cropLogoFile)}
+        file={cropLogoFile}
+        title="ครอปโลโก้ใบเสร็จ"
+        description="เลือกตำแหน่งโลโก้สำหรับแสดงบนหัวใบเสร็จ"
+        onCancel={() => {
+          setCropLogoFile(null);
+          setProcessingLogo(false);
+          setFileInputKey((prev) => prev + 1);
+        }}
+        onApply={({ dataUrl, info }) => {
+          setState((prev) => ({ ...prev, receiptLogoUrl: dataUrl }));
+          setLogoInfo(info);
+          setCropLogoFile(null);
+          setProcessingLogo(false);
+          setFileInputKey((prev) => prev + 1);
+        }}
+      />
       {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
       {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
     </section>

@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
 import { PaginationControls } from "@/components/pagination-controls";
-import { optimizeSquareImageFile } from "@/lib/client-image-upload";
+import { ImageCropModal } from "@/components/image-crop-modal";
 
 type Product = {
   id: string;
@@ -87,11 +87,13 @@ export function ProductManager({
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [cropAddImageFile, setCropAddImageFile] = useState<File | null>(null);
   const [editForm, setEditForm] = useState<EditProductForm | null>(null);
   const [editImageData, setEditImageData] = useState("");
   const [editImageInfo, setEditImageInfo] = useState("");
   const [editFileInputKey, setEditFileInputKey] = useState(0);
   const [processingEditImage, setProcessingEditImage] = useState(false);
+  const [cropEditImageFile, setCropEditImageFile] = useState<File | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
   const [queryInput, setQueryInput] = useState(initialQuery);
@@ -169,6 +171,8 @@ export function ProductManager({
     setAddModalOpen(false);
     setAddCategoryModalOpen(false);
     setAddCategoryError("");
+    setCropAddImageFile(null);
+    setProcessingImage(false);
   }
 
   const reloadProducts = useCallback(async () => {
@@ -206,23 +210,14 @@ export function ProductManager({
     if (!file) {
       setImageData("");
       setImageInfo("");
+      setCropAddImageFile(null);
+      setProcessingImage(false);
       return;
     }
 
-    setProcessingImage(true);
     setError("");
-    try {
-      const resized = await optimizeSquareImageFile(file);
-      const sizeKb = (resized.bytes / 1024).toFixed(1);
-      setImageData(resized.dataUrl);
-      setImageInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
-    } catch (err) {
-      setImageData("");
-      setImageInfo("");
-      setError(err instanceof Error ? err.message : "Cannot process image");
-    } finally {
-      setProcessingImage(false);
-    }
+    setProcessingImage(true);
+    setCropAddImageFile(file);
   }
 
   function openEdit(product: Product) {
@@ -247,26 +242,22 @@ export function ProductManager({
     setEditImageData("");
     setEditImageInfo("");
     setEditError("");
+    setCropEditImageFile(null);
     setProcessingEditImage(false);
     setSavingEdit(false);
   }
 
   async function onEditImageFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    setProcessingEditImage(true);
-    setEditError("");
-    try {
-      const resized = await optimizeSquareImageFile(file);
-      const sizeKb = (resized.bytes / 1024).toFixed(1);
-      setEditImageData(resized.dataUrl);
-      setEditImageInfo(`รูป 1:1 ${resized.width}x${resized.height} ~${sizeKb} KB`);
-    } catch (err) {
-      setEditError(err instanceof Error ? err.message : "Cannot process image");
-    } finally {
+    if (!file) {
+      setCropEditImageFile(null);
       setProcessingEditImage(false);
+      return;
     }
+
+    setEditError("");
+    setProcessingEditImage(true);
+    setCropEditImageFile(file);
   }
 
   async function onSubmitAddCategory(event: FormEvent<HTMLFormElement>) {
@@ -717,7 +708,7 @@ export function ProductManager({
                   ยกเลิก
                 </button>
                 <button type="submit" disabled={saving || processingImage}>
-                  {saving ? "กำลังบันทึก..." : processingImage ? "กำลังย่อรูป..." : "บันทึกสินค้า"}
+                  {saving ? "กำลังบันทึก..." : processingImage ? "กำลังจัดรูป..." : "บันทึกสินค้า"}
                 </button>
               </div>
             </form>
@@ -949,6 +940,44 @@ export function ProductManager({
           </div>
         </div>
       ) : null}
+
+      <ImageCropModal
+        open={Boolean(cropAddImageFile)}
+        file={cropAddImageFile}
+        title="ครอปรูปสินค้าใหม่"
+        description="เลือกตำแหน่งรูปที่จะใช้ในสินค้า (1:1)"
+        onCancel={() => {
+          setCropAddImageFile(null);
+          setProcessingImage(false);
+          setFileInputKey((prev) => prev + 1);
+        }}
+        onApply={({ dataUrl, info }) => {
+          setImageData(dataUrl);
+          setImageInfo(info);
+          setCropAddImageFile(null);
+          setProcessingImage(false);
+          setFileInputKey((prev) => prev + 1);
+        }}
+      />
+
+      <ImageCropModal
+        open={Boolean(cropEditImageFile)}
+        file={cropEditImageFile}
+        title="ครอปรูปสินค้า (แก้ไข)"
+        description="เลือกรูปที่ต้องการใช้แทนรูปเดิม"
+        onCancel={() => {
+          setCropEditImageFile(null);
+          setProcessingEditImage(false);
+          setEditFileInputKey((prev) => prev + 1);
+        }}
+        onApply={({ dataUrl, info }) => {
+          setEditImageData(dataUrl);
+          setEditImageInfo(info);
+          setCropEditImageFile(null);
+          setProcessingEditImage(false);
+          setEditFileInputKey((prev) => prev + 1);
+        }}
+      />
     </div>
   );
 }
