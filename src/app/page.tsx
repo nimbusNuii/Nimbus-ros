@@ -3,11 +3,6 @@ import { requirePageRole } from "@/lib/auth";
 
 const modules = [
   {
-    title: "หน้าร้าน (POS)",
-    desc: "เปิดบิล คิดเงิน และพรีวิวใบเสร็จแบบ Modal",
-    href: "/pos"
-  },
-  {
     title: "Create Order (No Nav)",
     desc: "หน้ารับออเดอร์แบบเต็มโฟกัส ไม่มีแถบเมนู",
     href: "/create-order"

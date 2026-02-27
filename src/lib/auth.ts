@@ -148,5 +148,5 @@ export function clearSessionCookie(response: NextResponse) {
 export function roleRedirectPath(role: UserRole) {
   if (role === "KITCHEN") return "/kitchen";
   if (role === "MANAGER" || role === "ADMIN") return "/manage";
-  return "/pos";
+  return "/create-order";
 }
