@@ -379,7 +379,7 @@ export function CreateOrderClient({
   return (
     <div className="space-y-4 pb-20 lg:pb-0">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="card space-y-4">
+        <section className="card space-y-3 !p-3 sm:space-y-4 sm:!p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {categoryTabs.map((tab) => (
@@ -387,7 +387,7 @@ export function CreateOrderClient({
                   key={tab}
                   type="button"
                   onClick={() => setActiveCategory(tab)}
-                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-4 py-2 text-sm`}
+                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm`}
                 >
                   {tab === "ALL" ? "ทั้งหมด" : tab}
                 </button>
@@ -411,11 +411,11 @@ export function CreateOrderClient({
             ) : null}
           </div>
 
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <div className="grid grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 sm:gap-2 md:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
               <article
                 key={product.id}
-                className="group relative overflow-hidden rounded-xl border border-[var(--line)] bg-white p-2 transition duration-150 hover:bg-[#f9fafb]"
+                className="group relative overflow-hidden rounded-lg border border-[var(--line)] bg-white p-1.5 transition duration-150 hover:bg-[#f9fafb] sm:rounded-xl sm:p-2"
               >
                 <button
                   type="button"
@@ -428,23 +428,23 @@ export function CreateOrderClient({
                     <img
                       src={product.imageUrl}
                       alt={product.name}
-                      className="aspect-square w-full rounded-lg border border-[var(--line)] object-cover"
+                      className="aspect-square w-full rounded-md border border-[var(--line)] object-cover sm:rounded-lg"
                     />
                   ) : (
-                    <div className="grid aspect-square w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
+                    <div className="grid aspect-square w-full place-items-center rounded-md border border-dashed border-[var(--line)] text-[10px] text-[var(--muted)] sm:rounded-lg sm:text-xs">
                       ไม่มีรูปสินค้า
                     </div>
                   )}
 
-                  <div className="mt-2 space-y-1">
-                    <p className="m-0 line-clamp-2 text-sm font-semibold text-[var(--text)]">{product.name}</p>
-                    <p className="m-0 text-xs text-[var(--muted)]">คงเหลือ {product.stockQty}</p>
-                    <p className="m-0 text-base font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
+                  <div className="mt-1.5 space-y-0.5 sm:mt-2 sm:space-y-1">
+                    <p className="m-0 line-clamp-2 text-[11px] font-semibold text-[var(--text)] sm:text-sm">{product.name}</p>
+                    <p className="m-0 text-[10px] text-[var(--muted)] sm:text-xs">คงเหลือ {product.stockQty}</p>
+                    <p className="m-0 text-xs font-bold text-[var(--brand)] sm:text-base">{formatCurrency(product.price, currency)}</p>
                   </div>
                 </button>
 
                 {product.stockQty <= 0 ? (
-                  <div className="absolute inset-0 grid place-items-center bg-black/35 text-2xl font-semibold text-white">Sold out</div>
+                  <div className="absolute inset-0 grid place-items-center bg-black/35 text-lg font-semibold text-white sm:text-2xl">Sold out</div>
                 ) : null}
               </article>
             ))}
