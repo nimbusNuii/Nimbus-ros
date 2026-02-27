@@ -197,7 +197,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
   }
 
   return (
-    <div className="grid">
+    <div className="space-y-4">
       <section className="card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -221,9 +221,9 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
         </div>
       </section>
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+      <div className="grid gap-4 xl:grid-cols-2">
         <section className="card">
-          <h2 style={{ marginTop: 0 }}>ตั้งค่า Template ใบเสร็จ</h2>
+          <h2 className="mt-0 text-xl font-semibold">ตั้งค่า Template ใบเสร็จ</h2>
           <form onSubmit={onSubmit}>
             <div className="field">
               <label htmlFor="name">ชื่อ template</label>
@@ -281,8 +281,8 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
               />
             </div>
 
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+            <div className="mb-3 flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 text-[var(--text)]">
                 <input
                   type="checkbox"
                   name="showStoreInfo"
@@ -292,7 +292,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
                 แสดงข้อมูลร้าน
               </label>
 
-              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+              <label className="flex items-center gap-2 text-[var(--text)]">
                 <input
                   type="checkbox"
                   name="showVatNumber"
@@ -302,7 +302,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
                 แสดงเลขภาษี
               </label>
 
-              <label style={{ display: "flex", gap: 8, alignItems: "center", color: "inherit" }}>
+              <label className="flex items-center gap-2 text-[var(--text)]">
                 <input
                   type="checkbox"
                   name="showCostBreakdown"
@@ -316,21 +316,21 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
             <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึก template"}</button>
           </form>
 
-          {message ? <p style={{ color: "var(--ok)" }}>{message}</p> : null}
-          {error ? <p style={{ color: "crimson" }}>{error}</p> : null}
+          {message ? <p className="m-0 text-sm text-[var(--ok)]">{message}</p> : null}
+          {error ? <p className="m-0 text-sm text-red-600">{error}</p> : null}
         </section>
 
         <section className="card">
-          <h2 style={{ marginTop: 0 }}>ตัวอย่างธีม: {previewTheme.label}</h2>
+          <h2 className="mt-0 text-xl font-semibold">ตัวอย่างธีม: {previewTheme.label}</h2>
           <ReceiptDocument
             order={previewOrder}
             store={store}
             template={mergeTemplateWithTheme(template, previewTheme)}
           />
 
-          <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "18px 0" }} />
+          <hr className="my-4 border-0 border-t border-[var(--line)]" />
 
-          <h2 style={{ marginTop: 0 }}>ตัวอย่างใบเสร็จ (ค่าปัจจุบัน)</h2>
+          <h2 className="mt-0 text-xl font-semibold">ตัวอย่างใบเสร็จ (ค่าปัจจุบัน)</h2>
           <ReceiptDocument order={previewOrder} store={store} template={template} />
         </section>
       </div>
@@ -346,7 +346,7 @@ export function ReceiptTemplateForm({ initialTemplate, store }: ReceiptTemplateF
             }
           }}
         >
-          <div className="modal-panel" style={{ width: "min(1160px, 100%)" }}>
+          <div className="modal-panel w-full max-w-6xl">
             <div className="modal-header">
               <div>
                 <h3 className="m-0 text-lg font-semibold">Theme Presets</h3>
