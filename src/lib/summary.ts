@@ -58,22 +58,17 @@ export async function calculateSummary(from?: string | null, to?: string | null)
     }
   };
 
-  const [orders, orderItems, expenseGroups, costItems, soldByItem] = await Promise.all([
+  const [orders, expenseGroups, soldItemRows] = await Promise.all([
     prisma.order.aggregate({
       where: orderWhere,
+      _count: {
+        _all: true
+      },
       _sum: {
         subtotal: true,
         discount: true,
         tax: true,
         total: true
-      }
-    }),
-    prisma.orderItem.aggregate({
-      where: {
-        order: orderWhere
-      },
-      _sum: {
-        lineTotal: true
       }
     }),
     prisma.expense.groupBy({
@@ -88,18 +83,10 @@ export async function calculateSummary(from?: string | null, to?: string | null)
         order: orderWhere
       },
       select: {
+        nameSnapshot: true,
         qty: true,
+        lineTotal: true,
         unitCost: true
-      }
-    }),
-    prisma.orderItem.groupBy({
-      by: ["nameSnapshot"],
-      where: {
-        order: orderWhere
-      },
-      _sum: {
-        qty: true,
-        lineTotal: true
       }
     })
   ]);
@@ -119,37 +106,71 @@ export async function calculateSummary(from?: string | null, to?: string | null)
   const subtotal = toNumber(orders._sum.subtotal);
   const discount = toNumber(orders._sum.discount);
   const tax = toNumber(orders._sum.tax);
+  const paidOrderCount = orders._count._all;
 
   const staffCost = expenseMap.STAFF;
   const electricityCost = expenseMap.ELECTRICITY;
   const ingredientExpense = expenseMap.INGREDIENT;
   const otherExpense = expenseMap.OTHER;
-  const cogsEstimate = costItems.reduce((sum, item) => sum + toNumber(item.unitCost) * item.qty, 0);
+  const soldMap = new Map<
+    string,
+    {
+      qty: number;
+      revenue: number;
+      cost: number;
+    }
+  >();
+  let cogsEstimate = 0;
+
+  for (const row of soldItemRows) {
+    const unitCost = toNumber(row.unitCost);
+    const revenue = toNumber(row.lineTotal);
+    const cost = unitCost * row.qty;
+    cogsEstimate += cost;
+
+    const current = soldMap.get(row.nameSnapshot) ?? {
+      qty: 0,
+      revenue: 0,
+      cost: 0
+    };
+    current.qty += row.qty;
+    current.revenue += revenue;
+    current.cost += cost;
+    soldMap.set(row.nameSnapshot, current);
+  }
 
   const totalExpense = cogsEstimate + ingredientExpense + staffCost + electricityCost + otherExpense;
+  const grossProfit = sales - cogsEstimate;
   const netProfit = sales - totalExpense;
-  const soldItems = soldByItem
-    .map((item) => {
-      const qty = item._sum.qty || 0;
-      const revenue = toNumber(item._sum.lineTotal);
+  const soldItems = Array.from(soldMap.entries())
+    .map(([name, item]) => {
+      const qty = item.qty;
+      const revenue = item.revenue;
+      const totalProfit = revenue - item.cost;
       return {
-        name: item.nameSnapshot,
+        name,
         qty,
         revenue,
-        averagePrice: qty > 0 ? revenue / qty : 0
+        totalProfit,
+        averagePrice: qty > 0 ? revenue / qty : 0,
+        averageProfit: qty > 0 ? totalProfit / qty : 0
       };
     })
     .sort((a, b) => {
-      if (b.qty !== a.qty) return b.qty - a.qty;
       return b.revenue - a.revenue;
     });
   const soldItemTotals = soldItems.reduce(
     (sum, item) => ({
       qty: sum.qty + item.qty,
-      revenue: sum.revenue + item.revenue
+      revenue: sum.revenue + item.revenue,
+      totalProfit: sum.totalProfit + item.totalProfit
     }),
-    { qty: 0, revenue: 0 }
+    { qty: 0, revenue: 0, totalProfit: 0 }
   );
+  const soldItemAverageProfit = soldItemTotals.qty > 0 ? soldItemTotals.totalProfit / soldItemTotals.qty : 0;
+  const operatingExpense = ingredientExpense + staffCost + electricityCost + otherExpense;
+  const averageProfitPerBill = paidOrderCount > 0 ? netProfit / paidOrderCount : 0;
+  const netMarginPercent = sales > 0 ? (netProfit / sales) * 100 : 0;
 
   return {
     range: { from: fromDate, to: toDate },
@@ -157,17 +178,28 @@ export async function calculateSummary(from?: string | null, to?: string | null)
     subtotal,
     discount,
     tax,
-    orderItemRevenue: toNumber(orderItems._sum.lineTotal),
+    orderItemRevenue: soldItemTotals.revenue,
+    paidOrderCount,
     cost: {
       ingredientFromMenu: cogsEstimate,
       ingredientExpense,
       staff: staffCost,
       electricity: electricityCost,
       other: otherExpense,
+      operatingExpense,
       totalExpense
     },
+    profit: {
+      grossProfit,
+      netProfit,
+      averageProfitPerBill,
+      netMarginPercent
+    },
     soldItems,
-    soldItemTotals,
+    soldItemTotals: {
+      ...soldItemTotals,
+      averageProfit: soldItemAverageProfit
+    },
     netProfit
   };
 }
