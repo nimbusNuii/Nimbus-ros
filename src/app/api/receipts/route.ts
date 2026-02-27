@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const status = searchParams.get("status");
-  const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit") || "100")));
+  const limit = Math.min(300, Math.max(1, Number(searchParams.get("limit") || "100")));
 
   const orders = await prisma.order.findMany({
     where: {
@@ -31,15 +31,42 @@ export async function GET(request: Request) {
       createdAt: "desc"
     },
     take: limit,
-    include: {
-      items: {
-        select: {
-          id: true,
-          qty: true
-        }
-      }
+    select: {
+      id: true,
+      orderNumber: true,
+      paymentMethod: true,
+      status: true,
+      customerType: true,
+      customerName: true,
+      scheduledFor: true,
+      createdAt: true,
+      subtotal: true,
+      discount: true,
+      tax: true,
+      total: true
     }
   });
+
+  const orderIds = orders.map((order) => order.id);
+  const qtyByOrderId = new Map<string, number>();
+
+  if (orderIds.length > 0) {
+    const qtyGroups = await prisma.orderItem.groupBy({
+      by: ["orderId"],
+      where: {
+        orderId: {
+          in: orderIds
+        }
+      },
+      _sum: {
+        qty: true
+      }
+    });
+
+    for (const group of qtyGroups) {
+      qtyByOrderId.set(group.orderId, group._sum.qty ?? 0);
+    }
+  }
 
   return NextResponse.json(
     orders.map((order) => ({
@@ -55,7 +82,7 @@ export async function GET(request: Request) {
       discount: toNumber(order.discount),
       tax: toNumber(order.tax),
       total: toNumber(order.total),
-      itemCount: order.items.reduce((sum, item) => sum + item.qty, 0)
+      itemCount: qtyByOrderId.get(order.id) ?? 0
     }))
   );
 }

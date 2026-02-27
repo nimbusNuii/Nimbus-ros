@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ReceiptPreviewModal } from "@/components/receipt-preview-modal";
 import { useRealtime } from "@/lib/use-realtime";
@@ -32,9 +32,12 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
   const [to, setTo] = useState(todayText);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const latestRequestRef = useRef(0);
+  const realtimeReloadTimerRef = useRef<number | null>(null);
 
   const buildQuery = (fromValue: string, toValue: string) => {
-    const params = new URLSearchParams({ limit: "300" });
+    const params = new URLSearchParams({ limit: "120" });
     if (fromValue) params.set("from", fromValue);
     if (toValue) params.set("to", toValue);
     return params.toString();
@@ -43,12 +46,24 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
   const query = useMemo(() => buildQuery(from, to), [from, to]);
 
   async function load(queryValue = query) {
+    latestRequestRef.current += 1;
+    const requestId = latestRequestRef.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch(`/api/receipts?${queryValue}`, { cache: "no-store" });
+      const response = await fetch(`/api/receipts?${queryValue}`, {
+        cache: "no-store",
+        signal: controller.signal
+      });
       const data = await response.json();
+
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Cannot load receipts");
@@ -56,21 +71,40 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
 
       setRows(data);
     } catch (err) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Cannot load receipts");
       setRows([]);
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestRef.current) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
     void load();
+    return () => {
+      abortRef.current?.abort();
+      if (realtimeReloadTimerRef.current) {
+        window.clearTimeout(realtimeReloadTimerRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useRealtime((event) => {
     if (event.type === "order.created" || event.type === "order.updated") {
-      void load();
+      if (realtimeReloadTimerRef.current) {
+        window.clearTimeout(realtimeReloadTimerRef.current);
+      }
+      realtimeReloadTimerRef.current = window.setTimeout(() => {
+        void load();
+      }, 250);
     }
   });
 
