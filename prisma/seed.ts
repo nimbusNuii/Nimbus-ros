@@ -10,13 +10,22 @@ function hashPin(pin: string) {
 async function main() {
   await prisma.storeSetting.upsert({
     where: { id: 1 },
-    update: {},
+    update: {
+      businessName: "ร้านหมูปิ้งหน้าโรงเรียน",
+      branchName: "สาขาหลัก",
+      address: "กรุงเทพฯ",
+      phone: "02-000-0000",
+      vatNumber: "0100000000000",
+      vatEnabled: true,
+      taxRate: 7,
+      currency: "THB"
+    },
     create: {
       id: 1,
-      businessName: "Demo POS Shop",
-      branchName: "Main",
-      address: "Bangkok",
-      phone: "000-000-0000",
+      businessName: "ร้านหมูปิ้งหน้าโรงเรียน",
+      branchName: "สาขาหลัก",
+      address: "กรุงเทพฯ",
+      phone: "02-000-0000",
       vatNumber: "0100000000000",
       vatEnabled: true,
       taxRate: 7,
@@ -39,37 +48,61 @@ async function main() {
     });
   }
 
+  const categorySeeds = [
+    { name: "หมูปิ้ง", sortOrder: 1 },
+    { name: "ชุดเซต", sortOrder: 2 },
+    { name: "เครื่องเคียง", sortOrder: 3 },
+    { name: "เครื่องดื่ม", sortOrder: 4 }
+  ] as const;
+
+  const categoryIdByName = new Map<string, string>();
+  for (const category of categorySeeds) {
+    const created = await prisma.productCategory.upsert({
+      where: { name: category.name },
+      update: {
+        sortOrder: category.sortOrder,
+        isActive: true
+      },
+      create: {
+        name: category.name,
+        sortOrder: category.sortOrder,
+        isActive: true
+      }
+    });
+    categoryIdByName.set(created.name, created.id);
+  }
+
   const products = [
-    { name: "หมูหมักงา", category: "ปิ้งย่าง", price: 89, cost: 39, sku: "DEMO-001", stockQty: 120 },
-    { name: "เนื้อโคขุนสไลซ์", category: "ปิ้งย่าง", price: 129, cost: 62, sku: "DEMO-002", stockQty: 90 },
-    { name: "เบคอนรมควัน", category: "ปิ้งย่าง", price: 99, cost: 48, sku: "DEMO-003", stockQty: 100 },
-    { name: "ไส้กรอกหมู", category: "ปิ้งย่าง", price: 79, cost: 32, sku: "DEMO-004", stockQty: 110 },
-    { name: "หมึกสด", category: "ปิ้งย่าง", price: 119, cost: 58, sku: "DEMO-005", stockQty: 70 },
-    { name: "กุ้งแม่น้ำ", category: "ปิ้งย่าง", price: 149, cost: 82, sku: "DEMO-006", stockQty: 65 },
-    { name: "สามชั้นหมักโคชูจัง", category: "ปิ้งย่าง", price: 109, cost: 52, sku: "DEMO-007", stockQty: 95 },
-    { name: "ไก่หมักซอสเกาหลี", category: "ปิ้งย่าง", price: 89, cost: 37, sku: "DEMO-008", stockQty: 105 },
-    { name: "เห็ดออรินจิย่าง", category: "ปิ้งย่าง", price: 69, cost: 26, sku: "DEMO-009", stockQty: 130 },
-    { name: "ชุดผักรวมย่าง", category: "ปิ้งย่าง", price: 59, cost: 24, sku: "DEMO-010", stockQty: 140 },
-    { name: "ข้าวกะเพราหมูสับ", category: "อาหารตามสั่ง", price: 69, cost: 28, sku: "DEMO-011", stockQty: 160 },
-    { name: "ข้าวกะเพราเนื้อ", category: "อาหารตามสั่ง", price: 85, cost: 38, sku: "DEMO-012", stockQty: 120 },
-    { name: "ข้าวผัดกุ้ง", category: "อาหารตามสั่ง", price: 89, cost: 41, sku: "DEMO-013", stockQty: 100 },
-    { name: "ข้าวผัดปู", category: "อาหารตามสั่ง", price: 95, cost: 45, sku: "DEMO-014", stockQty: 85 },
-    { name: "ผัดซีอิ๊วหมู", category: "อาหารตามสั่ง", price: 75, cost: 31, sku: "DEMO-015", stockQty: 130 },
-    { name: "ราดหน้าทะเล", category: "อาหารตามสั่ง", price: 95, cost: 46, sku: "DEMO-016", stockQty: 90 },
-    { name: "ผัดพริกแกงหมูกรอบ", category: "อาหารตามสั่ง", price: 89, cost: 43, sku: "DEMO-017", stockQty: 95 },
-    { name: "คะน้าหมูกรอบ", category: "อาหารตามสั่ง", price: 85, cost: 39, sku: "DEMO-018", stockQty: 100 },
-    { name: "ไข่เจียวหมูสับ", category: "อาหารตามสั่ง", price: 65, cost: 25, sku: "DEMO-019", stockQty: 150 },
-    { name: "ข้าวหมูทอดกระเทียม", category: "อาหารตามสั่ง", price: 79, cost: 33, sku: "DEMO-020", stockQty: 125 },
-    { name: "ต้มยำกุ้งน้ำข้น", category: "ต้ม/แกง", price: 129, cost: 60, sku: "DEMO-021", stockQty: 70 },
-    { name: "ต้มแซ่บกระดูกอ่อน", category: "ต้ม/แกง", price: 119, cost: 55, sku: "DEMO-022", stockQty: 65 },
-    { name: "แกงส้มชะอมกุ้ง", category: "ต้ม/แกง", price: 139, cost: 68, sku: "DEMO-023", stockQty: 55 },
-    { name: "แกงเขียวหวานไก่", category: "ต้ม/แกง", price: 109, cost: 50, sku: "DEMO-024", stockQty: 75 },
-    { name: "น้ำเปล่า", category: "เครื่องดื่ม", price: 15, cost: 5, sku: "DEMO-025", stockQty: 250 },
-    { name: "โค้ก", category: "เครื่องดื่ม", price: 25, cost: 11, sku: "DEMO-026", stockQty: 220 },
-    { name: "ชาไทยเย็น", category: "เครื่องดื่ม", price: 35, cost: 14, sku: "DEMO-027", stockQty: 180 },
-    { name: "เก๊กฮวย", category: "เครื่องดื่ม", price: 30, cost: 12, sku: "DEMO-028", stockQty: 175 },
-    { name: "เฉาก๊วยนมสด", category: "ของหวาน", price: 45, cost: 18, sku: "DEMO-029", stockQty: 140 },
-    { name: "ขนมปังกระเทียม", category: "ของทานเล่น", price: 49, cost: 19, sku: "DEMO-030", stockQty: 150 }
+    { name: "หมูปิ้งสูตรโบราณ", category: "หมูปิ้ง", price: 12, cost: 5, sku: "MOO-001", stockQty: 400 },
+    { name: "หมูปิ้งนมสด", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-002", stockQty: 350 },
+    { name: "หมูปิ้งพริกไทยดำ", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-003", stockQty: 320 },
+    { name: "หมูปิ้งสามชั้น", category: "หมูปิ้ง", price: 15, cost: 7, sku: "MOO-004", stockQty: 250 },
+    { name: "หมูปิ้งสไปซี่", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-005", stockQty: 240 },
+    { name: "หมูปิ้งซอสเทอริยากิ", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-006", stockQty: 220 },
+    { name: "หมูปิ้งงาขาว", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-007", stockQty: 260 },
+    { name: "หมูปิ้งกระเทียมพริกไทย", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-008", stockQty: 260 },
+    { name: "หมูปิ้งแจ่ว", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-009", stockQty: 210 },
+    { name: "หมูปิ้งซอสหวาน", category: "หมูปิ้ง", price: 12, cost: 5, sku: "MOO-010", stockQty: 280 },
+    { name: "ชุดเซต A หมูปิ้ง 5 ไม้ + ข้าวเหนียว", category: "ชุดเซต", price: 69, cost: 31, sku: "SET-011", stockQty: 120 },
+    { name: "ชุดเซต B หมูปิ้ง 8 ไม้ + ข้าวเหนียว 2 ห่อ", category: "ชุดเซต", price: 109, cost: 50, sku: "SET-012", stockQty: 90 },
+    { name: "ชุดเซต C หมูปิ้ง 10 ไม้ + น้ำ 1 ขวด", category: "ชุดเซต", price: 139, cost: 64, sku: "SET-013", stockQty: 80 },
+    { name: "ชุดเซต D หมูปิ้ง 15 ไม้ + น้ำ 2 ขวด", category: "ชุดเซต", price: 199, cost: 95, sku: "SET-014", stockQty: 60 },
+    { name: "ชุดเซตครอบครัว หมูปิ้ง 20 ไม้ + ข้าวเหนียว 6 ห่อ", category: "ชุดเซต", price: 279, cost: 132, sku: "SET-015", stockQty: 45 },
+    { name: "ชุดเซตอิ่มคุ้ม หมูปิ้ง 12 ไม้ + ข้าวเหนียว 3 ห่อ", category: "ชุดเซต", price: 169, cost: 78, sku: "SET-016", stockQty: 70 },
+    { name: "ชุดเซตมื้อเช้า หมูปิ้ง 6 ไม้ + นมถั่วเหลือง", category: "ชุดเซต", price: 89, cost: 40, sku: "SET-017", stockQty: 100 },
+    { name: "ชุดเซตมื้อด่วน หมูปิ้ง 4 ไม้ + น้ำเปล่า", category: "ชุดเซต", price: 59, cost: 27, sku: "SET-018", stockQty: 130 },
+    { name: "ชุดเซตพรีเมียม หมูปิ้งสามชั้น 10 ไม้ + น้ำสมุนไพร", category: "ชุดเซต", price: 179, cost: 86, sku: "SET-019", stockQty: 55 },
+    { name: "ชุดเซตคู่หู หมูปิ้ง 10 ไม้ + ข้าวเหนียว 2 ห่อ + น้ำ 2 ขวด", category: "ชุดเซต", price: 149, cost: 69, sku: "SET-020", stockQty: 85 },
+    { name: "ข้าวเหนียวห่อเล็ก", category: "เครื่องเคียง", price: 8, cost: 3, sku: "SIDE-021", stockQty: 500 },
+    { name: "ข้าวเหนียวห่อใหญ่", category: "เครื่องเคียง", price: 12, cost: 5, sku: "SIDE-022", stockQty: 350 },
+    { name: "แจ่วสูตรพิเศษ", category: "เครื่องเคียง", price: 10, cost: 4, sku: "SIDE-023", stockQty: 220 },
+    { name: "แตงกวาดอง", category: "เครื่องเคียง", price: 15, cost: 6, sku: "SIDE-024", stockQty: 180 },
+    { name: "น้ำเปล่า 600ml", category: "เครื่องดื่ม", price: 10, cost: 4, sku: "DRINK-025", stockQty: 600 },
+    { name: "โค้ก 325ml", category: "เครื่องดื่ม", price: 20, cost: 10, sku: "DRINK-026", stockQty: 300 },
+    { name: "สไปรท์ 325ml", category: "เครื่องดื่ม", price: 20, cost: 10, sku: "DRINK-027", stockQty: 280 },
+    { name: "ชามะนาวเย็น", category: "เครื่องดื่ม", price: 25, cost: 11, sku: "DRINK-028", stockQty: 240 },
+    { name: "นมถั่วเหลือง", category: "เครื่องดื่ม", price: 15, cost: 7, sku: "DRINK-029", stockQty: 260 },
+    { name: "น้ำเก๊กฮวย", category: "เครื่องดื่ม", price: 20, cost: 9, sku: "DRINK-030", stockQty: 220 }
   ] as const;
 
   for (const product of products) {
@@ -77,6 +110,7 @@ async function main() {
       where: { sku: product.sku },
       update: {
         name: product.name,
+        categoryId: categoryIdByName.get(product.category) || null,
         category: product.category,
         imageUrl: null,
         price: product.price,
@@ -87,6 +121,7 @@ async function main() {
       create: {
         sku: product.sku,
         name: product.name,
+        categoryId: categoryIdByName.get(product.category) || null,
         category: product.category,
         imageUrl: null,
         price: product.price,
