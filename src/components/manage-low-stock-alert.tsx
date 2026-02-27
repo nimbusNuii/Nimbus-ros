@@ -21,20 +21,27 @@ export function ManageLowStockAlert({ threshold, products }: ManageLowStockAlert
 
   return (
     <>
-      <section className="card mb-4">
-        <h2 className="mt-0 text-xl font-semibold">แจ้งเตือนสต็อกต่ำ (≤ {threshold})</h2>
+      <section className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2">
         {!hasLowStock ? (
-          <p className="mb-0 text-[var(--ok)]">สต็อกอยู่ในระดับปกติ</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="m-0 text-sm text-[var(--ok)]">สต็อกอยู่ในระดับปกติ</p>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              OK
+            </span>
+          </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+              แจ้งเตือนสต็อกต่ำ (≤ {threshold})
+            </span>
+            <span className="text-sm text-[var(--muted)]">
               พบสินค้าสต็อกต่ำ {products.length} รายการ
             </span>
-            <button type="button" className="secondary" onClick={() => setOpen(true)}>
+            <button type="button" className="secondary py-1.5 text-xs" onClick={() => setOpen(true)}>
               ดูรายการ
             </button>
-            <Link href="/manage/products" className="secondary">
-              ไปหน้าสินค้า
+            <Link href="/manage/products" className="secondary py-1.5 text-xs">
+              จัดการสินค้า
             </Link>
           </div>
         )}

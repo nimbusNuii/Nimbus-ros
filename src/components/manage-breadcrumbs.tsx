@@ -18,7 +18,11 @@ const labelBySegment: Record<string, string> = {
   "receipt-template": "Template ใบเสร็จ"
 };
 
-export function ManageBreadcrumbs() {
+type ManageBreadcrumbsProps = {
+  className?: string;
+};
+
+export function ManageBreadcrumbs({ className }: ManageBreadcrumbsProps) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
   const index = segments.indexOf("manage");
@@ -32,7 +36,7 @@ export function ManageBreadcrumbs() {
   });
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 overflow-x-auto pb-1">
+    <nav aria-label="Breadcrumb" className={`${className || "mb-4"} overflow-x-auto pb-1`}>
       <ol className="flex min-w-max items-center gap-2 whitespace-nowrap text-sm text-[var(--muted)]">
         {crumbs.map((crumb) => (
           <li key={crumb.href} className="flex items-center gap-2">
@@ -41,7 +45,10 @@ export function ManageBreadcrumbs() {
                 {crumb.label}
               </span>
             ) : (
-              <Link href={crumb.href} className="rounded-full border border-[var(--line)] px-3 py-1 hover:bg-[var(--surface-strong)]">
+              <Link
+                href={crumb.href}
+                className="rounded-full border border-[var(--line)] px-3 py-1 hover:bg-[var(--surface-strong)]"
+              >
                 {crumb.label}
               </Link>
             )}

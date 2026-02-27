@@ -13,18 +13,21 @@ export function ManageLayoutShell({ children }: ManageLayoutShellProps) {
 
   return (
     <div className="space-y-3 xl:grid xl:grid-cols-[260px_minmax(0,1fr)] xl:gap-4 xl:space-y-0">
-      <div className="flex justify-end xl:hidden">
-        <button type="button" className="secondary" onClick={() => setOpenMobileNav(true)}>
-          เมนูจัดการ
-        </button>
-      </div>
-
       <div className="hidden xl:block">
         <ManageSideNav />
       </div>
 
       <div className="min-w-0">
-        <ManageBreadcrumbs />
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <ManageBreadcrumbs className="mb-0 flex-1" />
+          <button
+            type="button"
+            className="secondary shrink-0 xl:hidden"
+            onClick={() => setOpenMobileNav(true)}
+          >
+            เมนูจัดการ
+          </button>
+        </div>
         {children}
       </div>
 
