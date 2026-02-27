@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type MenuOptionType = "SPICE_LEVEL" | "ADD_ON" | "REMOVE_INGREDIENT";
 
@@ -14,9 +16,15 @@ type MenuOption = {
 
 type MenuOptionManagerProps = {
   initialOptions: MenuOption[];
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  initialQuery: string;
+  initialSort: MenuOptionSort;
 };
 
 type DraftMap = Record<string, { type: MenuOptionType; label: string; sortOrder: number; isActive: boolean }>;
+type MenuOptionSort = "type_order_label" | "label_asc" | "label_desc" | "order_asc" | "order_desc" | "created_desc" | "created_asc";
 
 const typeLabel: Record<MenuOptionType, string> = {
   SPICE_LEVEL: "ระดับความเผ็ด",
@@ -36,12 +44,24 @@ function buildDrafts(options: MenuOption[]): DraftMap {
   }, {});
 }
 
-export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
+export function MenuOptionManager({
+  initialOptions,
+  currentPage,
+  pageSize,
+  totalItems,
+  initialQuery,
+  initialSort
+}: MenuOptionManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [options, setOptions] = useState(initialOptions);
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialOptions));
   const [savingId, setSavingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<MenuOptionSort>(initialSort);
 
   const grouped = useMemo(() => {
     const map: Record<MenuOptionType, MenuOption[]> = {
@@ -60,6 +80,57 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
 
     return map;
   }, [options]);
+
+  useEffect(() => {
+    setOptions(initialOptions);
+    setDrafts(buildDrafts(initialOptions));
+  }, [initialOptions]);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+  }, [initialQuery, initialSort]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    if (sortInput === "type_order_label") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sortInput);
+    }
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("type_order_label");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    params.delete("sort");
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
 
   function setDraftValue(optionId: string, key: keyof DraftMap[string], value: string | number | boolean) {
     setDrafts((prev) => ({
@@ -105,6 +176,8 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
           isActive: created.isActive
         }
       }));
+      goPage(1);
+      router.refresh();
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create option");
@@ -139,6 +212,7 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
 
       const updated = data as MenuOption;
       setOptions((prev) => prev.map((item) => (item.id === optionId ? updated : item)));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot update option");
     } finally {
@@ -168,6 +242,7 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
         delete next[optionId];
         return next;
       });
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot delete option");
     } finally {
@@ -204,6 +279,31 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
         </form>
 
         {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
+      </section>
+
+      <section className="card">
+        <form
+          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_240px_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="ค้นหาชื่อตัวเลือก" />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as MenuOptionSort)}>
+            <option value="type_order_label">ประเภท + ลำดับ + ชื่อ (ค่าเริ่มต้น)</option>
+            <option value="label_asc">ชื่อ A-Z</option>
+            <option value="label_desc">ชื่อ Z-A</option>
+            <option value="order_asc">ลำดับน้อยไปมาก</option>
+            <option value="order_desc">ลำดับมากไปน้อย</option>
+            <option value="created_desc">สร้างล่าสุดก่อน</option>
+            <option value="created_asc">สร้างเก่าสุดก่อน</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
       </section>
 
       {(Object.keys(grouped) as MenuOptionType[]).map((type) => (
@@ -290,6 +390,15 @@ export function MenuOptionManager({ initialOptions }: MenuOptionManagerProps) {
           </div>
         </section>
       ))}
+
+      <section className="card">
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
+      </section>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Category = {
   id: string;
@@ -12,9 +14,15 @@ type Category = {
 
 type CategoryManagerProps = {
   initialCategories: Category[];
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  initialQuery: string;
+  initialSort: CategorySort;
 };
 
 type DraftMap = Record<string, { name: string; sortOrder: number; isActive: boolean }>;
+type CategorySort = "order_name" | "name_asc" | "name_desc" | "order_asc" | "order_desc" | "created_desc" | "created_asc";
 
 function buildDrafts(categories: Category[]): DraftMap {
   return categories.reduce<DraftMap>((map, item) => {
@@ -27,14 +35,77 @@ function buildDrafts(categories: Category[]): DraftMap {
   }, {});
 }
 
-export function CategoryManager({ initialCategories }: CategoryManagerProps) {
+export function CategoryManager({
+  initialCategories,
+  currentPage,
+  pageSize,
+  totalItems,
+  initialQuery,
+  initialSort
+}: CategoryManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [categories, setCategories] = useState(initialCategories);
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialCategories));
   const [savingId, setSavingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<CategorySort>(initialSort);
 
   const activeCount = useMemo(() => categories.filter((item) => item.isActive).length, [categories]);
+
+  useEffect(() => {
+    setCategories(initialCategories);
+    setDrafts(buildDrafts(initialCategories));
+  }, [initialCategories]);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+  }, [initialQuery, initialSort]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    if (sortInput === "order_name") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sortInput);
+    }
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("order_name");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    params.delete("sort");
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
 
   function setDraftValue(categoryId: string, key: keyof DraftMap[string], value: string | number | boolean) {
     setDrafts((prev) => ({
@@ -83,6 +154,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           isActive: created.isActive
         }
       }));
+      goPage(1);
+      router.refresh();
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create category");
@@ -129,6 +202,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           )
           .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"))
       );
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot update category");
     } finally {
@@ -158,6 +232,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         delete next[categoryId];
         return next;
       });
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot delete category");
     } finally {
@@ -193,6 +268,28 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
             ใช้งานอยู่ {activeCount}/{categories.length}
           </span>
         </div>
+        <form
+          className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="ค้นหาชื่อหมวดหมู่" />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as CategorySort)}>
+            <option value="order_name">ลำดับ + ชื่อ (ค่าเริ่มต้น)</option>
+            <option value="name_asc">ชื่อ A-Z</option>
+            <option value="name_desc">ชื่อ Z-A</option>
+            <option value="order_asc">ลำดับน้อยไปมาก</option>
+            <option value="order_desc">ลำดับมากไปน้อย</option>
+            <option value="created_desc">สร้างล่าสุดก่อน</option>
+            <option value="created_asc">สร้างเก่าสุดก่อน</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
 
         <div className="overflow-x-auto">
           <table className="table min-w-[680px]">
@@ -263,6 +360,12 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
       </section>
     </div>
   );

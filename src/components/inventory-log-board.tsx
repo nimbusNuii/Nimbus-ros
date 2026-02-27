@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatDateTime } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Product = {
   id: string;
@@ -23,69 +25,130 @@ type InventoryLog = {
   order: { id: string; orderNumber: string } | null;
 };
 
+type InventoryLogPayload = {
+  rows: InventoryLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type InventorySort = "created_desc" | "created_asc";
+
 const reasonLabel: Record<InventoryLog["reason"], string> = {
   SALE: "ขาย",
   ADJUST: "ปรับ",
   RESTOCK: "เติมสต็อก"
 };
 
+const PAGE_SIZE = 50;
+
+function parsePage(value: string | null) {
+  const num = Number(value || "1");
+  if (!Number.isFinite(num)) return 1;
+  return Math.max(1, Math.trunc(num));
+}
+
 export function InventoryLogBoard() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentPage = parsePage(searchParams.get("page"));
+  const reasonParam = searchParams.get("reason") || "";
+  const productIdParam = searchParams.get("productId") || "";
+  const fromParam = searchParams.get("from") || "";
+  const toParam = searchParams.get("to") || "";
+  const qParam = searchParams.get("q") || "";
+  const sortParam: InventorySort = searchParams.get("sort") === "created_asc" ? "created_asc" : "created_desc";
+
   const [products, setProducts] = useState<Product[]>([]);
   const [logs, setLogs] = useState<InventoryLog[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [reason, setReason] = useState<string>("");
-  const [productId, setProductId] = useState<string>("");
-  const [from, setFrom] = useState<string>("");
-  const [to, setTo] = useState<string>("");
+  const [reasonInput, setReasonInput] = useState<string>(reasonParam);
+  const [productIdInput, setProductIdInput] = useState<string>(productIdParam);
+  const [fromInput, setFromInput] = useState<string>(fromParam);
+  const [toInput, setToInput] = useState<string>(toParam);
+  const [qInput, setQInput] = useState<string>(qParam);
+  const [sortInput, setSortInput] = useState<InventorySort>(sortParam);
 
   const productMap = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const query = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("limit", "200");
-    if (reason) params.set("reason", reason);
-    if (productId) params.set("productId", productId);
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    return params.toString();
-  }, [reason, productId, from, to]);
 
-  async function loadProducts() {
+  useEffect(() => {
+    setReasonInput(reasonParam);
+    setProductIdInput(productIdParam);
+    setFromInput(fromParam);
+    setToInput(toParam);
+    setQInput(qParam);
+    setSortInput(sortParam);
+  }, [reasonParam, productIdParam, fromParam, toParam, qParam, sortParam]);
+
+  const exportQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (reasonParam) params.set("reason", reasonParam);
+    if (productIdParam) params.set("productId", productIdParam);
+    if (fromParam) params.set("from", fromParam);
+    if (toParam) params.set("to", toParam);
+    return params.toString();
+  }, [reasonParam, productIdParam, fromParam, toParam]);
+
+  const loadProducts = useCallback(async () => {
     const response = await fetch("/api/products?active=1&limit=1000", { cache: "no-store" });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Cannot load products");
     }
     setProducts(data.map((item: Product) => ({ id: item.id, name: item.name, sku: item.sku })));
-  }
+  }, []);
 
-  async function loadLogs() {
-    const response = await fetch(`/api/inventory-logs?${query}`, { cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Cannot load inventory logs");
-    }
-    setLogs(data);
-  }
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
 
-  async function refresh() {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      await Promise.all([loadProducts(), loadLogs()]);
+      const params = new URLSearchParams();
+      params.set("limit", String(PAGE_SIZE));
+      params.set("page", String(currentPage));
+      params.set("withMeta", "1");
+      if (reasonParam) params.set("reason", reasonParam);
+      if (productIdParam) params.set("productId", productIdParam);
+      if (fromParam) params.set("from", fromParam);
+      if (toParam) params.set("to", toParam);
+      if (qParam) params.set("q", qParam);
+      if (sortParam !== "created_desc") params.set("sort", sortParam);
+
+      const response = await fetch(`/api/inventory-logs?${params.toString()}`, { cache: "no-store" });
+      const data = (await response.json()) as InventoryLogPayload | InventoryLog[] | { error?: string };
+      if (!response.ok) {
+        throw new Error(("error" in data && data.error) || "Cannot load inventory logs");
+      }
+
+      if (Array.isArray(data)) {
+        setLogs(data);
+        setTotalItems(data.length);
+      } else if ("rows" in data && Array.isArray(data.rows)) {
+        setLogs(data.rows);
+        setTotalItems(typeof data.total === "number" ? data.total : data.rows.length);
+      } else {
+        setLogs([]);
+        setTotalItems(0);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot load inventory data");
+      setError(err instanceof Error ? err.message : "Cannot load inventory logs");
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentPage, fromParam, productIdParam, qParam, reasonParam, sortParam, toParam]);
 
   useEffect(() => {
-    void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void loadLogs();
+  }, [loadLogs]);
 
   useRealtime((event) => {
     if (event.type === "stock.updated" || event.type === "order.created" || event.type === "order.updated") {
@@ -96,28 +159,61 @@ export function InventoryLogBoard() {
     }
   });
 
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = qInput.trim();
+    if (reasonInput) params.set("reason", reasonInput);
+    else params.delete("reason");
+    if (productIdInput) params.set("productId", productIdInput);
+    else params.delete("productId");
+    if (fromInput) params.set("from", fromInput);
+    else params.delete("from");
+    if (toInput) params.set("to", toInput);
+    else params.delete("to");
+    if (q) params.set("q", q);
+    else params.delete("q");
+    if (sortInput === "created_desc") params.delete("sort");
+    else params.set("sort", sortInput);
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setReasonInput("");
+    setProductIdInput("");
+    setFromInput("");
+    setToInput("");
+    setQInput("");
+    setSortInput("created_desc");
+    router.push(pathname);
+  }
+
   async function onFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      await loadLogs();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Cannot load inventory logs");
-    } finally {
-      setLoading(false);
-    }
+    applyFilters();
   }
 
   return (
     <div className="grid gap-4">
       <section className="card">
         <form onSubmit={onFilter}>
-          <div className="grid grid-3 items-end gap-3">
+          <div className="grid items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
             <div className="field">
               <label htmlFor="reason">ประเภท</label>
-              <select id="reason" value={reason} onChange={(event) => setReason(event.target.value)}>
+              <select id="reason" value={reasonInput} onChange={(event) => setReasonInput(event.target.value)}>
                 <option value="">ทั้งหมด</option>
                 <option value="SALE">ขาย</option>
                 <option value="ADJUST">ปรับ</option>
@@ -127,7 +223,7 @@ export function InventoryLogBoard() {
 
             <div className="field">
               <label htmlFor="product">สินค้า</label>
-              <select id="product" value={productId} onChange={(event) => setProductId(event.target.value)}>
+              <select id="product" value={productIdInput} onChange={(event) => setProductIdInput(event.target.value)}>
                 <option value="">ทั้งหมด</option>
                 {products.map((product) => (
                   <option value={product.id} key={product.id}>
@@ -139,22 +235,44 @@ export function InventoryLogBoard() {
 
             <div className="field">
               <label htmlFor="from">ตั้งแต่</label>
-              <input id="from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+              <input id="from" type="date" value={fromInput} onChange={(event) => setFromInput(event.target.value)} />
             </div>
 
             <div className="field">
               <label htmlFor="to">ถึง</label>
-              <input id="to" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+              <input id="to" type="date" value={toInput} onChange={(event) => setToInput(event.target.value)} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="inventoryQ">ค้นหา</label>
+              <input
+                id="inventoryQ"
+                value={qInput}
+                onChange={(event) => setQInput(event.target.value)}
+                placeholder="ค้นหาโน้ต/ผู้ทำรายการ"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="inventorySort">เรียงลำดับ</label>
+              <select id="inventorySort" value={sortInput} onChange={(event) => setSortInput(event.target.value as InventorySort)}>
+                <option value="created_desc">ล่าสุดก่อน</option>
+                <option value="created_asc">เก่าสุดก่อน</option>
+              </select>
             </div>
 
             <button type="submit" disabled={loading}>
               ค้นหา
             </button>
 
-            <button type="button" className="secondary" onClick={() => void refresh()} disabled={loading}>
+            <button type="button" className="secondary" onClick={resetFilters} disabled={loading}>
+              ล้างตัวกรอง
+            </button>
+
+            <button type="button" className="secondary" onClick={() => void loadLogs()} disabled={loading}>
               รีเฟรช
             </button>
-            <a className="secondary" href={`/api/inventory-logs/export?${query}`} target="_blank" rel="noreferrer">
+            <a className="secondary" href={`/api/inventory-logs/export?${exportQuery}`} target="_blank" rel="noreferrer">
               export csv
             </a>
           </div>
@@ -205,6 +323,12 @@ export function InventoryLogBoard() {
             </table>
           </div>
         ) : null}
+        <PaginationControls
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
       </section>
     </div>
   );
