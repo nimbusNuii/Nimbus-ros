@@ -53,6 +53,7 @@ export function ExpenseManager({
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState(initialExpenses);
   const [saving, setSaving] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [queryInput, setQueryInput] = useState(initialQuery);
   const [sortInput, setSortInput] = useState<ExpenseSort>(initialSort);
@@ -138,6 +139,7 @@ export function ExpenseManager({
       }
 
       setExpenses((prev) => [data, ...prev]);
+      setCreateModalOpen(false);
       goPage(1);
       router.refresh();
       event.currentTarget.reset();
@@ -149,39 +151,20 @@ export function ExpenseManager({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="space-y-4">
       <section className="card">
-        <h2 className="mt-0 text-xl font-semibold">เพิ่มค่าใช้จ่าย</h2>
-        <form onSubmit={onSubmit} className="space-y-2">
-          <div className="field">
-            <label htmlFor="type">ประเภท *</label>
-            <select id="type" name="type" required>
-              <option value="INGREDIENT">ค่าของ</option>
-              <option value="STAFF">ค่าพนักงาน</option>
-              <option value="ELECTRICITY">ค่าไฟ</option>
-              <option value="OTHER">อื่นๆ</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="amount">จำนวนเงิน *</label>
-            <input id="amount" name="amount" type="number" min={0} step="0.01" required />
-          </div>
-          <div className="field">
-            <label htmlFor="incurredOn">วันที่ *</label>
-            <input id="incurredOn" name="incurredOn" type="date" required />
-          </div>
-          <div className="field">
-            <label htmlFor="note">หมายเหตุ</label>
-            <textarea id="note" name="note" rows={3} />
-          </div>
-
-          <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกค่าใช้จ่าย"}</button>
-        </form>
-        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
-      </section>
-
-      <section className="card">
-        <h2 className="mt-0 text-xl font-semibold">ประวัติค่าใช้จ่ายล่าสุด</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="m-0 text-xl font-semibold">ประวัติค่าใช้จ่ายล่าสุด</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setCreateModalOpen(true);
+            }}
+          >
+            เพิ่มค่าใช้จ่าย
+          </button>
+        </div>
         <form
           className="mb-3 grid gap-2 md:grid-cols-3 lg:grid-cols-4"
           onSubmit={(event) => {
@@ -247,7 +230,62 @@ export function ExpenseManager({
           totalItems={totalItems}
           onPageChange={goPage}
         />
+        {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
+
+      {createModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCreateModalOpen(false);
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(520px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เพิ่มค่าใช้จ่าย</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">บันทึกค่าใช้จ่ายรายวันเพื่อใช้สรุปกำไร</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-2">
+              <div className="field mb-0">
+                <label htmlFor="type">ประเภท *</label>
+                <select id="type" name="type" required>
+                  <option value="INGREDIENT">ค่าของ</option>
+                  <option value="STAFF">ค่าพนักงาน</option>
+                  <option value="ELECTRICITY">ค่าไฟ</option>
+                  <option value="OTHER">อื่นๆ</option>
+                </select>
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="amount">จำนวนเงิน *</label>
+                <input id="amount" name="amount" type="number" min={0} step="0.01" required />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="incurredOn">วันที่ *</label>
+                <input id="incurredOn" name="incurredOn" type="date" required />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="note">หมายเหตุ</label>
+                <textarea id="note" name="note" rows={3} />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                  ยกเลิก
+                </button>
+                <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกค่าใช้จ่าย"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

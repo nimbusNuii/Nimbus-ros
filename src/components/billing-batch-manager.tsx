@@ -363,11 +363,11 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
               ))}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
               {filteredProducts.map((product) => (
                 <article
                   key={product.id}
-                  className="group relative overflow-hidden rounded-xl border border-[var(--line)] bg-white p-3 transition duration-150 hover:bg-[#f9fafb]"
+                  className="group relative overflow-hidden rounded-xl border border-[var(--line)] bg-white p-2 transition duration-150 hover:bg-[#f9fafb]"
                 >
                   <button
                     type="button"
@@ -389,9 +389,9 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                     )}
 
                     <div className="mt-2 space-y-1">
-                      <p className="m-0 font-semibold text-[var(--text)]">{product.name}</p>
+                      <p className="m-0 line-clamp-2 text-sm font-semibold text-[var(--text)]">{product.name}</p>
                       <p className="m-0 text-xs text-[var(--muted)]">คงเหลือ {product.stockQty}</p>
-                      <p className="m-0 text-xl font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
+                      <p className="m-0 text-base font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
                     </div>
                   </button>
 

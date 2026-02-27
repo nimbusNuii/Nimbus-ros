@@ -50,6 +50,7 @@ export function CategoryManager({
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialCategories));
   const [savingId, setSavingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [queryInput, setQueryInput] = useState(initialQuery);
   const [sortInput, setSortInput] = useState<CategorySort>(initialSort);
@@ -154,6 +155,7 @@ export function CategoryManager({
           isActive: created.isActive
         }
       }));
+      setCreateModalOpen(false);
       goPage(1);
       router.refresh();
       event.currentTarget.reset();
@@ -241,32 +243,24 @@ export function CategoryManager({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className="card">
-        <h2 className="mt-0 text-xl font-semibold">เพิ่มหมวดหมู่</h2>
-        <form onSubmit={createCategory} className="space-y-3">
-          <div className="field">
-            <label htmlFor="categoryName">ชื่อหมวดหมู่ *</label>
-            <input id="categoryName" name="name" required />
-          </div>
-          <div className="field">
-            <label htmlFor="categoryOrder">ลำดับแสดงผล</label>
-            <input id="categoryOrder" name="sortOrder" type="number" step={1} defaultValue={0} />
-          </div>
-
-          <button type="submit" disabled={creating}>
-            {creating ? "กำลังบันทึก..." : "เพิ่มหมวดหมู่"}
-          </button>
-        </form>
-        {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
-      </section>
-
+    <div className="space-y-4">
       <section className="card">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="m-0 text-xl font-semibold">รายการหมวดหมู่</h2>
-          <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
-            ใช้งานอยู่ {activeCount}/{categories.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <h2 className="m-0 text-xl font-semibold">รายการหมวดหมู่</h2>
+            <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
+              ใช้งานอยู่ {activeCount}/{categories.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setCreateModalOpen(true);
+            }}
+          >
+            เพิ่มหมวดหมู่
+          </button>
         </div>
         <form
           className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
@@ -366,7 +360,51 @@ export function CategoryManager({
           totalItems={totalItems}
           onPageChange={goPage}
         />
+        {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
       </section>
+
+      {createModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCreateModalOpen(false);
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(460px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เพิ่มหมวดหมู่</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">สร้างหมวดใหม่สำหรับหน้าเพิ่มสินค้าและ POS</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <form onSubmit={createCategory} className="space-y-3">
+              <div className="field mb-0">
+                <label htmlFor="categoryName">ชื่อหมวดหมู่ *</label>
+                <input id="categoryName" name="name" required />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="categoryOrder">ลำดับแสดงผล</label>
+                <input id="categoryOrder" name="sortOrder" type="number" step={1} defaultValue={0} />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={creating}>
+                  {creating ? "กำลังบันทึก..." : "เพิ่มหมวดหมู่"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

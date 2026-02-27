@@ -535,11 +535,11 @@ export function PosClient({
             </span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(128px,1fr))]">
             {visibleProducts.map((product) => (
               <article
                 key={product.id}
-                className={`group flex min-h-52 flex-col rounded-xl border border-[var(--line)] bg-white p-3 text-left transition duration-150 hover:bg-[#f9fafb] ${
+                className={`group flex flex-col rounded-xl border border-[var(--line)] bg-white p-2 text-left transition duration-150 hover:bg-[#f9fafb] ${
                   pulseProductId === product.id ? "scale-[0.98]" : ""
                 } ${product.stockQty <= 0 ? "opacity-70" : ""}`}
               >
@@ -562,12 +562,12 @@ export function PosClient({
                     </div>
                   )}
                   <div className="mt-2 w-full space-y-1">
-                    <div className="line-clamp-2 font-semibold text-[#111827]">{product.name}</div>
+                    <div className="line-clamp-2 text-sm font-semibold text-[#111827]">{product.name}</div>
                     <div className="text-xs text-[var(--muted)]">{product.category || "Uncategorized"}</div>
                     <div className={`text-xs ${product.stockQty > 0 ? "text-[var(--muted)]" : "text-red-600"}`}>
                       คงเหลือ {product.stockQty}
                     </div>
-                    <div className="text-base font-semibold">{formatCurrency(product.price, currency)}</div>
+                    <div className="text-sm font-semibold">{formatCurrency(product.price, currency)}</div>
                   </div>
                 </button>
 

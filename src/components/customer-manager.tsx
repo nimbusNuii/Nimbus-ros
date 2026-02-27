@@ -91,6 +91,7 @@ export function CustomerManager({
   const [customers, setCustomers] = useState(initialCustomers);
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialCustomers));
   const [saving, setSaving] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [selectedHistoryCustomerId, setSelectedHistoryCustomerId] = useState<string>(() => {
@@ -249,6 +250,7 @@ export function CustomerManager({
       if (created.type === "REGULAR" && !selectedHistoryCustomerId) {
         setSelectedHistoryCustomerId(created.id);
       }
+      setCreateModalOpen(false);
       goPage(1);
       router.refresh();
       event.currentTarget.reset();
@@ -309,48 +311,24 @@ export function CustomerManager({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className="card space-y-4">
-        <div>
-          <h2 className="mt-0 text-xl font-semibold">เพิ่มลูกค้า</h2>
-          <p className="mb-0 text-sm text-[var(--muted)]">รายชื่อลูกค้าที่เปิดใช้งาน จะไปแสดงใน POS dropdown</p>
-        </div>
-
-        <form onSubmit={createCustomer} className="space-y-3">
-          <div className="field">
-            <label htmlFor="customerName">ชื่อลูกค้า *</label>
-            <input id="customerName" name="name" required />
-          </div>
-          <div className="field">
-            <label htmlFor="customerType">ประเภท</label>
-            <select id="customerType" name="type" defaultValue="REGULAR">
-              <option value="REGULAR">ลูกค้าประจำ</option>
-              <option value="WALK_IN">ลูกค้า</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="customerPhone">เบอร์โทร</label>
-            <input id="customerPhone" name="phone" />
-          </div>
-          <div className="field">
-            <label htmlFor="customerNote">หมายเหตุ</label>
-            <textarea id="customerNote" name="note" rows={3} />
-          </div>
-
-          <button type="submit" disabled={saving}>
-            {saving ? "กำลังบันทึก..." : "เพิ่มลูกค้า"}
-          </button>
-        </form>
-
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      </section>
-
+    <div className="space-y-4">
       <section className="card space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="mt-0 text-xl font-semibold">รายชื่อลูกค้า</h2>
-          <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
-            หน้านี้ใช้งานอยู่ {activeCount}/{customers.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <h2 className="mt-0 text-xl font-semibold">รายชื่อลูกค้า</h2>
+            <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
+              หน้านี้ใช้งานอยู่ {activeCount}/{customers.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setCreateModalOpen(true);
+            }}
+          >
+            เพิ่มลูกค้า
+          </button>
         </div>
 
         <form
@@ -457,9 +435,10 @@ export function CustomerManager({
           onPageChange={goPage}
         />
         <p className="mb-0 text-xs text-[var(--muted)]">เลือกประเภทลูกค้าได้ทั้งลูกค้าประจำและขาจรสำหรับ POS dropdown</p>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </section>
 
-      <section className="card lg:col-span-2">
+      <section className="card">
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <div className="field mb-0 min-w-[260px] flex-1">
             <label htmlFor="historyCustomer">ประวัติการซื้อรายลูกค้า (เลือกจากลูกค้าประจำ)</label>
@@ -536,6 +515,60 @@ export function CustomerManager({
           </div>
         ) : null}
       </section>
+
+      {createModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCreateModalOpen(false);
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(520px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เพิ่มลูกค้า</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">รายชื่อลูกค้าที่เปิดใช้งาน จะไปแสดงใน POS dropdown</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                ปิด
+              </button>
+            </div>
+
+            <form onSubmit={createCustomer} className="space-y-3">
+              <div className="field mb-0">
+                <label htmlFor="customerName">ชื่อลูกค้า *</label>
+                <input id="customerName" name="name" required />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="customerType">ประเภท</label>
+                <select id="customerType" name="type" defaultValue="REGULAR">
+                  <option value="REGULAR">ลูกค้าประจำ</option>
+                  <option value="WALK_IN">ลูกค้า</option>
+                </select>
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="customerPhone">เบอร์โทร</label>
+                <input id="customerPhone" name="phone" />
+              </div>
+              <div className="field mb-0">
+                <label htmlFor="customerNote">หมายเหตุ</label>
+                <textarea id="customerNote" name="note" rows={3} />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={saving}>
+                  {saving ? "กำลังบันทึก..." : "เพิ่มลูกค้า"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
