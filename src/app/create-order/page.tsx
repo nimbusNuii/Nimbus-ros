@@ -38,28 +38,30 @@ export default async function CreateOrderPage() {
   ]);
 
   return (
-    <CreateOrderClient
-      products={products.map((product) => ({
-        id: product.id,
-        sku: product.sku,
-        name: product.name,
-        category: product.categoryRef?.name || product.category,
-        imageUrl: product.imageUrl,
-        price: toNumber(product.price),
-        stockQty: product.stockQty
-      }))}
-      categories={categories.map((category) => ({
-        id: category.id,
-        name: category.name
-      }))}
-      customers={customers.map((customer) => ({
-        id: customer.id,
-        name: customer.name,
-        type: customer.type
-      }))}
-      vatEnabled={setting?.vatEnabled ?? true}
-      taxRate={toNumber(setting?.taxRate ?? 7)}
-      currency={setting?.currency || "THB"}
-    />
+    <div className="w-full max-w-full overflow-x-hidden">
+      <CreateOrderClient
+        products={products.map((product) => ({
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          category: product.categoryRef?.name || product.category,
+          imageUrl: product.imageUrl,
+          price: toNumber(product.price),
+          stockQty: product.stockQty
+        }))}
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name
+        }))}
+        customers={customers.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          type: customer.type
+        }))}
+        vatEnabled={setting?.vatEnabled ?? true}
+        taxRate={toNumber(setting?.taxRate ?? 7)}
+        currency={setting?.currency || "THB"}
+      />
+    </div>
   );
 }

@@ -377,11 +377,11 @@ export function CreateOrderClient({
   }
 
   return (
-    <div className="space-y-4 pb-20 lg:pb-0">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="card space-y-3 !p-3 sm:space-y-4 sm:!p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="w-full max-w-full space-y-4 overflow-x-hidden pb-20 lg:pb-0">
+      <div className="grid w-full min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="card min-w-0 space-y-3 overflow-x-hidden !p-3 sm:space-y-4 sm:!p-4">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 max-w-full gap-2 overflow-x-auto pb-1">
               {categoryTabs.map((tab) => (
                 <button
                   key={tab}
@@ -397,7 +397,7 @@ export function CreateOrderClient({
               กลับหน้าหลัก
             </Link>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
             <input
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
@@ -411,7 +411,7 @@ export function CreateOrderClient({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 sm:gap-2 md:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
+          <div className="grid w-full min-w-0 grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 sm:gap-2 md:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
               <article
                 key={product.id}
