@@ -438,7 +438,7 @@ export function ProductManager({
           </button>
         </div>
         <form
-          className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -463,7 +463,71 @@ export function ProductManager({
             ล้างตัวกรอง
           </button>
         </form>
-        <div className="overflow-x-auto">
+
+        <div className="space-y-2 md:hidden">
+          {products.map((product) => (
+            <article key={product.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+              <div className="flex items-start gap-3">
+                {product.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="h-14 w-14 shrink-0 rounded-md border border-[var(--line)] object-cover"
+                  />
+                ) : (
+                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md border border-dashed border-[var(--line)] text-[10px] text-[var(--muted)]">
+                    No Img
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-sm font-semibold">{product.name}</p>
+                  <p className="m-0 mt-0.5 text-xs text-[var(--muted)]">หมวดหมู่: {product.category || "-"}</p>
+                  <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
+                    <p className="m-0 text-[var(--muted)]">
+                      ราคา: <span className="font-medium text-[var(--text)]">{formatCurrency(product.price, currency)}</span>
+                    </p>
+                    <p className="m-0 text-[var(--muted)]">
+                      ต้นทุน: <span className="font-medium text-[var(--text)]">{formatCurrency(product.cost, currency)}</span>
+                    </p>
+                    <p className="m-0 text-[var(--muted)]">
+                      สต็อก: <span className="font-semibold text-[var(--text)]">{product.stockQty}</span>
+                    </p>
+                    {!product.isActive ? <p className="m-0 text-xs text-[var(--muted)]">สถานะ: ปิดใช้งาน</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <input
+                  type="number"
+                  step={1}
+                  value={stockAdjust[product.id] || 0}
+                  onChange={(event) =>
+                    setStockAdjust((prev) => ({
+                      ...prev,
+                      [product.id]: Math.trunc(Number(event.target.value))
+                    }))
+                  }
+                  className="w-24"
+                />
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={adjustingId === product.id}
+                  onClick={() => adjustStock(product.id)}
+                >
+                  {adjustingId === product.id ? "..." : "บันทึกสต็อก"}
+                </button>
+                <button type="button" className="secondary" onClick={() => openEdit(product)}>
+                  แก้ไข
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="table min-w-[980px]">
             <thead>
               <tr>
