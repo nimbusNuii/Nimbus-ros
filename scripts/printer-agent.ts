@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import os from "node:os";
+import { detectSystemPrinters } from "../src/lib/system-printers";
 
 const APP_URL = (process.env.POS_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 const PRINTER_AGENT_TOKEN = process.env.PRINTER_AGENT_TOKEN || "";
@@ -10,6 +12,10 @@ const PRINT_COMMAND = process.env.PRINT_COMMAND || "";
 const POLL_INTERVAL_MS = Number(process.env.PRINTER_POLL_MS || 2500);
 const RETRY_ATTEMPTS = Math.max(1, Number(process.env.PRINTER_RETRY_ATTEMPTS || 3));
 const RETRY_DELAY_MS = Math.max(0, Number(process.env.PRINTER_RETRY_DELAY_MS || 800));
+const HEARTBEAT_INTERVAL_MS = Math.max(10000, Number(process.env.PRINTER_HEARTBEAT_MS || 30000));
+const PRINTER_AGENT_ID =
+  process.env.PRINTER_AGENT_ID ||
+  `${os.hostname()}-${PRINTER_CHANNEL.toLowerCase()}-${(PRINTER_TARGET || "any").toLowerCase()}`;
 
 if (!PRINTER_AGENT_TOKEN) {
   console.error("Missing PRINTER_AGENT_TOKEN");
@@ -21,6 +27,15 @@ type PrintJob = {
   payload: string;
   channel: "CASHIER_RECEIPT" | "KITCHEN_TICKET";
   printerTarget: string | null;
+};
+
+type HeartbeatPrinter = {
+  target: string;
+  label: string;
+  channels: ("CASHIER_RECEIPT" | "KITCHEN_TICKET")[];
+  isDefault: boolean;
+  state: "idle" | "printing" | "disabled" | "unknown";
+  rawStatus: string;
 };
 
 async function fetchJson<T>(path: string, init?: RequestInit) {
@@ -39,6 +54,13 @@ async function fetchJson<T>(path: string, init?: RequestInit) {
   }
 
   return (await response.json()) as T;
+}
+
+function inferChannels(target: string): ("CASHIER_RECEIPT" | "KITCHEN_TICKET")[] {
+  const lower = target.toLowerCase();
+  if (lower.includes("kitchen") || lower.includes("ครัว")) return ["KITCHEN_TICKET"];
+  if (lower.includes("cashier") || lower.includes("counter") || lower.includes("แคช")) return ["CASHIER_RECEIPT"];
+  return ["CASHIER_RECEIPT", "KITCHEN_TICKET"];
 }
 
 function sendToPrinter(payload: string): Promise<void> {
@@ -85,12 +107,57 @@ function sleep(ms: number) {
 }
 
 let isRunning = false;
+let lastHeartbeatAt = 0;
+
+async function sendHeartbeat(force = false) {
+  const now = Date.now();
+  if (!force && now - lastHeartbeatAt < HEARTBEAT_INTERVAL_MS) {
+    return;
+  }
+
+  let printers = await detectSystemPrinters();
+  if (PRINTER_TARGET) {
+    const hasConfiguredTarget = printers.some((item) => item.target === PRINTER_TARGET);
+    if (!hasConfiguredTarget) {
+      printers = [
+        {
+          target: PRINTER_TARGET,
+          label: PRINTER_TARGET,
+          isDefault: false,
+          state: "unknown",
+          rawStatus: "configured-target"
+        },
+        ...printers
+      ];
+    }
+  }
+
+  const payloadPrinters: HeartbeatPrinter[] = printers.map((printer) => ({
+    target: printer.target,
+    label: printer.label,
+    channels: inferChannels(printer.target),
+    isDefault: printer.isDefault,
+    state: printer.state,
+    rawStatus: printer.rawStatus
+  }));
+
+  await fetchJson("/api/printers/heartbeat", {
+    method: "POST",
+    body: JSON.stringify({
+      agentId: PRINTER_AGENT_ID,
+      printers: payloadPrinters
+    })
+  });
+  lastHeartbeatAt = now;
+}
 
 async function tick() {
   if (isRunning) return;
   isRunning = true;
 
   try {
+    await sendHeartbeat();
+
     const query = new URLSearchParams({
       status: "PENDING",
       limit: "10",
@@ -137,8 +204,12 @@ async function tick() {
 }
 
 console.log(
-  `Printer agent started. APP_URL=${APP_URL} channel=${PRINTER_CHANNEL} target=${PRINTER_TARGET || "*"} interval=${POLL_INTERVAL_MS}ms retryAttempts=${RETRY_ATTEMPTS}`
+  `Printer agent started. id=${PRINTER_AGENT_ID} APP_URL=${APP_URL} channel=${PRINTER_CHANNEL} target=${PRINTER_TARGET || "*"} interval=${POLL_INTERVAL_MS}ms heartbeat=${HEARTBEAT_INTERVAL_MS}ms retryAttempts=${RETRY_ATTEMPTS}`
 );
+void sendHeartbeat(true).catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[heartbeat-error] ${message}`);
+});
 void tick();
 setInterval(() => {
   void tick();

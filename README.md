@@ -134,6 +134,8 @@ POS_APP_URL=http://localhost:3000 \
 PRINTER_AGENT_TOKEN=optional-printer-token \
 PRINTER_CHANNEL=CASHIER_RECEIPT \
 PRINTER_TARGET=cashier \
+PRINTER_AGENT_ID=cashier-machine-1 \
+PRINTER_HEARTBEAT_MS=30000 \
 PRINTER_RETRY_ATTEMPTS=3 \
 PRINTER_RETRY_DELAY_MS=800 \
 PRINT_COMMAND='lpr -P YourPrinterName' \
@@ -141,6 +143,7 @@ npm run print:agent
 ```
 - ถ้าไม่กำหนด `PRINT_COMMAND` agent จะพิมพ์ payload ออก console (เหมาะสำหรับ debug)
 - ตัว agent จะ poll งานสถานะ `PENDING` ตาม `PRINTER_CHANNEL`/`PRINTER_TARGET` และอัปเดตเป็น `PRINTED` หรือ `FAILED`
+- ตัว agent จะส่ง heartbeat รายชื่อเครื่องปริ้นที่เชื่อมต่อจริงไปที่ `/api/printers/heartbeat` เพื่อให้หน้าเว็บ (รวมถึงบน Vercel) แสดงเครื่องปริ้นล่าสุดได้
 - ถ้าพิมพ์ล้มเหลว agent จะ retry ตาม `PRINTER_RETRY_ATTEMPTS`
 - ใน Receipt Modal จะเห็นสถานะ job แบบ realtime หลังส่งคิว (`รอพิมพ์`, `พิมพ์เสร็จแล้ว`, `พิมพ์ไม่สำเร็จ`)
 
@@ -187,6 +190,7 @@ PRINTER_CHANNEL=KITCHEN_TICKET PRINTER_TARGET=kitchen npm run print:agent
   - `channel` และ `printerTarget` ใช้แยกคิวพิมพ์หลายเครื่อง
 - `PATCH /api/print/jobs/:id`
 - `GET /api/printers` ดึงรายการเครื่องปริ้นสำหรับ dropdown
+- `POST /api/printers/heartbeat` endpoint สำหรับ printer agent รายงานรายชื่อเครื่องที่เชื่อมต่อ
 
 ## หมายเหตุ
 ถ้าต้องการต่อเครื่องปริ้นแบบอัตโนมัติ (กดแล้วพิมพ์ทันทีไม่ผ่าน dialog browser) ควรเพิ่ม service กลางในเครื่องร้าน เช่น:

@@ -188,7 +188,7 @@ async function main() {
   ] as const;
 
   for (const product of products) {
-    const imageUrl = product.imageKey ? sampleImage[product.imageKey] : null;
+    const imageUrl = "imageKey" in product ? sampleImage[product.imageKey] : null;
     await prisma.product.upsert({
       where: { sku: product.sku },
       update: {

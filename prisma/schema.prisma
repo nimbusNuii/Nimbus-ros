@@ -246,6 +246,25 @@ model PrintJob {
   @@index([orderId])
 }
 
+model PrinterPresence {
+  id              String   @id @default(cuid())
+  agentId         String
+  target          String
+  label           String
+  supportsCashier Boolean  @default(true)
+  supportsKitchen Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  state           String?
+  rawStatus       String?
+  lastSeenAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([agentId, target])
+  @@index([lastSeenAt])
+  @@index([target, lastSeenAt])
+}
+
 model AuditLog {
   id            String   @id @default(cuid())
   action        String
