@@ -226,13 +226,13 @@ export function ImageCropModal({ open, file, title, description, onCancel, onApp
                 <p className="m-0 mb-2 text-xs text-[var(--muted)]">
                   ต้นฉบับ {imageWidth}x{imageHeight} | ลากกรอบสี่เหลี่ยมเพื่อเลือกตำแหน่ง
                 </p>
-                <div className="relative inline-block w-full rounded-lg border border-[var(--line)] bg-white p-2">
+                <div className="relative mx-auto inline-block max-w-full rounded-lg border border-[var(--line)] bg-white p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     ref={imageRef}
                     src={source}
                     alt="Crop source"
-                    className="mx-auto block max-h-[320px] w-auto max-w-full rounded-lg object-contain"
+                    className="block max-h-[320px] w-auto max-w-full rounded-lg object-contain"
                     onLoad={(event) => {
                       setDisplayWidth(event.currentTarget.clientWidth);
                       setDisplayHeight(event.currentTarget.clientHeight);
