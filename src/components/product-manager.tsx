@@ -23,6 +23,7 @@ type Product = {
 type ProductCategory = {
   id: string;
   name: string;
+  sortOrder?: number;
 };
 
 type ProductManagerProps = {
@@ -70,9 +71,16 @@ export function ProductManager({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState(initialProducts);
-  const [categories] = useState(initialCategories);
+  const [categories, setCategories] = useState(initialCategories);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addCategoryId, setAddCategoryId] = useState("");
+  const [addCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
+  const [addCategoryName, setAddCategoryName] = useState("");
+  const [addCategorySortOrder, setAddCategorySortOrder] = useState(0);
+  const [addCategorySaving, setAddCategorySaving] = useState(false);
+  const [addCategoryError, setAddCategoryError] = useState("");
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [stockAdjust, setStockAdjust] = useState<Record<string, number>>({});
   const [imageData, setImageData] = useState("");
@@ -137,6 +145,30 @@ export function ProductManager({
     params.delete("page");
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function sortCategories(list: ProductCategory[]) {
+    return [...list].sort((a, b) => {
+      const sortA = a.sortOrder ?? 0;
+      const sortB = b.sortOrder ?? 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return a.name.localeCompare(b.name, "th");
+    });
+  }
+
+  function openAddModal() {
+    setError("");
+    setImageData("");
+    setImageInfo("");
+    setAddCategoryId("");
+    setFileInputKey((prev) => prev + 1);
+    setAddModalOpen(true);
+  }
+
+  function closeAddModal() {
+    setAddModalOpen(false);
+    setAddCategoryModalOpen(false);
+    setAddCategoryError("");
   }
 
   const reloadProducts = useCallback(async () => {
@@ -237,6 +269,53 @@ export function ProductManager({
     }
   }
 
+  async function onSubmitAddCategory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (addCategorySaving) return;
+    const name = addCategoryName.trim();
+    if (!name) {
+      setAddCategoryError("กรุณากรอกชื่อหมวดหมู่");
+      return;
+    }
+
+    setAddCategorySaving(true);
+    setAddCategoryError("");
+    try {
+      const response = await fetch("/api/product-categories", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name,
+          sortOrder: addCategorySortOrder,
+          isActive: true
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? "Cannot create category");
+      }
+
+      setCategories((prev) =>
+        sortCategories([
+          ...prev,
+          {
+            id: data.id,
+            name: data.name,
+            sortOrder: data.sortOrder
+          }
+        ])
+      );
+      setAddCategoryId(data.id);
+      setAddCategoryName("");
+      setAddCategorySortOrder(0);
+      setAddCategoryModalOpen(false);
+    } catch (err) {
+      setAddCategoryError(err instanceof Error ? err.message : "Cannot create category");
+    } finally {
+      setAddCategorySaving(false);
+    }
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -250,7 +329,7 @@ export function ProductManager({
         body: JSON.stringify({
           sku: form.get("sku"),
           name: form.get("name"),
-          categoryId: form.get("categoryId"),
+          categoryId: addCategoryId || null,
           imageData,
           price: Number(form.get("price")),
           cost: Number(form.get("cost")),
@@ -269,7 +348,9 @@ export function ProductManager({
       event.currentTarget.reset();
       setImageData("");
       setImageInfo("");
+      setAddCategoryId("");
       setFileInputKey((prev) => prev + 1);
+      setAddModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create product");
     } finally {
@@ -348,85 +429,14 @@ export function ProductManager({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="space-y-4">
       <section className="card">
-        <h2 className="mt-0 text-xl font-semibold">เพิ่มสินค้า</h2>
-        <form onSubmit={onSubmit} className="space-y-2">
-          <div className="field">
-            <label htmlFor="sku">SKU</label>
-            <input id="sku" name="sku" />
-          </div>
-          <div className="field">
-            <label htmlFor="name">ชื่อสินค้า *</label>
-            <input id="name" name="name" required />
-          </div>
-          <div className="field">
-            <label htmlFor="categoryId">หมวดหมู่</label>
-            <select id="categoryId" name="categoryId" defaultValue="">
-              <option value="">ไม่ระบุหมวดหมู่</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-              จัดการหมวดหมู่เพิ่มเติมได้ที่เมนู Manage &gt; Categories
-            </p>
-          </div>
-          <div className="field">
-            <label htmlFor="imageFile">รูปสินค้า (ไฟล์)</label>
-            <input
-              key={fileInputKey}
-              id="imageFile"
-              type="file"
-              accept="image/*"
-              onChange={onImageFileChange}
-              disabled={processingImage}
-            />
-            <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
-              ระบบจะครอปเป็น 1:1 และบีบไฟล์ไม่เกิน 10KB (base64)
-            </p>
-          </div>
-          {imageData ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-              <p className="mb-2 text-xs text-[var(--muted)]">{imageInfo}</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageData} alt="Preview" className="h-28 w-28 rounded-lg object-cover" />
-              <button
-                type="button"
-                className="secondary mt-2"
-                onClick={() => {
-                  setImageData("");
-                  setImageInfo("");
-                  setFileInputKey((prev) => prev + 1);
-                }}
-              >
-                ลบรูป
-              </button>
-            </div>
-          ) : null}
-          <div className="field">
-            <label htmlFor="price">ราคาขาย *</label>
-            <input id="price" name="price" type="number" min={0} step="0.01" required />
-          </div>
-          <div className="field">
-            <label htmlFor="cost">ต้นทุนต่อหน่วย *</label>
-            <input id="cost" name="cost" type="number" min={0} step="0.01" required />
-          </div>
-          <div className="field">
-            <label htmlFor="stockQty">สต็อกเริ่มต้น *</label>
-            <input id="stockQty" name="stockQty" type="number" min={0} step={1} defaultValue={0} required />
-          </div>
-          <button disabled={saving || processingImage}>
-            {saving ? "กำลังบันทึก..." : processingImage ? "กำลังย่อรูป..." : "บันทึกสินค้า"}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="m-0 text-xl font-semibold">รายการสินค้า</h2>
+          <button type="button" onClick={openAddModal}>
+            เพิ่มสินค้า
           </button>
-        </form>
-        {error ? <p className="mt-2 text-red-600">{error}</p> : null}
-      </section>
-
-      <section className="card">
-        <h2 className="mt-0 text-xl font-semibold">รายการสินค้า</h2>
+        </div>
         <form
           className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
           onSubmit={(event) => {
@@ -532,7 +542,198 @@ export function ProductManager({
           totalItems={totalItems}
           onPageChange={goPage}
         />
+        {error ? <p className="mt-2 text-red-600">{error}</p> : null}
       </section>
+
+      {addModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeAddModal();
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(560px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เพิ่มสินค้า</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">เพิ่มสินค้าใหม่พร้อมรูป 1:1 และเลือกหมวดหมู่</p>
+              </div>
+              <button type="button" className="secondary" onClick={closeAddModal}>
+                ปิด
+              </button>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-3">
+              <div className="field mb-0">
+                <label htmlFor="sku">SKU</label>
+                <input id="sku" name="sku" />
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="name">ชื่อสินค้า *</label>
+                <input id="name" name="name" required />
+              </div>
+
+              <div className="field mb-0">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <label htmlFor="categoryId">หมวดหมู่</label>
+                  <button
+                    type="button"
+                    className="secondary px-2 py-1 text-xs"
+                    onClick={() => {
+                      setAddCategoryError("");
+                      setAddCategoryModalOpen(true);
+                    }}
+                  >
+                    เพิ่มหมวดหมู่
+                  </button>
+                </div>
+                <select id="categoryId" name="categoryId" value={addCategoryId} onChange={(event) => setAddCategoryId(event.target.value)}>
+                  <option value="">ไม่ระบุหมวดหมู่</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="imageFile">รูปสินค้า (ไฟล์)</label>
+                <input
+                  key={fileInputKey}
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={onImageFileChange}
+                  disabled={processingImage}
+                />
+                <p className="mb-0 mt-1 text-xs text-[var(--muted)]">
+                  ระบบจะครอปเป็น 1:1 และบีบไฟล์ไม่เกิน 10KB (base64)
+                </p>
+              </div>
+              {imageData ? (
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                  <p className="mb-2 text-xs text-[var(--muted)]">{imageInfo}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imageData} alt="Preview" className="h-28 w-28 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    className="secondary mt-2"
+                    onClick={() => {
+                      setImageData("");
+                      setImageInfo("");
+                      setFileInputKey((prev) => prev + 1);
+                    }}
+                  >
+                    ลบรูป
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="field mb-0">
+                  <label htmlFor="price">ราคาขาย *</label>
+                  <input id="price" name="price" type="number" min={0} step="0.01" required />
+                </div>
+                <div className="field mb-0">
+                  <label htmlFor="cost">ต้นทุนต่อหน่วย *</label>
+                  <input id="cost" name="cost" type="number" min={0} step="0.01" required />
+                </div>
+                <div className="field mb-0">
+                  <label htmlFor="stockQty">สต็อกเริ่มต้น *</label>
+                  <input id="stockQty" name="stockQty" type="number" min={0} step={1} defaultValue={0} required />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="secondary" onClick={closeAddModal}>
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={saving || processingImage}>
+                  {saving ? "กำลังบันทึก..." : processingImage ? "กำลังย่อรูป..." : "บันทึกสินค้า"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {addCategoryModalOpen ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setAddCategoryModalOpen(false);
+              setAddCategoryError("");
+            }
+          }}
+        >
+          <div className="modal-panel" style={{ width: "min(460px, 100%)" }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="m-0 text-lg font-semibold">เพิ่มหมวดหมู่</h3>
+                <p className="m-0 mt-1 text-sm text-[var(--muted)]">เพิ่มหมวดใหม่แล้วเลือกใช้ได้ทันที</p>
+              </div>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setAddCategoryModalOpen(false);
+                  setAddCategoryError("");
+                }}
+              >
+                ปิด
+              </button>
+            </div>
+
+            <form className="space-y-3" onSubmit={onSubmitAddCategory}>
+              <div className="field mb-0">
+                <label htmlFor="addCategoryName">ชื่อหมวดหมู่ *</label>
+                <input
+                  id="addCategoryName"
+                  required
+                  value={addCategoryName}
+                  onChange={(event) => setAddCategoryName(event.target.value)}
+                />
+              </div>
+
+              <div className="field mb-0">
+                <label htmlFor="addCategorySortOrder">ลำดับ</label>
+                <input
+                  id="addCategorySortOrder"
+                  type="number"
+                  step={1}
+                  value={addCategorySortOrder}
+                  onChange={(event) => setAddCategorySortOrder(Math.trunc(Number(event.target.value) || 0))}
+                />
+              </div>
+
+              {addCategoryError ? <p className="m-0 text-sm text-red-600">{addCategoryError}</p> : null}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setAddCategoryModalOpen(false);
+                    setAddCategoryError("");
+                  }}
+                >
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={addCategorySaving}>
+                  {addCategorySaving ? "กำลังบันทึก..." : "บันทึกหมวดหมู่"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {editForm ? (
         <div
