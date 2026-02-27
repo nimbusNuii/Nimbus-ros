@@ -56,17 +56,24 @@ export default async function ManagePage() {
   ]);
 
   return (
-    <div>
+    <div className="space-y-4">
       <section className="card mb-4">
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {menuGroups.map((group) => (
             <div key={group.title} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
               <p className="mb-2 mt-0 text-sm font-semibold text-[var(--text)]">{group.title}</p>
               <div className="space-y-2">
                 {group.items.map((item) => (
-                  <Link key={item.href} href={item.href} className="secondary flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm">
-                    <span className="font-medium text-[var(--text)]">{item.label}</span>
-                    <span className="text-xs text-[var(--muted)]">{item.hint}</span>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="secondary flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-[var(--text)]">{item.label}</span>
+                      <span className="mt-0.5 block text-xs text-[var(--muted)] sm:hidden">{item.hint}</span>
+                    </span>
+                    <span className="hidden shrink-0 text-xs text-[var(--muted)] sm:inline">{item.hint}</span>
                   </Link>
                 ))}
               </div>
@@ -76,28 +83,44 @@ export default async function ManagePage() {
       </section>
 
       <section className="card mb-4">
-        <h2 className="mt-0">แจ้งเตือนสต็อกต่ำ (≤ {LOW_STOCK_THRESHOLD})</h2>
+        <h2 className="mt-0 text-xl font-semibold">แจ้งเตือนสต็อกต่ำ (≤ {LOW_STOCK_THRESHOLD})</h2>
         {lowStockProducts.length === 0 ? (
           <p className="mb-0 text-[var(--ok)]">สต็อกอยู่ในระดับปกติ</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>สินค้า</th>
-                <th>หมวดหมู่</th>
-                <th>คงเหลือ</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <div className="space-y-2 md:hidden">
               {lowStockProducts.map((product) => (
-                <tr key={product.id}>
-                  <td>{product.name}</td>
-                  <td>{product.category || "-"}</td>
-                  <td className="font-semibold text-red-600">{product.stockQty}</td>
-                </tr>
+                <article key={product.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                  <p className="m-0 text-sm font-semibold">{product.name}</p>
+                  <p className="m-0 mt-1 text-xs text-[var(--muted)]">หมวดหมู่: {product.category || "-"}</p>
+                  <p className="m-0 mt-2 text-sm">
+                    คงเหลือ: <span className="font-semibold text-red-600">{product.stockQty}</span>
+                  </p>
+                </article>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="table min-w-[680px]">
+                <thead>
+                  <tr>
+                    <th>สินค้า</th>
+                    <th>หมวดหมู่</th>
+                    <th>คงเหลือ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStockProducts.map((product) => (
+                    <tr key={product.id}>
+                      <td>{product.name}</td>
+                      <td>{product.category || "-"}</td>
+                      <td className="font-semibold text-red-600">{product.stockQty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 

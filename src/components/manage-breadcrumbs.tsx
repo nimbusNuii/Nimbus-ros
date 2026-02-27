@@ -32,8 +32,8 @@ export function ManageBreadcrumbs() {
   });
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-4">
-      <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+    <nav aria-label="Breadcrumb" className="mb-4 overflow-x-auto pb-1">
+      <ol className="flex min-w-max items-center gap-2 whitespace-nowrap text-sm text-[var(--muted)]">
         {crumbs.map((crumb) => (
           <li key={crumb.href} className="flex items-center gap-2">
             {crumb.isLast ? (
