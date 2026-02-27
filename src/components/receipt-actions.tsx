@@ -11,6 +11,7 @@ export function ReceiptActions({ orderId }: ReceiptActionsProps) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [printerTarget, setPrinterTarget] = useState("");
 
   async function enqueuePrint(channel: "CASHIER_RECEIPT" | "KITCHEN_TICKET") {
@@ -40,12 +41,47 @@ export function ReceiptActions({ orderId }: ReceiptActionsProps) {
     }
   }
 
+  async function downloadPdf() {
+    setDownloadingPdf(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(`/api/receipts/${orderId}/pdf`, { cache: "no-store" });
+      if (!response.ok) {
+        let message = "Cannot download PDF";
+        try {
+          const payload = await response.json();
+          if (payload?.error) message = payload.error;
+        } catch {
+          // ignore parse errors and keep generic message
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `receipt-${orderId}.pdf`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+      setMessage("ดาวน์โหลด PDF แล้ว");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot download PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="hide-print" style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link href={`/api/receipts/${orderId}/pdf`} target="_blank" className="nav-link">
-          ดาวน์โหลด PDF
-        </Link>
+        <button className="secondary" type="button" disabled={downloadingPdf} onClick={() => void downloadPdf()}>
+          {downloadingPdf ? "กำลังดาวน์โหลด..." : "ดาวน์โหลด PDF"}
+        </button>
         <input
           value={printerTarget}
           onChange={(event) => setPrinterTarget(event.target.value)}

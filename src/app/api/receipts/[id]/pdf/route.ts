@@ -32,7 +32,7 @@ export async function GET(
     prisma.receiptTemplate.findFirst({ where: { isDefault: true } })
   ]);
 
-  const pdf = await buildReceiptPdfWithPdfmake({
+  const pdfPayload = {
     order: {
       orderNumber: order.orderNumber,
       createdAt: order.createdAt,
@@ -65,7 +65,20 @@ export async function GET(
       showCostBreakdown: template?.showCostBreakdown ?? false,
       paperWidth: template?.paperWidth ?? 80
     }
-  });
+  };
+
+  let pdf: Buffer;
+  try {
+    pdf = await buildReceiptPdfWithPdfmake(pdfPayload);
+  } catch (firstError) {
+    // Retry without logo in case uploaded image format cannot be parsed by pdfmake.
+    try {
+      pdf = await buildReceiptPdfWithPdfmake(pdfPayload, { disableLogo: true });
+    } catch {
+      const message = firstError instanceof Error ? firstError.message : "Cannot generate receipt PDF";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {

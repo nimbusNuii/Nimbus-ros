@@ -109,6 +109,7 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
   const [message, setMessage] = useState("");
   const [queueingAction, setQueueingAction] = useState<PrintChannel | "BOTH" | null>(null);
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [printers, setPrinters] = useState<PrinterOption[]>([]);
   const [cashierPrinter, setCashierPrinter] = useState("");
   const [kitchenPrinter, setKitchenPrinter] = useState("");
@@ -455,6 +456,48 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
     }
   }
 
+  async function downloadPdf() {
+    if (!orderId) return;
+    setDownloadingPdf(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(`/api/receipts/${orderId}/pdf`, {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        let message = "Cannot download PDF";
+        try {
+          const payload = await response.json();
+          if (payload?.error) {
+            message = payload.error;
+          }
+        } catch {
+          // ignore parse errors and keep generic message
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const fileName = `receipt-${data?.order.orderNumber || orderId}.pdf`;
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+      setMessage(`ดาวน์โหลด PDF แล้ว (${fileName})`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot download PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   if (!orderId) return null;
 
   return (
@@ -504,9 +547,9 @@ export function ReceiptPreviewModal({ orderId, onClose }: ReceiptPreviewModalPro
             </div>
 
             <div className="flex flex-wrap items-end gap-2">
-              <a className="secondary" href={`/api/receipts/${orderId}/pdf`} target="_blank" rel="noreferrer">
-                ดาวน์โหลด PDF
-              </a>
+              <button type="button" className="secondary" onClick={() => void downloadPdf()} disabled={downloadingPdf}>
+                {downloadingPdf ? "กำลังดาวน์โหลด..." : "ดาวน์โหลด PDF"}
+              </button>
               <div className="relative" ref={printMenuRef}>
                 <div className="inline-flex">
                   <button

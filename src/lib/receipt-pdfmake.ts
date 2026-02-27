@@ -104,10 +104,14 @@ async function resolveLogoDataUri(logoUrl?: string | null) {
 }
 
 async function resolveFontDescriptors(): Promise<Record<string, Record<string, string>>> {
-  const hasThaiFont = await fs
-    .access(FONT_PATHS.normal)
-    .then(() => true)
-    .catch(() => false);
+  const hasThaiFont = await Promise.all(
+    Object.values(FONT_PATHS).map((fontPath) =>
+      fs
+        .access(fontPath)
+        .then(() => true)
+        .catch(() => false)
+    )
+  ).then((results) => results.every(Boolean));
 
   if (hasThaiFont) {
     return {
@@ -115,12 +119,33 @@ async function resolveFontDescriptors(): Promise<Record<string, Record<string, s
     };
   }
 
+  const robotoPaths = {
+    normal: path.join(ROBOTO_FONT_DIR, "Roboto-Regular.ttf"),
+    bold: path.join(ROBOTO_FONT_DIR, "Roboto-Medium.ttf"),
+    italics: path.join(ROBOTO_FONT_DIR, "Roboto-Italic.ttf"),
+    bolditalics: path.join(ROBOTO_FONT_DIR, "Roboto-MediumItalic.ttf")
+  };
+  const hasRobotoFont = await Promise.all(
+    Object.values(robotoPaths).map((fontPath) =>
+      fs
+        .access(fontPath)
+        .then(() => true)
+        .catch(() => false)
+    )
+  ).then((results) => results.every(Boolean));
+
+  if (hasRobotoFont) {
+    return {
+      Roboto: robotoPaths
+    };
+  }
+
   return {
-    Roboto: {
-      normal: path.join(ROBOTO_FONT_DIR, "Roboto-Regular.ttf"),
-      bold: path.join(ROBOTO_FONT_DIR, "Roboto-Medium.ttf"),
-      italics: path.join(ROBOTO_FONT_DIR, "Roboto-Italic.ttf"),
-      bolditalics: path.join(ROBOTO_FONT_DIR, "Roboto-MediumItalic.ttf")
+    Helvetica: {
+      normal: "Helvetica",
+      bold: "Helvetica-Bold",
+      italics: "Helvetica-Oblique",
+      bolditalics: "Helvetica-BoldOblique"
     }
   };
 }
@@ -271,13 +296,16 @@ function estimatePageHeight(payload: ReceiptPdfPayload) {
   return Math.max(260, Math.ceil(totalLines * 15 + 70));
 }
 
-export async function buildReceiptPdfWithPdfmake(payload: ReceiptPdfPayload) {
+export async function buildReceiptPdfWithPdfmake(
+  payload: ReceiptPdfPayload,
+  options?: { disableLogo?: boolean }
+) {
   const pageWidthPt = payload.template.paperWidth === 58 ? 164 : 228;
   const pageHeightPt = estimatePageHeight(payload);
   const fonts = await resolveFontDescriptors();
-  const fontFamily = "Sarabun" in fonts ? "Sarabun" : "Roboto";
+  const fontFamily = "Sarabun" in fonts ? "Sarabun" : "Roboto" in fonts ? "Roboto" : "Helvetica";
   const printer = new PdfPrinter(fonts);
-  const logoDataUri = await resolveLogoDataUri(payload.store.receiptLogoUrl);
+  const logoDataUri = options?.disableLogo ? null : await resolveLogoDataUri(payload.store.receiptLogoUrl);
 
   const docDefinition: TDocumentDefinitions = {
     pageSize: {
