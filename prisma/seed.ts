@@ -7,6 +7,24 @@ function hashPin(pin: string) {
   return crypto.createHash("sha256").update(pin).digest("hex");
 }
 
+function createSvgDataUrl(label: string, bgColor: string) {
+  const safeLabel = label.replace(/[<>&]/g, "");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="${bgColor}" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#g)" />
+  <circle cx="520" cy="120" r="76" fill="rgba(255,255,255,0.16)" />
+  <circle cx="120" cy="380" r="58" fill="rgba(255,255,255,0.14)" />
+  <text x="48" y="420" fill="#ffffff" font-size="56" font-family="Arial, sans-serif" font-weight="700">${safeLabel}</text>
+</svg>`;
+
+  return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
+}
+
 async function main() {
   await prisma.storeSetting.upsert({
     where: { id: 1 },
@@ -52,7 +70,9 @@ async function main() {
     { name: "หมูปิ้ง", sortOrder: 1 },
     { name: "ชุดเซต", sortOrder: 2 },
     { name: "เครื่องเคียง", sortOrder: 3 },
-    { name: "เครื่องดื่ม", sortOrder: 4 }
+    { name: "เครื่องดื่ม", sortOrder: 4 },
+    { name: "เมนูแนะนำประจำวัน", sortOrder: 5 },
+    { name: "โปรชุดคุ้ม", sortOrder: 6 }
   ] as const;
 
   const categoryIdByName = new Map<string, string>();
@@ -72,47 +92,110 @@ async function main() {
     categoryIdByName.set(created.name, created.id);
   }
 
+  const sampleImage = {
+    moo: createSvgDataUrl("หมูปิ้ง", "#ea580c"),
+    set: createSvgDataUrl("ชุดเซต", "#b45309"),
+    side: createSvgDataUrl("เครื่องเคียง", "#15803d"),
+    drink: createSvgDataUrl("เครื่องดื่ม", "#0284c7"),
+    daily: createSvgDataUrl("แนะนำวันนี้", "#7c3aed"),
+    promo: createSvgDataUrl("โปรชุดคุ้ม", "#dc2626")
+  } as const;
+
   const products = [
-    { name: "หมูปิ้งสูตรโบราณ", category: "หมูปิ้ง", price: 12, cost: 5, sku: "MOO-001", stockQty: 400 },
+    { name: "หมูปิ้งสูตรโบราณ", category: "หมูปิ้ง", price: 12, cost: 5, sku: "MOO-001", stockQty: 400, imageKey: "moo" },
     { name: "หมูปิ้งนมสด", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-002", stockQty: 350 },
     { name: "หมูปิ้งพริกไทยดำ", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-003", stockQty: 320 },
-    { name: "หมูปิ้งสามชั้น", category: "หมูปิ้ง", price: 15, cost: 7, sku: "MOO-004", stockQty: 250 },
+    { name: "หมูปิ้งสามชั้น", category: "หมูปิ้ง", price: 15, cost: 7, sku: "MOO-004", stockQty: 250, imageKey: "moo" },
     { name: "หมูปิ้งสไปซี่", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-005", stockQty: 240 },
     { name: "หมูปิ้งซอสเทอริยากิ", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-006", stockQty: 220 },
     { name: "หมูปิ้งงาขาว", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-007", stockQty: 260 },
     { name: "หมูปิ้งกระเทียมพริกไทย", category: "หมูปิ้ง", price: 13, cost: 6, sku: "MOO-008", stockQty: 260 },
     { name: "หมูปิ้งแจ่ว", category: "หมูปิ้ง", price: 14, cost: 6, sku: "MOO-009", stockQty: 210 },
     { name: "หมูปิ้งซอสหวาน", category: "หมูปิ้ง", price: 12, cost: 5, sku: "MOO-010", stockQty: 280 },
-    { name: "ชุดเซต A หมูปิ้ง 5 ไม้ + ข้าวเหนียว", category: "ชุดเซต", price: 69, cost: 31, sku: "SET-011", stockQty: 120 },
+    { name: "ชุดเซต A หมูปิ้ง 5 ไม้ + ข้าวเหนียว", category: "ชุดเซต", price: 69, cost: 31, sku: "SET-011", stockQty: 120, imageKey: "set" },
     { name: "ชุดเซต B หมูปิ้ง 8 ไม้ + ข้าวเหนียว 2 ห่อ", category: "ชุดเซต", price: 109, cost: 50, sku: "SET-012", stockQty: 90 },
     { name: "ชุดเซต C หมูปิ้ง 10 ไม้ + น้ำ 1 ขวด", category: "ชุดเซต", price: 139, cost: 64, sku: "SET-013", stockQty: 80 },
-    { name: "ชุดเซต D หมูปิ้ง 15 ไม้ + น้ำ 2 ขวด", category: "ชุดเซต", price: 199, cost: 95, sku: "SET-014", stockQty: 60 },
+    { name: "ชุดเซต D หมูปิ้ง 15 ไม้ + น้ำ 2 ขวด", category: "ชุดเซต", price: 199, cost: 95, sku: "SET-014", stockQty: 60, imageKey: "set" },
     { name: "ชุดเซตครอบครัว หมูปิ้ง 20 ไม้ + ข้าวเหนียว 6 ห่อ", category: "ชุดเซต", price: 279, cost: 132, sku: "SET-015", stockQty: 45 },
     { name: "ชุดเซตอิ่มคุ้ม หมูปิ้ง 12 ไม้ + ข้าวเหนียว 3 ห่อ", category: "ชุดเซต", price: 169, cost: 78, sku: "SET-016", stockQty: 70 },
     { name: "ชุดเซตมื้อเช้า หมูปิ้ง 6 ไม้ + นมถั่วเหลือง", category: "ชุดเซต", price: 89, cost: 40, sku: "SET-017", stockQty: 100 },
     { name: "ชุดเซตมื้อด่วน หมูปิ้ง 4 ไม้ + น้ำเปล่า", category: "ชุดเซต", price: 59, cost: 27, sku: "SET-018", stockQty: 130 },
     { name: "ชุดเซตพรีเมียม หมูปิ้งสามชั้น 10 ไม้ + น้ำสมุนไพร", category: "ชุดเซต", price: 179, cost: 86, sku: "SET-019", stockQty: 55 },
     { name: "ชุดเซตคู่หู หมูปิ้ง 10 ไม้ + ข้าวเหนียว 2 ห่อ + น้ำ 2 ขวด", category: "ชุดเซต", price: 149, cost: 69, sku: "SET-020", stockQty: 85 },
-    { name: "ข้าวเหนียวห่อเล็ก", category: "เครื่องเคียง", price: 8, cost: 3, sku: "SIDE-021", stockQty: 500 },
+    { name: "ข้าวเหนียวห่อเล็ก", category: "เครื่องเคียง", price: 8, cost: 3, sku: "SIDE-021", stockQty: 500, imageKey: "side" },
     { name: "ข้าวเหนียวห่อใหญ่", category: "เครื่องเคียง", price: 12, cost: 5, sku: "SIDE-022", stockQty: 350 },
     { name: "แจ่วสูตรพิเศษ", category: "เครื่องเคียง", price: 10, cost: 4, sku: "SIDE-023", stockQty: 220 },
     { name: "แตงกวาดอง", category: "เครื่องเคียง", price: 15, cost: 6, sku: "SIDE-024", stockQty: 180 },
-    { name: "น้ำเปล่า 600ml", category: "เครื่องดื่ม", price: 10, cost: 4, sku: "DRINK-025", stockQty: 600 },
+    { name: "น้ำเปล่า 600ml", category: "เครื่องดื่ม", price: 10, cost: 4, sku: "DRINK-025", stockQty: 600, imageKey: "drink" },
     { name: "โค้ก 325ml", category: "เครื่องดื่ม", price: 20, cost: 10, sku: "DRINK-026", stockQty: 300 },
     { name: "สไปรท์ 325ml", category: "เครื่องดื่ม", price: 20, cost: 10, sku: "DRINK-027", stockQty: 280 },
-    { name: "ชามะนาวเย็น", category: "เครื่องดื่ม", price: 25, cost: 11, sku: "DRINK-028", stockQty: 240 },
+    { name: "ชามะนาวเย็น", category: "เครื่องดื่ม", price: 25, cost: 11, sku: "DRINK-028", stockQty: 240, imageKey: "drink" },
     { name: "นมถั่วเหลือง", category: "เครื่องดื่ม", price: 15, cost: 7, sku: "DRINK-029", stockQty: 260 },
-    { name: "น้ำเก๊กฮวย", category: "เครื่องดื่ม", price: 20, cost: 9, sku: "DRINK-030", stockQty: 220 }
+    { name: "น้ำเก๊กฮวย", category: "เครื่องดื่ม", price: 20, cost: 9, sku: "DRINK-030", stockQty: 220 },
+    {
+      name: "แนะนำวันนี้: หมูปิ้งสมุนไพร 5 ไม้ + ข้าวเหนียว",
+      category: "เมนูแนะนำประจำวัน",
+      price: 79,
+      cost: 36,
+      sku: "DAILY-031",
+      stockQty: 60,
+      imageKey: "daily"
+    },
+    {
+      name: "แนะนำวันนี้: หมูปิ้งซอสพริกไทยเลมอน 6 ไม้",
+      category: "เมนูแนะนำประจำวัน",
+      price: 89,
+      cost: 40,
+      sku: "DAILY-032",
+      stockQty: 55,
+      imageKey: "daily"
+    },
+    {
+      name: "แนะนำวันนี้: เซตหมูปิ้งแจ่ว + น้ำสมุนไพร",
+      category: "เมนูแนะนำประจำวัน",
+      price: 99,
+      cost: 44,
+      sku: "DAILY-033",
+      stockQty: 50
+    },
+    {
+      name: "โปรชุดคุ้ม 1: หมูปิ้ง 10 ไม้ + ข้าวเหนียว 2 ห่อ",
+      category: "โปรชุดคุ้ม",
+      price: 119,
+      cost: 54,
+      sku: "PROMO-034",
+      stockQty: 80,
+      imageKey: "promo"
+    },
+    {
+      name: "โปรชุดคุ้ม 2: หมูปิ้ง 15 ไม้ + น้ำ 2 ขวด",
+      category: "โปรชุดคุ้ม",
+      price: 179,
+      cost: 82,
+      sku: "PROMO-035",
+      stockQty: 65,
+      imageKey: "promo"
+    },
+    {
+      name: "โปรชุดคุ้ม 3: หมูปิ้ง 20 ไม้ + ข้าวเหนียว 4 ห่อ + น้ำ 2 ขวด",
+      category: "โปรชุดคุ้ม",
+      price: 239,
+      cost: 112,
+      sku: "PROMO-036",
+      stockQty: 45,
+      imageKey: "promo"
+    }
   ] as const;
 
   for (const product of products) {
+    const imageUrl = product.imageKey ? sampleImage[product.imageKey] : null;
     await prisma.product.upsert({
       where: { sku: product.sku },
       update: {
         name: product.name,
         categoryId: categoryIdByName.get(product.category) || null,
         category: product.category,
-        imageUrl: null,
+        imageUrl,
         price: product.price,
         cost: product.cost,
         stockQty: product.stockQty,
@@ -123,7 +206,7 @@ async function main() {
         name: product.name,
         categoryId: categoryIdByName.get(product.category) || null,
         category: product.category,
-        imageUrl: null,
+        imageUrl,
         price: product.price,
         cost: product.cost,
         stockQty: product.stockQty,
