@@ -256,7 +256,7 @@ export function MenuOptionManager({
         <h2 className="mt-0 text-xl font-semibold">เพิ่มตัวเลือกเมนู</h2>
         <p className="text-sm text-[var(--muted)]">POS จะแสดงเฉพาะตัวเลือกที่เปิดใช้งาน และสามารถเลือกปรับแต่งเฉพาะบางออเดอร์ได้</p>
 
-        <form onSubmit={createOption} className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto] md:items-end">
+        <form onSubmit={createOption} className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_160px_auto] md:items-end">
           <div className="field mb-0">
             <label htmlFor="optionType">ประเภท</label>
             <select id="optionType" name="type" defaultValue="ADD_ON">
@@ -273,9 +273,11 @@ export function MenuOptionManager({
             <label htmlFor="optionOrder">ลำดับ</label>
             <input id="optionOrder" name="sortOrder" type="number" step={1} defaultValue={0} />
           </div>
-          <button type="submit" disabled={creating}>
-            {creating ? "กำลังบันทึก..." : "เพิ่มตัวเลือก"}
-          </button>
+          <div className="md:col-span-2 xl:col-span-1">
+            <button type="submit" disabled={creating}>
+              {creating ? "กำลังบันทึก..." : "เพิ่มตัวเลือก"}
+            </button>
+          </div>
         </form>
 
         {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
@@ -283,7 +285,7 @@ export function MenuOptionManager({
 
       <section className="card">
         <form
-          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_240px_auto_auto]"
+          className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_240px_auto_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -310,7 +312,64 @@ export function MenuOptionManager({
         <section key={type} className="card">
           <h3 className="mt-0 text-lg font-semibold">{typeLabel[type]}</h3>
 
-          <div className="overflow-x-auto">
+          <div className="space-y-2 md:hidden">
+            {grouped[type].map((item) => {
+              const draft = drafts[item.id];
+              return (
+                <article key={item.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="field mb-0">
+                      <label htmlFor={`label-mobile-${item.id}`}>รายการ</label>
+                      <input
+                        id={`label-mobile-${item.id}`}
+                        value={draft?.label || ""}
+                        onChange={(event) => setDraftValue(item.id, "label", event.target.value)}
+                      />
+                    </div>
+                    <div className="field mb-0">
+                      <label htmlFor={`type-mobile-${item.id}`}>ประเภท</label>
+                      <select
+                        id={`type-mobile-${item.id}`}
+                        value={draft?.type || item.type}
+                        onChange={(event) => setDraftValue(item.id, "type", event.target.value as MenuOptionType)}
+                      >
+                        <option value="ADD_ON">เพิ่มพิเศษ</option>
+                        <option value="SPICE_LEVEL">ระดับความเผ็ด</option>
+                        <option value="REMOVE_INGREDIENT">ไม่ใส่วัตถุดิบ</option>
+                      </select>
+                    </div>
+                    <div className="field mb-0">
+                      <label htmlFor={`order-mobile-${item.id}`}>ลำดับ</label>
+                      <input
+                        id={`order-mobile-${item.id}`}
+                        type="number"
+                        step={1}
+                        value={draft?.sortOrder ?? 0}
+                        onChange={(event) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(event.target.value) || 0))}
+                      />
+                    </div>
+                    <div className="field mb-0">
+                      <label>สถานะ</label>
+                      <button type="button" className="secondary" onClick={() => setDraftValue(item.id, "isActive", !draft?.isActive)}>
+                        {draft?.isActive ? "ใช้งาน" : "ปิด"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button type="button" disabled={savingId === item.id} onClick={() => void saveOption(item.id)}>
+                      {savingId === item.id ? "..." : "บันทึก"}
+                    </button>
+                    <button type="button" className="secondary" disabled={savingId === item.id} onClick={() => void removeOption(item.id)}>
+                      ลบ
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+            {grouped[type].length === 0 ? <p className="text-center text-sm text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="table min-w-[760px]">
               <thead>
                 <tr>
