@@ -3,7 +3,6 @@ import { existsSync, statSync, watch } from "node:fs";
 import { extname, resolve } from "node:path";
 
 const WATCH_TARGETS = [
-  "src",
   "prisma",
   "scripts",
   "package.json",
@@ -186,7 +185,7 @@ for (const target of WATCH_TARGETS) {
   attachWatcher(target);
 }
 
-console.log("[dev-auto-restart] watching source changes and auto-restarting next dev");
+console.log("[dev-auto-restart] watching config/env/db changes and auto-restarting next dev");
 startDevServer();
 
 process.on("SIGINT", shutdown);
