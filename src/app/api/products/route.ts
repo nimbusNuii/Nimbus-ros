@@ -4,7 +4,7 @@ import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { publishRealtime } from "@/lib/realtime";
-import { parseBooleanFlag, parseLimit } from "@/lib/query-utils";
+import { parseBooleanFlag, parseLimit, parsePage } from "@/lib/query-utils";
 
 const DATA_URL_IMAGE_PATTERN = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i;
 const MAX_IMAGE_DATA_LENGTH = 450_000;
@@ -36,6 +36,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const activeOnly = parseBooleanFlag(searchParams, "active");
   const limit = parseLimit(searchParams, 300, 1000);
+  const page = parsePage(searchParams);
+  const skip = (page - 1) * limit;
 
   const products = await prisma.product.findMany({
     where: activeOnly
@@ -52,6 +54,7 @@ export async function GET(request: Request) {
       }
     },
     orderBy: [{ category: "asc" }, { name: "asc" }],
+    skip,
     take: limit
   });
 

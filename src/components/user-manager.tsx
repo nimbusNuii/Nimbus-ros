@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PaginationControls } from "@/components/pagination-controls";
 
 type Role = "CASHIER" | "KITCHEN" | "MANAGER" | "ADMIN";
@@ -16,6 +17,9 @@ type User = {
 type UserManagerProps = {
   initialUsers: User[];
   isAdmin: boolean;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
 };
 
 const roleLabel: Record<Role, string> = {
@@ -24,25 +28,37 @@ const roleLabel: Record<Role, string> = {
   MANAGER: "ผู้จัดการ",
   ADMIN: "แอดมิน"
 };
-const PAGE_SIZE = 10;
 
-export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
+export function UserManager({
+  initialUsers,
+  isAdmin,
+  currentPage,
+  pageSize,
+  totalItems
+}: UserManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState(initialUsers);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
-  const pagedUsers = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return users.slice(start, start + PAGE_SIZE);
-  }, [page, users]);
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    setUsers(initialUsers);
+  }, [initialUsers]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
     }
-  }, [page, totalPages]);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
 
   async function createUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,8 +87,8 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
         throw new Error(data.error || "Cannot create user");
       }
 
-      setUsers((prev) => [data, ...prev]);
-      setPage(1);
+      setUsers((prev) => [data, ...prev].slice(0, pageSize));
+      goPage(1);
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create user");
@@ -126,7 +142,7 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
               </tr>
             </thead>
             <tbody>
-              {pagedUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id}>
                   <td>{user.username}</td>
                   <td>{user.fullName}</td>
@@ -197,7 +213,12 @@ export function UserManager({ initialUsers, isAdmin }: UserManagerProps) {
             </tbody>
           </table>
         </div>
-        <PaginationControls page={page} pageSize={PAGE_SIZE} totalItems={users.length} onPageChange={setPage} />
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
       </section>
 
       <section className="card">

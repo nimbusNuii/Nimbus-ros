@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { PaginationControls } from "@/components/pagination-controls";
 
@@ -18,6 +19,9 @@ type Customer = {
 type CustomerManagerProps = {
   initialCustomers: Customer[];
   currency: string;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
 };
 
 type CustomerOrderHistory = {
@@ -68,9 +72,16 @@ function buildDrafts(customers: Customer[]): DraftMap {
   }, {});
 }
 
-const PAGE_SIZE = 10;
-
-export function CustomerManager({ initialCustomers, currency }: CustomerManagerProps) {
+export function CustomerManager({
+  initialCustomers,
+  currency,
+  currentPage,
+  pageSize,
+  totalItems
+}: CustomerManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState(initialCustomers);
   const [drafts, setDrafts] = useState<DraftMap>(() => buildDrafts(initialCustomers));
   const [saving, setSaving] = useState(false);
@@ -83,24 +94,29 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [history, setHistory] = useState<CustomerHistoryPayload | null>(null);
-  const [page, setPage] = useState(1);
 
   const activeCount = useMemo(() => customers.filter((item) => item.isActive).length, [customers]);
-  const totalPages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
-  const pagedCustomers = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return customers.slice(start, start + PAGE_SIZE);
-  }, [customers, page]);
   const regularCustomers = useMemo(
     () => customers.filter((item) => item.type === "REGULAR").sort((a, b) => a.name.localeCompare(b.name, "th")),
     [customers]
   );
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    setCustomers(initialCustomers);
+    setDrafts(buildDrafts(initialCustomers));
+  }, [initialCustomers]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
     }
-  }, [page, totalPages]);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
 
   function setDraftValue(customerId: string, key: keyof DraftMap[string], value: string | boolean) {
     setDrafts((prev) => ({
@@ -177,8 +193,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
       }
 
       const created = data as Customer;
-      setCustomers((prev) => [created, ...prev]);
-      setPage(1);
+      setCustomers((prev) => [created, ...prev].slice(0, pageSize));
       setDrafts((prev) => ({
         ...prev,
         [created.id]: {
@@ -192,6 +207,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
       if (created.type === "REGULAR" && !selectedHistoryCustomerId) {
         setSelectedHistoryCustomerId(created.id);
       }
+      goPage(1);
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create customer");
@@ -289,7 +305,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
         <div className="flex items-center justify-between gap-2">
           <h2 className="mt-0 text-xl font-semibold">รายชื่อลูกค้า</h2>
           <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
-            ใช้งานอยู่ {activeCount}/{customers.length}
+            หน้านี้ใช้งานอยู่ {activeCount}/{customers.length}
           </span>
         </div>
 
@@ -306,7 +322,7 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
               </tr>
             </thead>
             <tbody>
-              {pagedCustomers.map((customer) => {
+              {customers.map((customer) => {
                 const draft = drafts[customer.id];
                 return (
                   <tr key={customer.id}>
@@ -369,7 +385,12 @@ export function CustomerManager({ initialCustomers, currency }: CustomerManagerP
             </tbody>
           </table>
         </div>
-        <PaginationControls page={page} pageSize={PAGE_SIZE} totalItems={customers.length} onPageChange={setPage} />
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
         <p className="mb-0 text-xs text-[var(--muted)]">เลือกประเภทลูกค้าได้ทั้งลูกค้าประจำและขาจรสำหรับ POS dropdown</p>
       </section>
 

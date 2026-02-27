@@ -3,7 +3,7 @@ import type { CustomerType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { parseBooleanFlag, parseLimit } from "@/lib/query-utils";
+import { parseBooleanFlag, parseLimit, parsePage } from "@/lib/query-utils";
 
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["CASHIER", "MANAGER", "ADMIN"]);
@@ -13,6 +13,8 @@ export async function GET(request: Request) {
   const typeParam = searchParams.get("type");
   const type = typeParam === "WALK_IN" || typeParam === "REGULAR" ? (typeParam as CustomerType) : undefined;
   const limit = parseLimit(searchParams, 300, 1000);
+  const page = parsePage(searchParams);
+  const skip = (page - 1) * limit;
 
   const customers = await prisma.customer.findMany({
     where: {
@@ -20,6 +22,7 @@ export async function GET(request: Request) {
       type
     },
     orderBy: [{ isActive: "desc" }, { type: "asc" }, { name: "asc" }],
+    skip,
     take: limit
   });
 

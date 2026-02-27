@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
 import { PaginationControls } from "@/components/pagination-controls";
@@ -27,13 +28,14 @@ type ProductManagerProps = {
   initialProducts: Product[];
   initialCategories: ProductCategory[];
   currency: string;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
 };
 
 const IMAGE_MAX_SIDE = 720;
 const TARGET_DATA_URL_LENGTH = 320_000;
 const MIN_QUALITY = 0.55;
-const PAGE_SIZE = 10;
-
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -76,7 +78,17 @@ async function resizeImageFile(file: File) {
   return output;
 }
 
-export function ProductManager({ initialProducts, initialCategories, currency }: ProductManagerProps) {
+export function ProductManager({
+  initialProducts,
+  initialCategories,
+  currency,
+  currentPage,
+  pageSize,
+  totalItems
+}: ProductManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState(initialProducts);
   const [categories] = useState(initialCategories);
   const [saving, setSaving] = useState(false);
@@ -87,30 +99,33 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [page, setPage] = useState(1);
-
-  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
-  const pagedProducts = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return products.slice(start, start + PAGE_SIZE);
-  }, [page, products]);
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
     }
-  }, [page, totalPages]);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
 
   const reloadProducts = useCallback(async () => {
     try {
-      const response = await fetch("/api/products?limit=1000", { cache: "no-store" });
+      const response = await fetch(`/api/products?limit=${pageSize}&page=${currentPage}`, { cache: "no-store" });
       if (!response.ok) return;
       const data = (await response.json()) as Product[];
       setProducts(data);
     } catch {
       // keep current state if refresh fails
     }
-  }, []);
+  }, [currentPage, pageSize]);
 
   useRealtime((event) => {
     if (
@@ -173,8 +188,8 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
         throw new Error(data.error ?? "Cannot create product");
       }
 
-      setProducts((prev) => [data, ...prev]);
-      setPage(1);
+      setProducts((prev) => [data, ...prev].slice(0, pageSize));
+      goPage(1);
       event.currentTarget.reset();
       setImageData("");
       setImageInfo("");
@@ -313,7 +328,7 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
               </tr>
             </thead>
             <tbody>
-              {pagedProducts.map((product) => (
+              {products.map((product) => (
                 <tr key={product.id}>
                   <td>
                     {product.imageUrl ? (
@@ -363,7 +378,12 @@ export function ProductManager({ initialProducts, initialCategories, currency }:
             </tbody>
           </table>
         </div>
-        <PaginationControls page={page} pageSize={PAGE_SIZE} totalItems={products.length} onPageChange={setPage} />
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
       </section>
     </div>
   );
