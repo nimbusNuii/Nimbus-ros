@@ -24,7 +24,13 @@ export default async function SummaryPage({
   ]);
 
   const currency = setting?.currency || "THB";
-  const profitTone = (value: number) => (value < 0 ? "text-red-600" : "text-[var(--ok)]");
+  const isZero = (value: number) => Math.abs(value) < 0.000001;
+  const neutralAmountTone = "text-[var(--text)]";
+  const profitTone = (value: number) => {
+    if (isZero(value)) return neutralAmountTone;
+    return value < 0 ? "text-red-600" : "text-[var(--ok)]";
+  };
+  const expenseTone = (value: number) => (isZero(value) ? neutralAmountTone : "text-red-600");
 
   return (
     <div>
@@ -47,11 +53,13 @@ export default async function SummaryPage({
       <section className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="card">
           <div className="pill">ยอดขายรวม</div>
-          <h2 className="mb-0 mt-2 text-3xl font-bold text-[var(--ok)]">{formatCurrency(summary.sales, currency)}</h2>
+          <h2 className={`mb-0 mt-2 text-3xl font-bold ${neutralAmountTone}`}>{formatCurrency(summary.sales, currency)}</h2>
         </article>
         <article className="card">
           <div className="pill">ค่าใช้จ่ายรวม</div>
-          <h2 className="mb-0 mt-2 text-3xl font-bold text-red-600">{formatCurrency(summary.cost.totalExpense, currency)}</h2>
+          <h2 className={`mb-0 mt-2 text-3xl font-bold ${expenseTone(summary.cost.totalExpense)}`}>
+            {formatCurrency(summary.cost.totalExpense, currency)}
+          </h2>
         </article>
         <article className="card">
           <div className="pill">กำไรขั้นต้น</div>
@@ -82,7 +90,7 @@ export default async function SummaryPage({
           </div>
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
             <p className="m-0 text-sm text-[var(--muted)]">ค่าใช้จ่ายดำเนินงาน</p>
-            <p className="m-0 mt-1 text-lg font-semibold text-red-600">
+            <p className={`m-0 mt-1 text-lg font-semibold ${expenseTone(summary.cost.operatingExpense)}`}>
               {formatCurrency(summary.cost.operatingExpense, currency)}
             </p>
           </div>
@@ -97,11 +105,13 @@ export default async function SummaryPage({
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span className="text-[var(--muted)]">ยอดขายรวม</span>
-            <span className="font-semibold text-[var(--ok)]">{formatCurrency(summary.sales, currency)}</span>
+            <span className={`font-semibold ${neutralAmountTone}`}>{formatCurrency(summary.sales, currency)}</span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span className="text-[var(--muted)]">ต้นทุนวัตถุดิบจากเมนู</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.ingredientFromMenu, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.ingredientFromMenu)}`}>
+              {formatCurrency(summary.cost.ingredientFromMenu, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span className="text-[var(--muted)]">กำไรขั้นต้น</span>
@@ -111,7 +121,9 @@ export default async function SummaryPage({
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span className="text-[var(--muted)]">ค่าใช้จ่ายรวมทั้งหมด</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.totalExpense, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.totalExpense)}`}>
+              {formatCurrency(summary.cost.totalExpense, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span className="text-[var(--muted)]">กำไรสุทธิ</span>
@@ -132,23 +144,29 @@ export default async function SummaryPage({
         <div className="space-y-2">
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span>ต้นทุนวัตถุดิบจากเมนูที่ขาย</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.ingredientFromMenu, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.ingredientFromMenu)}`}>
+              {formatCurrency(summary.cost.ingredientFromMenu, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span>ค่าของ (บันทึกเพิ่ม)</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.ingredientExpense, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.ingredientExpense)}`}>
+              {formatCurrency(summary.cost.ingredientExpense, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span>ค่าพนักงาน</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.staff, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.staff)}`}>{formatCurrency(summary.cost.staff, currency)}</span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span>ค่าไฟ</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.electricity, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.electricity)}`}>
+              {formatCurrency(summary.cost.electricity, currency)}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm">
             <span>อื่นๆ</span>
-            <span className="font-semibold text-red-600">{formatCurrency(summary.cost.other, currency)}</span>
+            <span className={`font-semibold ${expenseTone(summary.cost.other)}`}>{formatCurrency(summary.cost.other, currency)}</span>
           </div>
         </div>
 
@@ -162,7 +180,9 @@ export default async function SummaryPage({
           <h2 className="m-0 text-xl font-semibold">ยอดขายตามสินค้าในช่วงที่เลือก</h2>
           <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
             รวม {summary.soldItemTotals.qty} ชิ้น /{" "}
-            <span className="font-semibold text-[var(--ok)]">{formatCurrency(summary.soldItemTotals.revenue, currency)}</span>{" "}
+            <span className={`font-semibold ${neutralAmountTone}`}>
+              {formatCurrency(summary.soldItemTotals.revenue, currency)}
+            </span>{" "}
             / กำไรรวม{" "}
             <span className={profitTone(summary.soldItemTotals.totalProfit)}>
               {formatCurrency(summary.soldItemTotals.totalProfit, currency)}
@@ -178,7 +198,7 @@ export default async function SummaryPage({
                 <p className="m-0 text-[var(--muted)]">จำนวนขาย</p>
                 <p className="m-0 text-right font-medium">{item.qty}</p>
                 <p className="m-0 text-[var(--muted)]">ยอดขายรวม</p>
-                <p className="m-0 text-right font-semibold text-[var(--ok)]">{formatCurrency(item.revenue, currency)}</p>
+                <p className={`m-0 text-right font-semibold ${neutralAmountTone}`}>{formatCurrency(item.revenue, currency)}</p>
                 <p className="m-0 text-[var(--muted)]">ราคาเฉลี่ย/ชิ้น</p>
                 <p className="m-0 text-right font-medium">{formatCurrency(item.averagePrice, currency)}</p>
                 <p className="m-0 text-[var(--muted)]">กำไรเฉลี่ย/ชิ้น</p>
@@ -214,7 +234,7 @@ export default async function SummaryPage({
                 <tr key={item.name}>
                   <td>{item.name}</td>
                   <td>{item.qty}</td>
-                  <td className="font-semibold text-[var(--ok)]">{formatCurrency(item.revenue, currency)}</td>
+                  <td className={`font-semibold ${neutralAmountTone}`}>{formatCurrency(item.revenue, currency)}</td>
                   <td>{formatCurrency(item.averagePrice, currency)}</td>
                   <td className={profitTone(item.averageProfit)}>{formatCurrency(item.averageProfit, currency)}</td>
                   <td className={`font-semibold ${profitTone(item.totalProfit)}`}>{formatCurrency(item.totalProfit, currency)}</td>
