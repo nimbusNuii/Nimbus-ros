@@ -1,19 +1,46 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPin, requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { parseLimit, parsePage } from "@/lib/query-utils";
 
+type UserSort = "role_username" | "username_asc" | "username_desc" | "created_desc" | "created_asc";
+
+function parseSort(value: string | null): UserSort {
+  const allowed: UserSort[] = ["role_username", "username_asc", "username_desc", "created_desc", "created_asc"];
+  return value && allowed.includes(value as UserSort) ? (value as UserSort) : "role_username";
+}
+
+function orderByFromSort(sort: UserSort): Prisma.AppUserOrderByWithRelationInput[] {
+  if (sort === "username_asc") return [{ username: "asc" }];
+  if (sort === "username_desc") return [{ username: "desc" }];
+  if (sort === "created_desc") return [{ createdAt: "desc" }];
+  if (sort === "created_asc") return [{ createdAt: "asc" }];
+  return [{ role: "asc" }, { username: "asc" }];
+}
+
 export async function GET(request: Request) {
   const auth = requireApiRole(request, ["ADMIN", "MANAGER"]);
   if (auth.response) return auth.response;
   const { searchParams } = new URL(request.url);
+  const q = (searchParams.get("q") || "").trim().slice(0, 120);
+  const sort = parseSort(searchParams.get("sort"));
   const limit = parseLimit(searchParams, 200, 500);
   const page = parsePage(searchParams);
   const skip = (page - 1) * limit;
+  const where: Prisma.AppUserWhereInput | undefined = q
+    ? {
+        OR: [
+          { username: { contains: q, mode: "insensitive" } },
+          { fullName: { contains: q, mode: "insensitive" } }
+        ]
+      }
+    : undefined;
 
   const users = await prisma.appUser.findMany({
-    orderBy: [{ role: "asc" }, { username: "asc" }],
+    where,
+    orderBy: orderByFromSort(sort),
     skip,
     take: limit
   });

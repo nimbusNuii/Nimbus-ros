@@ -31,7 +31,18 @@ type ProductManagerProps = {
   currentPage: number;
   pageSize: number;
   totalItems: number;
+  initialQuery: string;
+  initialSort: ProductSort;
 };
+
+type ProductSort =
+  | "category_name"
+  | "name_asc"
+  | "name_desc"
+  | "stock_asc"
+  | "stock_desc"
+  | "price_asc"
+  | "price_desc";
 
 const IMAGE_MAX_SIDE = 720;
 const TARGET_DATA_URL_LENGTH = 320_000;
@@ -84,7 +95,9 @@ export function ProductManager({
   currency,
   currentPage,
   pageSize,
-  totalItems
+  totalItems,
+  initialQuery,
+  initialSort
 }: ProductManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -99,10 +112,17 @@ export function ProductManager({
   const [imageInfo, setImageInfo] = useState("");
   const [processingImage, setProcessingImage] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<ProductSort>(initialSort);
 
   useEffect(() => {
     setProducts(initialProducts);
   }, [initialProducts]);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+  }, [initialQuery, initialSort]);
 
   function goPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -116,16 +136,53 @@ export function ProductManager({
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    if (sortInput === "category_name") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sortInput);
+    }
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("category_name");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    params.delete("sort");
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
   const reloadProducts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/products?limit=${pageSize}&page=${currentPage}`, { cache: "no-store" });
+      const params = new URLSearchParams();
+      params.set("limit", String(pageSize));
+      params.set("page", String(currentPage));
+      const q = searchParams.get("q");
+      const sort = searchParams.get("sort");
+      if (q) params.set("q", q);
+      if (sort) params.set("sort", sort);
+
+      const response = await fetch(`/api/products?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) return;
       const data = (await response.json()) as Product[];
       setProducts(data);
     } catch {
       // keep current state if refresh fails
     }
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchParams]);
 
   useRealtime((event) => {
     if (
@@ -314,6 +371,32 @@ export function ProductManager({
 
       <section className="card">
         <h2 className="mt-0 text-xl font-semibold">รายการสินค้า</h2>
+        <form
+          className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input
+            value={queryInput}
+            onChange={(event) => setQueryInput(event.target.value)}
+            placeholder="ค้นหาชื่อสินค้า / SKU / หมวดหมู่"
+          />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as ProductSort)}>
+            <option value="category_name">หมวดหมู่ + ชื่อ (ค่าเริ่มต้น)</option>
+            <option value="name_asc">ชื่อ A-Z</option>
+            <option value="name_desc">ชื่อ Z-A</option>
+            <option value="stock_asc">สต็อกน้อยไปมาก</option>
+            <option value="stock_desc">สต็อกมากไปน้อย</option>
+            <option value="price_asc">ราคาต่ำไปสูง</option>
+            <option value="price_desc">ราคาสูงไปต่ำ</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
         <div className="overflow-x-auto">
           <table className="table min-w-[880px]">
             <thead>

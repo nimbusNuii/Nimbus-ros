@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
 import { requireApiRole } from "@/lib/auth";
@@ -8,6 +9,30 @@ import { parseBooleanFlag, parseLimit, parsePage } from "@/lib/query-utils";
 
 const DATA_URL_IMAGE_PATTERN = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i;
 const MAX_IMAGE_DATA_LENGTH = 450_000;
+type ProductSort = "category_name" | "name_asc" | "name_desc" | "stock_asc" | "stock_desc" | "price_asc" | "price_desc";
+
+function parseSort(value: string | null): ProductSort {
+  const allowed: ProductSort[] = [
+    "category_name",
+    "name_asc",
+    "name_desc",
+    "stock_asc",
+    "stock_desc",
+    "price_asc",
+    "price_desc"
+  ];
+  return value && allowed.includes(value as ProductSort) ? (value as ProductSort) : "category_name";
+}
+
+function orderByFromSort(sort: ProductSort): Prisma.ProductOrderByWithRelationInput[] {
+  if (sort === "name_asc") return [{ name: "asc" }];
+  if (sort === "name_desc") return [{ name: "desc" }];
+  if (sort === "stock_asc") return [{ stockQty: "asc" }, { name: "asc" }];
+  if (sort === "stock_desc") return [{ stockQty: "desc" }, { name: "asc" }];
+  if (sort === "price_asc") return [{ price: "asc" }, { name: "asc" }];
+  if (sort === "price_desc") return [{ price: "desc" }, { name: "asc" }];
+  return [{ category: "asc" }, { name: "asc" }];
+}
 
 function normalizeImageValue(raw?: string) {
   const value = raw?.trim() || "";
@@ -35,16 +60,26 @@ export async function GET(request: Request) {
   if (auth.response) return auth.response;
   const { searchParams } = new URL(request.url);
   const activeOnly = parseBooleanFlag(searchParams, "active");
+  const q = (searchParams.get("q") || "").trim().slice(0, 120);
+  const sort = parseSort(searchParams.get("sort"));
   const limit = parseLimit(searchParams, 300, 1000);
   const page = parsePage(searchParams);
   const skip = (page - 1) * limit;
+  const where: Prisma.ProductWhereInput = {
+    isActive: activeOnly ? true : undefined,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { sku: { contains: q, mode: "insensitive" } },
+            { category: { contains: q, mode: "insensitive" } }
+          ]
+        }
+      : {})
+  };
 
   const products = await prisma.product.findMany({
-    where: activeOnly
-      ? {
-          isActive: true
-        }
-      : undefined,
+    where,
     include: {
       categoryRef: {
         select: {
@@ -53,7 +88,7 @@ export async function GET(request: Request) {
         }
       }
     },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
+    orderBy: orderByFromSort(sort),
     skip,
     take: limit
   });

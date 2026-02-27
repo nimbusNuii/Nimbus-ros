@@ -20,7 +20,11 @@ type UserManagerProps = {
   currentPage: number;
   pageSize: number;
   totalItems: number;
+  initialQuery: string;
+  initialSort: UserSort;
 };
+
+type UserSort = "role_username" | "username_asc" | "username_desc" | "created_desc" | "created_asc";
 
 const roleLabel: Record<Role, string> = {
   CASHIER: "แคชเชียร์",
@@ -34,7 +38,9 @@ export function UserManager({
   isAdmin,
   currentPage,
   pageSize,
-  totalItems
+  totalItems,
+  initialQuery,
+  initialSort
 }: UserManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -43,10 +49,17 @@ export function UserManager({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<UserSort>(initialSort);
 
   useEffect(() => {
     setUsers(initialUsers);
   }, [initialUsers]);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+  }, [initialQuery, initialSort]);
 
   function goPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -56,6 +69,35 @@ export function UserManager({
     } else {
       params.set("page", String(safePage));
     }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    if (sortInput === "role_username") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sortInput);
+    }
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("role_username");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    params.delete("sort");
+    params.delete("page");
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
   }
@@ -129,6 +171,30 @@ export function UserManager({
         <h2 className="mt-0 text-xl font-semibold">ผู้ใช้งานระบบ</h2>
         {!isAdmin ? <p className="text-sm text-[var(--muted)]">บัญชี manager ดูรายการได้ แต่แก้ไขได้เฉพาะ admin</p> : null}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <form
+          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input
+            value={queryInput}
+            onChange={(event) => setQueryInput(event.target.value)}
+            placeholder="ค้นหา username / ชื่อ"
+          />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as UserSort)}>
+            <option value="role_username">บทบาท + username (ค่าเริ่มต้น)</option>
+            <option value="username_asc">username A-Z</option>
+            <option value="username_desc">username Z-A</option>
+            <option value="created_desc">สร้างล่าสุดก่อน</option>
+            <option value="created_asc">สร้างเก่าสุดก่อน</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
 
         <div className="overflow-x-auto">
           <table className="table min-w-[820px]">

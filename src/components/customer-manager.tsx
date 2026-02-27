@@ -22,7 +22,11 @@ type CustomerManagerProps = {
   currentPage: number;
   pageSize: number;
   totalItems: number;
+  initialQuery: string;
+  initialSort: CustomerSort;
 };
+
+type CustomerSort = "active_type_name" | "name_asc" | "name_desc" | "created_desc" | "created_asc";
 
 type CustomerOrderHistory = {
   id: string;
@@ -77,7 +81,9 @@ export function CustomerManager({
   currency,
   currentPage,
   pageSize,
-  totalItems
+  totalItems,
+  initialQuery,
+  initialSort
 }: CustomerManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -94,6 +100,8 @@ export function CustomerManager({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [history, setHistory] = useState<CustomerHistoryPayload | null>(null);
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<CustomerSort>(initialSort);
 
   const activeCount = useMemo(() => customers.filter((item) => item.isActive).length, [customers]);
   const regularCustomers = useMemo(
@@ -106,6 +114,11 @@ export function CustomerManager({
     setDrafts(buildDrafts(initialCustomers));
   }, [initialCustomers]);
 
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+  }, [initialQuery, initialSort]);
+
   function goPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
     const safePage = Math.max(1, Math.trunc(nextPage));
@@ -114,6 +127,35 @@ export function CustomerManager({
     } else {
       params.set("page", String(safePage));
     }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.delete("q");
+    }
+    if (sortInput === "active_type_name") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sortInput);
+    }
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("active_type_name");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    params.delete("sort");
+    params.delete("page");
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
   }
@@ -308,6 +350,27 @@ export function CustomerManager({
             หน้านี้ใช้งานอยู่ {activeCount}/{customers.length}
           </span>
         </div>
+
+        <form
+          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="ค้นหาชื่อ/เบอร์/โน้ต" />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as CustomerSort)}>
+            <option value="active_type_name">สถานะ + ประเภท + ชื่อ (ค่าเริ่มต้น)</option>
+            <option value="name_asc">ชื่อ A-Z</option>
+            <option value="name_desc">ชื่อ Z-A</option>
+            <option value="created_desc">สร้างล่าสุดก่อน</option>
+            <option value="created_asc">สร้างเก่าสุดก่อน</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
 
         <div className="overflow-x-auto">
           <table className="table min-w-[760px]">
