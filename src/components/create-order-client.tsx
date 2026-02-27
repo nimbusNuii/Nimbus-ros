@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/use-realtime";
 
 type Product = {
   id: string;
+  sku?: string | null;
   name: string;
   category: string | null;
   imageUrl: string | null;
@@ -61,6 +62,7 @@ export function CreateOrderClient({
   currency
 }: CreateOrderClientProps) {
   const [activeCategory, setActiveCategory] = useState("ALL");
+  const [searchText, setSearchText] = useState("");
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
@@ -89,7 +91,13 @@ export function CreateOrderClient({
     return products.filter((item) => (item.category || "Uncategory") === activeCategory);
   }, [activeCategory, products]);
 
-  const visibleProducts = categoryProducts;
+  const visibleProducts = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+    if (!keyword) return categoryProducts;
+    return categoryProducts.filter((item) =>
+      [item.name, item.category || "", item.sku || ""].join(" ").toLowerCase().includes(keyword)
+    );
+  }, [categoryProducts, searchText]);
 
   const itemCount = cartLines.reduce((sum, item) => sum + item.qty, 0);
   const subtotal = cartLines.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
@@ -251,6 +259,19 @@ export function CreateOrderClient({
             <Link href="/" className="secondary shrink-0 rounded-lg px-3 py-2 text-sm">
               กลับหน้าหลัก
             </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="ค้นหาเมนู / หมวด / SKU"
+              className="w-full md:max-w-md"
+            />
+            {searchText ? (
+              <button type="button" className="secondary whitespace-nowrap" onClick={() => setSearchText("")}>
+                ล้าง
+              </button>
+            ) : null}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

@@ -41,6 +41,7 @@ export default async function CreateOrderPage() {
     <CreateOrderClient
       products={products.map((product) => ({
         id: product.id,
+        sku: product.sku,
         name: product.name,
         category: product.categoryRef?.name || product.category,
         imageUrl: product.imageUrl,

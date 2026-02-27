@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatDateTime } from "@/lib/format";
 import { useRealtime } from "@/lib/use-realtime";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type PrintJob = {
   id: string;
@@ -18,6 +20,16 @@ type PrintJob = {
   };
 };
 
+type PrintJobsPayload = {
+  rows: PrintJob[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type PrintStatusFilter = PrintJob["status"] | "ALL";
+type PrintSort = "created_desc" | "created_asc";
+
 const statusLabel: Record<PrintJob["status"], string> = {
   PENDING: "รอพิมพ์",
   PRINTED: "พิมพ์แล้ว",
@@ -29,54 +41,85 @@ const channelLabel: Record<PrintJob["channel"], string> = {
   KITCHEN_TICKET: "บิลครัว"
 };
 
+const PAGE_SIZE = 30;
+
+function parsePage(value: string | null) {
+  const num = Number(value || "1");
+  if (!Number.isFinite(num)) return 1;
+  return Math.max(1, Math.trunc(num));
+}
+
 export function PrintJobsBoard() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentPage = parsePage(searchParams.get("page"));
+  const statusParam = (searchParams.get("status") as PrintStatusFilter | null) || "PENDING";
+  const channelParam = (searchParams.get("channel") as PrintJob["channel"] | null) || "";
+  const printerTargetParam = searchParams.get("printerTarget") || "";
+  const qParam = searchParams.get("q") || "";
+  const sortParam: PrintSort = searchParams.get("sort") === "created_asc" ? "created_asc" : "created_desc";
+
   const [jobs, setJobs] = useState<PrintJob[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState<PrintJob["status"] | "ALL">("PENDING");
-  const [channel, setChannel] = useState<PrintJob["channel"] | "">("");
-  const [printerTarget, setPrinterTarget] = useState("");
+
+  const [statusInput, setStatusInput] = useState<PrintStatusFilter>(statusParam);
+  const [channelInput, setChannelInput] = useState<PrintJob["channel"] | "">(channelParam);
+  const [printerTargetInput, setPrinterTargetInput] = useState(printerTargetParam);
+  const [qInput, setQInput] = useState(qParam);
+  const [sortInput, setSortInput] = useState<PrintSort>(sortParam);
+
+  useEffect(() => {
+    setStatusInput(statusParam);
+    setChannelInput(channelParam);
+    setPrinterTargetInput(printerTargetParam);
+    setQInput(qParam);
+    setSortInput(sortParam);
+  }, [channelParam, printerTargetParam, qParam, sortParam, statusParam]);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const query = new URLSearchParams({ status, limit: "100" });
-      if (channel) query.set("channel", channel);
-      if (printerTarget.trim()) query.set("printerTarget", printerTarget.trim());
+      const query = new URLSearchParams();
+      query.set("withMeta", "1");
+      query.set("limit", String(PAGE_SIZE));
+      query.set("page", String(currentPage));
+      query.set("status", statusParam);
+      if (channelParam) query.set("channel", channelParam);
+      if (printerTargetParam.trim()) query.set("printerTarget", printerTargetParam.trim());
+      if (qParam.trim()) query.set("q", qParam.trim());
+      if (sortParam !== "created_desc") query.set("sort", sortParam);
 
       const response = await fetch(`/api/print/jobs?${query.toString()}`, { cache: "no-store" });
-      const data = await response.json();
+      const data = (await response.json()) as PrintJobsPayload | PrintJob[] | { error?: string };
 
       if (!response.ok) {
-        throw new Error(data.error || "Cannot load print jobs");
+        throw new Error(("error" in data && data.error) || "Cannot load print jobs");
       }
 
-      setJobs(data);
+      if (Array.isArray(data)) {
+        setJobs(data);
+        setTotalItems(data.length);
+      } else if ("rows" in data && Array.isArray(data.rows)) {
+        setJobs(data.rows);
+        setTotalItems(typeof data.total === "number" ? data.total : data.rows.length);
+      } else {
+        setJobs([]);
+        setTotalItems(0);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot load print jobs");
     } finally {
       setLoading(false);
     }
-  }, [status, channel, printerTarget]);
+  }, [channelParam, currentPage, printerTargetParam, qParam, sortParam, statusParam]);
 
   useEffect(() => {
     void load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void load();
-      }
-    }, 15000);
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void load();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
   }, [load]);
 
   useRealtime((event) => {
@@ -84,6 +127,48 @@ export function PrintJobsBoard() {
       void load();
     }
   });
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("status", statusInput);
+    if (channelInput) params.set("channel", channelInput);
+    else params.delete("channel");
+    if (printerTargetInput.trim()) params.set("printerTarget", printerTargetInput.trim());
+    else params.delete("printerTarget");
+    if (qInput.trim()) params.set("q", qInput.trim());
+    else params.delete("q");
+    if (sortInput === "created_desc") params.delete("sort");
+    else params.set("sort", sortInput);
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setStatusInput("PENDING");
+    setChannelInput("");
+    setPrinterTargetInput("");
+    setQInput("");
+    setSortInput("created_desc");
+    router.push(pathname);
+  }
+
+  async function onSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    applyFilters();
+  }
 
   async function updateStatus(jobId: string, status: PrintJob["status"]) {
     const response = await fetch(`/api/print/jobs/${jobId}`, {
@@ -99,15 +184,13 @@ export function PrintJobsBoard() {
     }
   }
 
-  if (loading) return <p>กำลังโหลดคิวพิมพ์...</p>;
-
   return (
     <section className="card space-y-3">
       <h2 className="mt-0 text-xl font-semibold">Print Queue</h2>
-      <div className="grid grid-3 items-end gap-3">
+      <form onSubmit={onSearch} className="grid items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
         <div className="field">
           <label htmlFor="statusFilter">Status</label>
-          <select id="statusFilter" value={status} onChange={(event) => setStatus(event.target.value as PrintJob["status"] | "ALL")}>
+          <select id="statusFilter" value={statusInput} onChange={(event) => setStatusInput(event.target.value as PrintStatusFilter)}>
             <option value="PENDING">รอพิมพ์</option>
             <option value="FAILED">พิมพ์ไม่สำเร็จ</option>
             <option value="PRINTED">พิมพ์แล้ว</option>
@@ -118,8 +201,8 @@ export function PrintJobsBoard() {
           <label htmlFor="channelFilter">Channel</label>
           <select
             id="channelFilter"
-            value={channel}
-            onChange={(event) => setChannel(event.target.value as PrintJob["channel"] | "")}
+            value={channelInput}
+            onChange={(event) => setChannelInput(event.target.value as PrintJob["channel"] | "")}
           >
             <option value="">ทั้งหมด</option>
             <option value="CASHIER_RECEIPT">ใบเสร็จแคชเชียร์</option>
@@ -130,17 +213,41 @@ export function PrintJobsBoard() {
           <label htmlFor="targetFilter">Printer Target</label>
           <input
             id="targetFilter"
-            value={printerTarget}
-            onChange={(event) => setPrinterTarget(event.target.value)}
+            value={printerTargetInput}
+            onChange={(event) => setPrinterTargetInput(event.target.value)}
             placeholder="cashier / kitchen"
           />
         </div>
-        <button className="secondary" type="button" onClick={() => void load()}>
+        <div className="field">
+          <label htmlFor="print-q">ค้นหา</label>
+          <input
+            id="print-q"
+            value={qInput}
+            onChange={(event) => setQInput(event.target.value)}
+            placeholder="order / printer / error"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="print-sort">เรียงลำดับ</label>
+          <select id="print-sort" value={sortInput} onChange={(event) => setSortInput(event.target.value as PrintSort)}>
+            <option value="created_desc">ล่าสุดก่อน</option>
+            <option value="created_asc">เก่าสุดก่อน</option>
+          </select>
+        </div>
+        <button type="submit" disabled={loading}>
           ค้นหา
         </button>
-      </div>
+        <button className="secondary" type="button" onClick={resetFilters} disabled={loading}>
+          ล้างตัวกรอง
+        </button>
+        <button className="secondary" type="button" onClick={() => void load()} disabled={loading}>
+          รีเฟรช
+        </button>
+      </form>
+
+      {loading ? <p className="text-sm text-[var(--muted)]">กำลังโหลดคิวพิมพ์...</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {jobs.length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีคิวพิมพ์ค้าง</p> : null}
+      {!loading && jobs.length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีคิวพิมพ์ค้าง</p> : null}
 
       <div className="overflow-x-auto">
         <table className="table min-w-[920px]">
@@ -164,22 +271,35 @@ export function PrintJobsBoard() {
                 <td>{statusLabel[job.status]}</td>
                 <td>
                   <div className="flex flex-wrap gap-2">
-                    <button className="secondary" onClick={() => updateStatus(job.id, "PRINTED")}>
+                    <button className="secondary" onClick={() => void updateStatus(job.id, "PRINTED")}>
                       พิมพ์แล้ว
                     </button>
-                    <button className="secondary" onClick={() => updateStatus(job.id, "FAILED")}>
+                    <button className="secondary" onClick={() => void updateStatus(job.id, "FAILED")}>
                       ล้มเหลว
                     </button>
-                    <button className="secondary" onClick={() => updateStatus(job.id, "PENDING")}>
+                    <button className="secondary" onClick={() => void updateStatus(job.id, "PENDING")}>
                       retry
                     </button>
                   </div>
                 </td>
               </tr>
             ))}
+            {jobs.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center text-[var(--muted)]">
+                  ไม่มีข้อมูล
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
+      <PaginationControls
+        page={currentPage}
+        pageSize={PAGE_SIZE}
+        totalItems={totalItems}
+        onPageChange={goPage}
+      />
     </section>
   );
 }

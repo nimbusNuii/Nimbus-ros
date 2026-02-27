@@ -1,7 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { PaginationControls } from "@/components/pagination-controls";
 
 type Expense = {
   id: string;
@@ -14,7 +16,18 @@ type Expense = {
 type ExpenseManagerProps = {
   initialExpenses: Expense[];
   currency: string;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  initialQuery: string;
+  initialSort: ExpenseSort;
+  initialType: ExpenseTypeFilter;
+  initialFrom: string;
+  initialTo: string;
 };
+
+type ExpenseSort = "incurred_desc" | "incurred_asc" | "amount_desc" | "amount_asc" | "created_desc" | "created_asc";
+type ExpenseTypeFilter = "ALL" | "INGREDIENT" | "STAFF" | "ELECTRICITY" | "OTHER";
 
 const typeLabel: Record<Expense["type"], string> = {
   INGREDIENT: "ค่าของ",
@@ -23,10 +36,80 @@ const typeLabel: Record<Expense["type"], string> = {
   OTHER: "อื่นๆ"
 };
 
-export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProps) {
+export function ExpenseManager({
+  initialExpenses,
+  currency,
+  currentPage,
+  pageSize,
+  totalItems,
+  initialQuery,
+  initialSort,
+  initialType,
+  initialFrom,
+  initialTo
+}: ExpenseManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState(initialExpenses);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [sortInput, setSortInput] = useState<ExpenseSort>(initialSort);
+  const [typeInput, setTypeInput] = useState<ExpenseTypeFilter>(initialType);
+  const [fromInput, setFromInput] = useState(initialFrom);
+  const [toInput, setToInput] = useState(initialTo);
+
+  useEffect(() => {
+    setExpenses(initialExpenses);
+  }, [initialExpenses]);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setSortInput(initialSort);
+    setTypeInput(initialType);
+    setFromInput(initialFrom);
+    setToInput(initialTo);
+  }, [initialFrom, initialQuery, initialSort, initialTo, initialType]);
+
+  function goPage(nextPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    const safePage = Math.max(1, Math.trunc(nextPage));
+    if (safePage === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(safePage));
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams(searchParams.toString());
+    const q = queryInput.trim();
+    if (q) params.set("q", q);
+    else params.delete("q");
+    if (typeInput === "ALL") params.delete("type");
+    else params.set("type", typeInput);
+    if (fromInput) params.set("from", fromInput);
+    else params.delete("from");
+    if (toInput) params.set("to", toInput);
+    else params.delete("to");
+    if (sortInput === "incurred_desc") params.delete("sort");
+    else params.set("sort", sortInput);
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function resetFilters() {
+    setQueryInput("");
+    setSortInput("incurred_desc");
+    setTypeInput("ALL");
+    setFromInput("");
+    setToInput("");
+    router.push(pathname);
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,6 +138,8 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
       }
 
       setExpenses((prev) => [data, ...prev]);
+      goPage(1);
+      router.refresh();
       event.currentTarget.reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot save expense");
@@ -97,6 +182,36 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
 
       <section className="card">
         <h2 className="mt-0 text-xl font-semibold">ประวัติค่าใช้จ่ายล่าสุด</h2>
+        <form
+          className="mb-3 grid gap-2 md:grid-cols-3 lg:grid-cols-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+          }}
+        >
+          <input value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="ค้นหาหมายเหตุ" />
+          <select value={typeInput} onChange={(event) => setTypeInput(event.target.value as ExpenseTypeFilter)}>
+            <option value="ALL">ทุกประเภท</option>
+            <option value="INGREDIENT">ค่าของ</option>
+            <option value="STAFF">ค่าพนักงาน</option>
+            <option value="ELECTRICITY">ค่าไฟ</option>
+            <option value="OTHER">อื่นๆ</option>
+          </select>
+          <input type="date" value={fromInput} onChange={(event) => setFromInput(event.target.value)} />
+          <input type="date" value={toInput} onChange={(event) => setToInput(event.target.value)} />
+          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as ExpenseSort)}>
+            <option value="incurred_desc">วันที่ล่าสุดก่อน</option>
+            <option value="incurred_asc">วันที่เก่าสุดก่อน</option>
+            <option value="amount_desc">ยอดมากไปน้อย</option>
+            <option value="amount_asc">ยอดน้อยไปมาก</option>
+            <option value="created_desc">เพิ่มล่าสุดก่อน</option>
+            <option value="created_asc">เพิ่มเก่าสุดก่อน</option>
+          </select>
+          <button type="submit">ค้นหา</button>
+          <button type="button" className="secondary" onClick={resetFilters}>
+            ล้างตัวกรอง
+          </button>
+        </form>
         <div className="overflow-x-auto">
           <table className="table min-w-[560px]">
             <thead>
@@ -104,6 +219,7 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
                 <th>ประเภท</th>
                 <th>วันที่</th>
                 <th>จำนวน</th>
+                <th>หมายเหตุ</th>
               </tr>
             </thead>
             <tbody>
@@ -112,11 +228,12 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
                   <td>{typeLabel[expense.type]}</td>
                   <td>{formatDateTime(expense.incurredOn)}</td>
                   <td className="font-semibold">{formatCurrency(expense.amount, currency)}</td>
+                  <td>{expense.note || "-"}</td>
                 </tr>
               ))}
               {expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="text-center text-[var(--muted)]">
+                  <td colSpan={4} className="text-center text-[var(--muted)]">
                     ยังไม่มีข้อมูล
                   </td>
                 </tr>
@@ -124,6 +241,12 @@ export function ExpenseManager({ initialExpenses, currency }: ExpenseManagerProp
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          page={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={goPage}
+        />
       </section>
     </div>
   );
