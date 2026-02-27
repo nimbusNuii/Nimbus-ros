@@ -332,7 +332,7 @@ export function CustomerManager({
         </div>
 
         <form
-          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
+          className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             applyFilters();
@@ -352,7 +352,67 @@ export function CustomerManager({
           </button>
         </form>
 
-        <div className="overflow-x-auto">
+        <div className="space-y-2 md:hidden">
+          {customers.map((customer) => {
+            const draft = drafts[customer.id];
+            return (
+              <article key={customer.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                <div className="mb-2 grid gap-2">
+                  <div className="field mb-0">
+                    <label>ชื่อ</label>
+                    <input
+                      value={draft?.name || ""}
+                      onChange={(event) => setDraftValue(customer.id, "name", event.target.value)}
+                    />
+                  </div>
+                  <div className="field mb-0">
+                    <label>ประเภท</label>
+                    <select
+                      value={draft?.type || "REGULAR"}
+                      onChange={(event) =>
+                        setDraftValue(customer.id, "type", event.target.value as "WALK_IN" | "REGULAR")
+                      }
+                    >
+                      <option value="REGULAR">ลูกค้าประจำ</option>
+                      <option value="WALK_IN">ลูกค้า</option>
+                    </select>
+                  </div>
+                  <div className="field mb-0">
+                    <label>เบอร์</label>
+                    <input
+                      value={draft?.phone || ""}
+                      onChange={(event) => setDraftValue(customer.id, "phone", event.target.value)}
+                    />
+                  </div>
+                  <div className="field mb-0">
+                    <label>หมายเหตุ</label>
+                    <input
+                      value={draft?.note || ""}
+                      onChange={(event) => setDraftValue(customer.id, "note", event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-[var(--muted)]">สถานะ: {draft?.isActive ? "ใช้งาน" : "ปิด"}</span>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setDraftValue(customer.id, "isActive", !draft?.isActive)}
+                  >
+                    {draft?.isActive ? "ปิด" : "เปิด"}
+                  </button>
+                  <button type="button" onClick={() => saveCustomer(customer.id)} disabled={savingId === customer.id}>
+                    {savingId === customer.id ? "..." : "บันทึก"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {customers.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีลูกค้า</p> : null}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="table min-w-[760px]">
             <thead>
               <tr>
@@ -481,7 +541,27 @@ export function CustomerManager({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="space-y-2 md:hidden">
+              {history.rows.map((row) => (
+                <article key={row.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
+                  <p className="m-0 text-xs text-[var(--muted)]">{formatDateTime(row.createdAt)}</p>
+                  <p className="m-0 mt-1 text-sm font-semibold">{row.orderNumber}</p>
+                  <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
+                    <p className="m-0 text-[var(--muted)]">จำนวนรายการ</p>
+                    <p className="m-0 text-right font-medium">{row.itemCount}</p>
+                    <p className="m-0 text-[var(--muted)]">ชำระ</p>
+                    <p className="m-0 text-right font-medium">{row.paymentMethod}</p>
+                    <p className="m-0 text-[var(--muted)]">ยอดสุทธิ</p>
+                    <p className="m-0 text-right font-semibold">{formatCurrency(row.total, currency)}</p>
+                  </div>
+                </article>
+              ))}
+              {history.rows.length === 0 ? (
+                <p className="py-4 text-center text-sm text-[var(--muted)]">ยังไม่พบประวัติการซื้อ</p>
+              ) : null}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="table min-w-[720px]">
                 <thead>
                   <tr>
