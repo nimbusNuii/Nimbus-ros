@@ -1,4 +1,4 @@
-declare module "pdfmake/src/printer" {
+declare module "pdfmake/src/Printer" {
   class PdfPrinter {
     constructor(fontDescriptors: Record<string, Record<string, string>>);
     createPdfKitDocument(documentDefinition: unknown): NodeJS.ReadableStream & {
@@ -10,5 +10,10 @@ declare module "pdfmake/src/printer" {
     };
   }
 
+  export default PdfPrinter;
+}
+
+declare module "pdfmake/src/printer" {
+  import PdfPrinter from "pdfmake/src/Printer";
   export default PdfPrinter;
 }

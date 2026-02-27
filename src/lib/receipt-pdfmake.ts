@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Content, TDocumentDefinitions } from "pdfmake/interfaces";
-import PdfPrinter from "pdfmake/src/printer";
+import PdfPrinter from "pdfmake/src/Printer";
 
 type ReceiptPdfPayload = {
   order: {
