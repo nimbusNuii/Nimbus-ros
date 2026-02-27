@@ -609,6 +609,34 @@ main {
   animation: toastSlideIn 200ms ease-out;
 }
 
+.route-loading-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  overflow: hidden;
+  z-index: 121;
+}
+
+.route-loading-topbar-indicator {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #ffffff));
+  animation: routeTopbarSlide 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes routeTopbarSlide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
 @media (max-width: 768px) {
   main {
     padding: 14px;
@@ -618,7 +646,8 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .kds-delayed-pulse,
   .modal-panel,
-  .toast-slide-in {
+  .toast-slide-in,
+  .route-loading-topbar-indicator {
     animation: none !important;
   }
 }
