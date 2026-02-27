@@ -322,6 +322,7 @@ export function CustomerManager({
           </div>
           <button
             type="button"
+            className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
             onClick={() => {
               setError("");
               setCreateModalOpen(true);
@@ -346,8 +347,10 @@ export function CustomerManager({
             <option value="created_desc">สร้างล่าสุดก่อน</option>
             <option value="created_asc">สร้างเก่าสุดก่อน</option>
           </select>
-          <button type="submit">ค้นหา</button>
-          <button type="button" className="secondary" onClick={resetFilters}>
+          <button type="submit" className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm">
+            ค้นหา
+          </button>
+          <button type="button" className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm" onClick={resetFilters}>
             ล้างตัวกรอง
           </button>
         </form>
@@ -397,12 +400,17 @@ export function CustomerManager({
                   <span className="text-xs text-[var(--muted)]">สถานะ: {draft?.isActive ? "ใช้งาน" : "ปิด"}</span>
                   <button
                     type="button"
-                    className="secondary"
+                    className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
                     onClick={() => setDraftValue(customer.id, "isActive", !draft?.isActive)}
                   >
                     {draft?.isActive ? "ปิด" : "เปิด"}
                   </button>
-                  <button type="button" onClick={() => saveCustomer(customer.id)} disabled={savingId === customer.id}>
+                  <button
+                    type="button"
+                    className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                    onClick={() => saveCustomer(customer.id)}
+                    disabled={savingId === customer.id}
+                  >
                     {savingId === customer.id ? "..." : "บันทึก"}
                   </button>
                 </div>
@@ -465,12 +473,17 @@ export function CustomerManager({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          className="secondary"
+                          className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
                           onClick={() => setDraftValue(customer.id, "isActive", !draft?.isActive)}
                         >
                           {draft?.isActive ? "ปิด" : "เปิด"}
                         </button>
-                        <button type="button" onClick={() => saveCustomer(customer.id)} disabled={savingId === customer.id}>
+                        <button
+                          type="button"
+                          className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                          onClick={() => saveCustomer(customer.id)}
+                          disabled={savingId === customer.id}
+                        >
                           {savingId === customer.id ? "..." : "บันทึก"}
                         </button>
                       </div>
@@ -611,7 +624,11 @@ export function CustomerManager({
                 <h3 className="m-0 text-lg font-semibold">เพิ่มลูกค้า</h3>
                 <p className="m-0 mt-1 text-sm text-[var(--muted)]">รายชื่อลูกค้าที่เปิดใช้งาน จะไปแสดงใน POS dropdown</p>
               </div>
-              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+              <button
+                type="button"
+                className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                onClick={() => setCreateModalOpen(false)}
+              >
                 ปิด
               </button>
             </div>
@@ -638,10 +655,14 @@ export function CustomerManager({
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                <button
+                  type="button"
+                  className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                  onClick={() => setCreateModalOpen(false)}
+                >
                   ยกเลิก
                 </button>
-                <button type="submit" disabled={saving}>
+                <button type="submit" className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm" disabled={saving}>
                   {saving ? "กำลังบันทึก..." : "เพิ่มลูกค้า"}
                 </button>
               </div>

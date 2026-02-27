@@ -157,6 +157,7 @@ export function ExpenseManager({
           <h2 className="m-0 text-xl font-semibold">ประวัติค่าใช้จ่ายล่าสุด</h2>
           <button
             type="button"
+            className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
             onClick={() => {
               setError("");
               setCreateModalOpen(true);
@@ -190,8 +191,10 @@ export function ExpenseManager({
             <option value="created_desc">เพิ่มล่าสุดก่อน</option>
             <option value="created_asc">เพิ่มเก่าสุดก่อน</option>
           </select>
-          <button type="submit">ค้นหา</button>
-          <button type="button" className="secondary" onClick={resetFilters}>
+          <button type="submit" className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm">
+            ค้นหา
+          </button>
+          <button type="button" className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm" onClick={resetFilters}>
             ล้างตัวกรอง
           </button>
         </form>
@@ -263,7 +266,11 @@ export function ExpenseManager({
                 <h3 className="m-0 text-lg font-semibold">เพิ่มค่าใช้จ่าย</h3>
                 <p className="m-0 mt-1 text-sm text-[var(--muted)]">บันทึกค่าใช้จ่ายรายวันเพื่อใช้สรุปกำไร</p>
               </div>
-              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+              <button
+                type="button"
+                className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                onClick={() => setCreateModalOpen(false)}
+              >
                 ปิด
               </button>
             </div>
@@ -292,10 +299,16 @@ export function ExpenseManager({
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+                <button
+                  type="button"
+                  className="secondary px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm"
+                  onClick={() => setCreateModalOpen(false)}
+                >
                   ยกเลิก
                 </button>
-                <button disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึกค่าใช้จ่าย"}</button>
+                <button className="px-2 py-1.5 text-xs lg:px-3 lg:py-2 lg:text-sm" disabled={saving}>
+                  {saving ? "กำลังบันทึก..." : "บันทึกค่าใช้จ่าย"}
+                </button>
               </div>
             </form>
           </div>

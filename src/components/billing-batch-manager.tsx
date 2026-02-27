@@ -344,6 +344,7 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
               <label htmlFor="productSearch">ค้นหาสินค้า</label>
               <input
                 id="productSearch"
+                className="max-w-[260px] px-2 py-1.5 text-sm sm:max-w-[320px]"
                 value={productQuery}
                 onChange={(event) => setProductQuery(event.target.value)}
                 placeholder="ค้นหาเมนู / หมวด / SKU"

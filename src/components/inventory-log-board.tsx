@@ -247,6 +247,7 @@ export function InventoryLogBoard() {
               <label htmlFor="inventoryQ">ค้นหา</label>
               <input
                 id="inventoryQ"
+                className="max-w-[220px] px-2 py-1.5 text-sm sm:max-w-[250px]"
                 value={qInput}
                 onChange={(event) => setQInput(event.target.value)}
                 placeholder="ค้นหาโน้ต/ผู้ทำรายการ"
