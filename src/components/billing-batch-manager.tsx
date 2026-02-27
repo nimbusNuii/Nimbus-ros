@@ -7,7 +7,10 @@ type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "QR";
 
 type Product = {
   id: string;
+  sku?: string | null;
   name: string;
+  category: string | null;
+  imageUrl: string | null;
   price: number;
   stockQty: number;
 };
@@ -44,6 +47,7 @@ function toDateTimeLocalValue(date = new Date()) {
 }
 
 export function BillingBatchManager({ products, customers, currency }: BillingBatchManagerProps) {
+  const [activeCategory, setActiveCategory] = useState("ALL");
   const [dateTime, setDateTime] = useState(toDateTimeLocalValue());
   const [customerId, setCustomerId] = useState("WALK_IN");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
@@ -59,11 +63,26 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
   const customerById = useMemo(() => new Map(customers.map((item) => [item.id, item])), [customers]);
   const productById = useMemo(() => new Map(products.map((item) => [item.id, item])), [products]);
 
+  const categoryTabs = useMemo(() => {
+    const unique = new Set<string>();
+    for (const product of products) {
+      if (product.category) unique.add(product.category);
+    }
+    return ["ALL", ...Array.from(unique)];
+  }, [products]);
+
+  const categoryProducts = useMemo(() => {
+    if (activeCategory === "ALL") return products;
+    return products.filter((item) => (item.category || "Uncategory") === activeCategory);
+  }, [activeCategory, products]);
+
   const filteredProducts = useMemo(() => {
     const q = productQuery.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((item) => item.name.toLowerCase().includes(q));
-  }, [products, productQuery]);
+    if (!q) return categoryProducts;
+    return categoryProducts.filter((item) =>
+      [item.name, item.category || "", item.sku || ""].join(" ").toLowerCase().includes(q)
+    );
+  }, [categoryProducts, productQuery]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => {
@@ -227,7 +246,15 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="m-0 text-base font-semibold">รายการสินค้า</h3>
-          <button type="button" className="secondary" onClick={() => setProductModalOpen(true)}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setActiveCategory("ALL");
+              setProductQuery("");
+              setProductModalOpen(true);
+            }}
+          >
             เพิ่มสินค้า (Modal)
           </button>
         </div>
@@ -319,17 +346,55 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                 id="productSearch"
                 value={productQuery}
                 onChange={(event) => setProductQuery(event.target.value)}
-                placeholder="พิมพ์ชื่อสินค้า"
+                placeholder="ค้นหาเมนู / หมวด / SKU"
               />
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              {categoryTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveCategory(tab)}
+                  className={`${activeCategory === tab ? "" : "secondary"} whitespace-nowrap rounded-full px-4 py-2 text-sm`}
+                >
+                  {tab === "ALL" ? "ทั้งหมด" : tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProducts.map((product) => (
-                <article key={product.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
-                  <p className="m-0 text-sm font-semibold text-[var(--text)]">{product.name}</p>
-                  <p className="m-0 mt-1 text-xs text-[var(--muted)]">
-                    {formatCurrency(product.price, currency)} | คงเหลือ {product.stockQty}
-                  </p>
+                <article
+                  key={product.id}
+                  className="group relative overflow-hidden rounded-xl border border-[var(--line)] bg-white p-3 transition duration-150 hover:bg-[#f9fafb]"
+                >
+                  <button
+                    type="button"
+                    className="secondary w-full flex-col items-start rounded-lg border border-transparent bg-transparent p-0 text-left"
+                    disabled={product.stockQty <= 0}
+                    onClick={() => addProduct(product.id)}
+                  >
+                    {product.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="h-28 w-full rounded-lg border border-[var(--line)] object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-28 w-full place-items-center rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--muted)]">
+                        ไม่มีรูปสินค้า
+                      </div>
+                    )}
+
+                    <div className="mt-2 space-y-1">
+                      <p className="m-0 font-semibold text-[var(--text)]">{product.name}</p>
+                      <p className="m-0 text-xs text-[var(--muted)]">คงเหลือ {product.stockQty}</p>
+                      <p className="m-0 text-xl font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     className="secondary mt-2 w-full"
@@ -338,6 +403,12 @@ export function BillingBatchManager({ products, customers, currency }: BillingBa
                   >
                     {product.stockQty <= 0 ? "สินค้าหมด" : "เพิ่มสินค้า"}
                   </button>
+
+                  {product.stockQty <= 0 ? (
+                    <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/35 text-2xl font-semibold text-white">
+                      Sold out
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>

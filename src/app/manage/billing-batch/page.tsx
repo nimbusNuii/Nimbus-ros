@@ -28,7 +28,10 @@ export default async function ManageBillingBatchPage() {
       <BillingBatchManager
         products={products.map((product) => ({
           id: product.id,
+          sku: product.sku,
           name: product.name,
+          category: product.category,
+          imageUrl: product.imageUrl,
           price: toNumber(product.price),
           stockQty: product.stockQty
         }))}
