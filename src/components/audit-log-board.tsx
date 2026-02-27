@@ -189,7 +189,7 @@ export function AuditLogBoard() {
     <div className="grid gap-4">
       <section className="card">
         <form onSubmit={onSearch}>
-          <div className="grid items-end gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="field">
               <label htmlFor="action">Action</label>
               <input id="action" value={actionInput} onChange={(event) => setActionInput(event.target.value)} placeholder="เช่น ORDER_CREATED" />
@@ -217,18 +217,20 @@ export function AuditLogBoard() {
                 <option value="created_asc">เก่าสุดก่อน</option>
               </select>
             </div>
-            <button type="submit" disabled={loading}>
-              ค้นหา
-            </button>
-            <button type="button" className="secondary" onClick={resetFilters} disabled={loading}>
-              ล้างตัวกรอง
-            </button>
-            <button type="button" className="secondary" onClick={() => void load()} disabled={loading}>
-              รีเฟรช
-            </button>
-            <a className="secondary" href={`/api/audit-logs/export?${exportQuery}`} target="_blank" rel="noreferrer">
-              export csv
-            </a>
+            <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
+              <button type="submit" disabled={loading}>
+                ค้นหา
+              </button>
+              <button type="button" className="secondary" onClick={resetFilters} disabled={loading}>
+                ล้างตัวกรอง
+              </button>
+              <button type="button" className="secondary" onClick={() => void load()} disabled={loading}>
+                รีเฟรช
+              </button>
+              <a className="secondary" href={`/api/audit-logs/export?${exportQuery}`} target="_blank" rel="noreferrer">
+                export csv
+              </a>
+            </div>
           </div>
         </form>
       </section>
@@ -239,7 +241,31 @@ export function AuditLogBoard() {
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         {!loading ? (
-          <div className="overflow-x-auto">
+          <div className="space-y-2 md:hidden">
+            {logs.map((log) => (
+              <article key={log.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="m-0 text-sm font-semibold text-[var(--text)]">{log.action}</p>
+                    <p className="m-0 text-xs text-[var(--muted)]">{formatDateTime(log.createdAt)}</p>
+                  </div>
+                  <span className="text-xs text-[var(--muted)]">{log.actor?.fullName || log.actorUsername || "-"}</span>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-[var(--muted)]">
+                  <p className="m-0">
+                    Entity: {log.entity}
+                    {log.entityId ? ` (${log.entityId.slice(0, 8)})` : ""}
+                  </p>
+                  <p className="m-0 break-words">Metadata: {safeString(log.metadata)}</p>
+                </div>
+              </article>
+            ))}
+            {logs.length === 0 ? <p className="text-center text-sm text-[var(--muted)]">ไม่พบรายการ</p> : null}
+          </div>
+        ) : null}
+
+        {!loading ? (
+          <div className="hidden overflow-x-auto md:block">
             <table className="table min-w-[920px]">
               <thead>
                 <tr>
