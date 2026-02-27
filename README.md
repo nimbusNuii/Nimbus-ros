@@ -30,7 +30,7 @@
 ## 1) Setup
 ```bash
 cp .env.example .env
-# แก้ DATABASE_URL และ POS_SESSION_SECRET
+# แก้ DATABASE_URL, DIRECT_URL และ POS_SESSION_SECRET
 npm install
 npm run prisma:generate
 npm run prisma:migrate -- --name init
