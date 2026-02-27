@@ -68,6 +68,7 @@ export function CreateOrderClient({
   const [discount, setDiscount] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState("WALK_IN");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [cartOpenMobile, setCartOpenMobile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -232,6 +233,7 @@ export function CreateOrderClient({
       setMessage(`สร้างออเดอร์สำเร็จ ${data.orderNumber}`);
       setCartLines([]);
       setDiscount(0);
+      setCartOpenMobile(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cannot create order");
     } finally {
@@ -239,11 +241,146 @@ export function CreateOrderClient({
     }
   }
 
+  function renderOrderPanel(isMobile = false) {
+    const idSuffix = isMobile ? "-mobile" : "-desktop";
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-xl font-semibold text-[var(--text)]">Current Order ({itemCount})</h2>
+          <div className="flex items-center gap-2">
+            <button type="button" className="secondary px-2 py-1 text-xs" onClick={clearCart} disabled={cartLines.length === 0}>
+              Delete All
+            </button>
+            {isMobile ? (
+              <button type="button" className="secondary px-2 py-1 text-xs" onClick={() => setCartOpenMobile(false)}>
+                ปิด
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-3 flex-1 space-y-2 overflow-auto pr-1">
+          {cartLines.length === 0 ? <p className="text-sm text-[var(--muted)]">ยังไม่มีสินค้าในออเดอร์</p> : null}
+          {cartLines.map((line) => (
+            <article key={line.lineId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  {line.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={line.imageUrl} alt={line.name} className="h-10 w-10 rounded-lg border border-[var(--line)] object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg border border-dashed border-[var(--line)]" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="m-0 truncate text-sm font-semibold text-[var(--text)]">{line.name}</p>
+                    <p className="m-0 text-xs text-[var(--muted)]">{formatCurrency(line.unitPrice, currency)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button type="button" className="secondary h-7 w-7 p-0 text-xs" onClick={() => updateQty(line.lineId, -1)}>
+                    -
+                  </button>
+                  <span className="min-w-5 text-center text-sm font-semibold">{line.qty}</span>
+                  <button type="button" className="secondary h-7 w-7 p-0 text-xs" onClick={() => updateQty(line.lineId, 1)}>
+                    +
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="field mb-0 space-y-1">
+              <label htmlFor={`create-order-customer${idSuffix}`} className="text-[11px]">
+                ลูกค้า
+              </label>
+              <select
+                id={`create-order-customer${idSuffix}`}
+                value={selectedCustomerId}
+                onChange={(event) => setSelectedCustomerId(event.target.value)}
+                className="h-9 px-2 py-1 text-xs"
+              >
+                <option value="WALK_IN">ลูกค้า</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field mb-0 space-y-1">
+              <label htmlFor={`create-order-payment${idSuffix}`} className="text-[11px]">
+                ชำระเงิน
+              </label>
+              <select
+                id={`create-order-payment${idSuffix}`}
+                value={paymentMethod}
+                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                className="h-9 px-2 py-1 text-xs"
+              >
+                <option value="CASH">เงินสด</option>
+                <option value="CARD">บัตร</option>
+                <option value="TRANSFER">โอนเงิน</option>
+                <option value="QR">QR</option>
+              </select>
+            </div>
+
+            <div className="field mb-0 space-y-1">
+              <label htmlFor={`create-order-discount${idSuffix}`} className="text-[11px]">
+                ส่วนลด
+              </label>
+              <input
+                id={`create-order-discount${idSuffix}`}
+                type="number"
+                min={0}
+                value={discount}
+                onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
+                className="h-9 px-2 py-1 text-xs"
+              />
+            </div>
+          </div>
+
+          <table className="table">
+            <tbody>
+              <tr>
+                <td>Subtotal</td>
+                <td>{formatCurrency(subtotal, currency)}</td>
+              </tr>
+              <tr>
+                <td>Discount total</td>
+                <td>{formatCurrency(safeDiscount, currency)}</td>
+              </tr>
+              <tr>
+                <td>{vatEnabled ? `Tax (${taxRate}%)` : "Tax (ปิด VAT)"}</td>
+                <td>{formatCurrency(tax, currency)}</td>
+              </tr>
+              <tr>
+                <td className="text-base font-semibold">Total</td>
+                <td className="text-lg font-bold">{formatCurrency(total, currency)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <button type="button" className="w-full" disabled={submitting || cartLines.length === 0} onClick={() => void createOrder()}>
+            {submitting ? "กำลังบันทึก..." : "Create Order"}
+          </button>
+
+          {message ? <p className="m-0 text-sm text-[var(--ok)]">{message}</p> : null}
+          {error ? <p className="m-0 text-sm text-red-600">{error}</p> : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="space-y-4 pb-20 lg:pb-0">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="card space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex gap-2 overflow-x-auto pb-1">
               {categoryTabs.map((tab) => (
                 <button
@@ -260,21 +397,21 @@ export function CreateOrderClient({
               กลับหน้าหลัก
             </Link>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
               placeholder="ค้นหาเมนู / หมวด / SKU"
-              className="w-full md:max-w-md"
+              className="w-full sm:max-w-md"
             />
             {searchText ? (
-              <button type="button" className="secondary whitespace-nowrap" onClick={() => setSearchText("")}>
+              <button type="button" className="secondary w-full whitespace-nowrap sm:w-auto" onClick={() => setSearchText("")}>
                 ล้าง
               </button>
             ) : null}
           </div>
 
-          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(128px,1fr))]">
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {visibleProducts.map((product) => (
               <article
                 key={product.id}
@@ -299,12 +436,12 @@ export function CreateOrderClient({
                     </div>
                   )}
 
-                    <div className="mt-2 space-y-1">
-                      <p className="m-0 line-clamp-2 text-sm font-semibold text-[var(--text)]">{product.name}</p>
-                      <p className="m-0 text-xs text-[var(--muted)]">คงเหลือ {product.stockQty}</p>
-                      <p className="m-0 text-base font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
-                    </div>
-                  </button>
+                  <div className="mt-2 space-y-1">
+                    <p className="m-0 line-clamp-2 text-sm font-semibold text-[var(--text)]">{product.name}</p>
+                    <p className="m-0 text-xs text-[var(--muted)]">คงเหลือ {product.stockQty}</p>
+                    <p className="m-0 text-base font-bold text-[var(--brand)]">{formatCurrency(product.price, currency)}</p>
+                  </div>
+                </button>
 
                 {product.stockQty <= 0 ? (
                   <div className="absolute inset-0 grid place-items-center bg-black/35 text-2xl font-semibold text-white">Sold out</div>
@@ -314,129 +451,29 @@ export function CreateOrderClient({
           </div>
         </section>
 
-        <aside className="card flex flex-col xl:sticky xl:top-6 xl:h-[calc(100dvh-48px)]">
-          <div className="flex items-center justify-between">
-            <h2 className="m-0 text-2xl font-semibold text-[var(--text)]">Current Order ({itemCount})</h2>
-            <button type="button" className="secondary px-2 py-1 text-xs" onClick={clearCart} disabled={cartLines.length === 0}>
-              Delete All
-            </button>
-          </div>
-
-          <div className="mt-3 flex-1 space-y-2 overflow-auto pr-1">
-            {cartLines.length === 0 ? <p className="text-sm text-[var(--muted)]">ยังไม่มีสินค้าในออเดอร์</p> : null}
-            {cartLines.map((line) => (
-              <article key={line.lineId} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    {line.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={line.imageUrl} alt={line.name} className="h-10 w-10 rounded-lg border border-[var(--line)] object-cover" />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg border border-dashed border-[var(--line)]" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="m-0 truncate text-sm font-semibold text-[var(--text)]">{line.name}</p>
-                      <p className="m-0 text-xs text-[var(--muted)]">{formatCurrency(line.unitPrice, currency)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button type="button" className="secondary h-7 w-7 p-0 text-xs" onClick={() => updateQty(line.lineId, -1)}>
-                      -
-                    </button>
-                    <span className="min-w-5 text-center text-sm font-semibold">{line.qty}</span>
-                    <button type="button" className="secondary h-7 w-7 p-0 text-xs" onClick={() => updateQty(line.lineId, 1)}>
-                      +
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="field mb-0 space-y-1">
-                <label htmlFor="create-order-customer" className="text-[11px]">
-                  ลูกค้า
-                </label>
-                <select
-                  id="create-order-customer"
-                  value={selectedCustomerId}
-                  onChange={(event) => setSelectedCustomerId(event.target.value)}
-                  className="h-9 px-2 py-1 text-xs"
-                >
-                  <option value="WALK_IN">ลูกค้า</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="field mb-0 space-y-1">
-                <label htmlFor="create-order-payment" className="text-[11px]">
-                  ชำระเงิน
-                </label>
-                <select
-                  id="create-order-payment"
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-                  className="h-9 px-2 py-1 text-xs"
-                >
-                  <option value="CASH">เงินสด</option>
-                  <option value="CARD">บัตร</option>
-                  <option value="TRANSFER">โอนเงิน</option>
-                  <option value="QR">QR</option>
-                </select>
-              </div>
-
-              <div className="field mb-0 space-y-1">
-                <label htmlFor="create-order-discount" className="text-[11px]">
-                  ส่วนลด
-                </label>
-                <input
-                  id="create-order-discount"
-                  type="number"
-                  min={0}
-                  value={discount}
-                  onChange={(event) => setDiscount(Math.max(0, Number(event.target.value) || 0))}
-                  className="h-9 px-2 py-1 text-xs"
-                />
-              </div>
-            </div>
-
-            <table className="table">
-              <tbody>
-                <tr>
-                  <td>Subtotal</td>
-                  <td>{formatCurrency(subtotal, currency)}</td>
-                </tr>
-                <tr>
-                  <td>Discount total</td>
-                  <td>{formatCurrency(safeDiscount, currency)}</td>
-                </tr>
-                <tr>
-                  <td>{vatEnabled ? `Tax (${taxRate}%)` : "Tax (ปิด VAT)"}</td>
-                  <td>{formatCurrency(tax, currency)}</td>
-                </tr>
-                <tr>
-                  <td className="text-base font-semibold">Total</td>
-                  <td className="text-lg font-bold">{formatCurrency(total, currency)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <button type="button" className="w-full" disabled={submitting || cartLines.length === 0} onClick={() => void createOrder()}>
-              {submitting ? "กำลังบันทึก..." : "Create Order"}
-            </button>
-
-            {message ? <p className="m-0 text-sm text-[var(--ok)]">{message}</p> : null}
-            {error ? <p className="m-0 text-sm text-red-600">{error}</p> : null}
-          </div>
-        </aside>
+        <aside className="card hidden lg:flex lg:sticky lg:top-6 lg:h-[calc(100dvh-48px)]">{renderOrderPanel()}</aside>
       </div>
+
+      <button
+        type="button"
+        className="fixed bottom-4 right-4 z-30 rounded-full px-4 py-3 text-sm font-semibold shadow-sm lg:hidden"
+        onClick={() => setCartOpenMobile(true)}
+      >
+        Order ({itemCount}) • {formatCurrency(total, currency)}
+      </button>
+
+      {cartOpenMobile ? (
+        <div
+          className="modal-overlay lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCartOpenMobile(false);
+          }}
+        >
+          <div className="modal-panel flex h-[min(88dvh,760px)] w-full max-w-xl flex-col">{renderOrderPanel(true)}</div>
+        </div>
+      ) : null}
     </div>
   );
 }
