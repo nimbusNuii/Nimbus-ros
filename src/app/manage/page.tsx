@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
 import { StoreSettingsForm } from "@/components/store-settings-form";
+import { ManageLowStockAlert } from "@/components/manage-low-stock-alert";
 import { requirePageRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -82,47 +83,7 @@ export default async function ManagePage() {
         </div>
       </section>
 
-      <section className="card mb-4">
-        <h2 className="mt-0 text-xl font-semibold">แจ้งเตือนสต็อกต่ำ (≤ {LOW_STOCK_THRESHOLD})</h2>
-        {lowStockProducts.length === 0 ? (
-          <p className="mb-0 text-[var(--ok)]">สต็อกอยู่ในระดับปกติ</p>
-        ) : (
-          <>
-            <div className="space-y-2 md:hidden">
-              {lowStockProducts.map((product) => (
-                <article key={product.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-                  <p className="m-0 text-sm font-semibold">{product.name}</p>
-                  <p className="m-0 mt-1 text-xs text-[var(--muted)]">หมวดหมู่: {product.category || "-"}</p>
-                  <p className="m-0 mt-2 text-sm">
-                    คงเหลือ: <span className="font-semibold text-red-600">{product.stockQty}</span>
-                  </p>
-                </article>
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto md:block">
-              <table className="table min-w-[680px]">
-                <thead>
-                  <tr>
-                    <th>สินค้า</th>
-                    <th>หมวดหมู่</th>
-                    <th>คงเหลือ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStockProducts.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.name}</td>
-                      <td>{product.category || "-"}</td>
-                      <td className="font-semibold text-red-600">{product.stockQty}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
+      <ManageLowStockAlert threshold={LOW_STOCK_THRESHOLD} products={lowStockProducts} />
 
       <StoreSettingsForm
         initialSettings={{
