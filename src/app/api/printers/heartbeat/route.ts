@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { runTransaction } from "@/lib/transaction";
 
 type HeartbeatPrinter = {
   target?: string;
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   const now = new Date();
   const targets = printers.map((item) => item.target);
 
-  await prisma.$transaction(async (tx) => {
+  await runTransaction(async (tx) => {
     for (const item of printers) {
       await tx.printerPresence.upsert({
         where: {

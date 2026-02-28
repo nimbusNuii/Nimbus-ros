@@ -6,6 +6,7 @@ import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
 import { publishRealtime } from "@/lib/realtime";
+import { runTransaction } from "@/lib/transaction";
 import { parseLimit } from "@/lib/query-utils";
 
 type CustomerType = "WALK_IN" | "REGULAR";
@@ -194,7 +195,7 @@ export async function POST(request: Request) {
     let outOfStockRace = false;
     for (let attempts = 0; attempts < 6; attempts += 1) {
       try {
-        order = await prisma.$transaction(async (tx) => {
+        order = await runTransaction(async (tx) => {
           const lastOrder = await tx.order.findFirst({
             where: {
               orderDateKey

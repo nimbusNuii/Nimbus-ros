@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { publishRealtime } from "@/lib/realtime";
+import { runTransaction } from "@/lib/transaction";
 
 export async function PATCH(
   request: Request,
@@ -35,7 +36,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Stock cannot be negative" }, { status: 409 });
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await runTransaction(async (tx) => {
       const product = await tx.product.update({
         where: { id },
         data: {

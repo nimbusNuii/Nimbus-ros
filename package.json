@@ -9,8 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:migrate": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} prisma migrate dev",
+    "prisma:seed": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} tsx prisma/seed.ts",
     "print:agent": "tsx scripts/printer-agent.ts"
   },
   "dependencies": {

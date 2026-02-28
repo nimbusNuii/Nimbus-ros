@@ -30,13 +30,19 @@
 ## 1) Setup
 ```bash
 cp .env.example .env
-# แก้ DATABASE_URL, DIRECT_URL และ POS_SESSION_SECRET
+# แก้ค่า Neon ใน DATABASE_URL/DIRECT_URL (ใช้ตอน deploy)
+# แก้ LOCAL_DATABASE_URL เป็น local postgres (ใช้ตอนรัน local)
+# แก้ POS_SESSION_SECRET
 npm install
 npm run prisma:generate
 npm run prisma:migrate -- --name init
 npm run prisma:seed
 npm run dev
 ```
+
+หมายเหตุ:
+- ตอนรัน local ตัวแอปจะใช้ `LOCAL_DATABASE_URL` อัตโนมัติ (ถ้ามีค่า)
+- ตอน deploy บน Vercel ให้ตั้ง `DATABASE_URL` และ `DIRECT_URL` เป็น Neon ใน Project Environment Variables
 
 เปิดที่:
 - `http://localhost:3000/auth/login`

@@ -5,6 +5,7 @@ import { requireApiRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { buildPrintPayload, suggestedTarget } from "@/lib/print";
 import { publishRealtime } from "@/lib/realtime";
+import { runTransaction } from "@/lib/transaction";
 
 type UpdateAction = "CANCEL" | "MARK_PAID";
 
@@ -50,7 +51,7 @@ export async function PATCH(
         return map;
       }, new Map<string, number>());
 
-      const updated = await prisma.$transaction(async (tx) => {
+      const updated = await runTransaction(async (tx) => {
         const cancelled = await tx.order.update({
           where: { id: order.id },
           data: {
@@ -144,7 +145,7 @@ export async function PATCH(
       prisma.receiptTemplate.findFirst({ where: { isDefault: true } })
     ]);
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await runTransaction(async (tx) => {
       const paid = await tx.order.update({
         where: {
           id: order.id
