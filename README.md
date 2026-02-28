@@ -44,6 +44,20 @@ npm run dev
 - ตอนรัน local ตัวแอปจะใช้ `LOCAL_DATABASE_URL` อัตโนมัติ (ถ้ามีค่า)
 - ตอน deploy บน Vercel ให้ตั้ง `DATABASE_URL` และ `DIRECT_URL` เป็น Neon ใน Project Environment Variables
 
+## Deploy (Production)
+ใช้คำสั่งนี้เพื่อ deploy แบบปลอดภัย:
+
+```bash
+npm run deploy:prod
+```
+
+สิ่งที่สคริปต์ทำอัตโนมัติ:
+- ดึง env ของ Vercel production มาเช็คก่อน deploy
+- ตรวจว่า `DATABASE_URL`/`DIRECT_URL` ไม่ชี้ local และเป็น Neon (`.neon.tech`)
+- ตรวจว่า `DIRECT_URL` ไม่ใช่ pooler URL
+- Deploy ขึ้น Vercel production
+- สร้าง git tag เวอร์ชันหลัง deploy สำเร็จ (ถ้า `v<version>` มีอยู่แล้ว จะเป็น `v<version>-deploy-<timestamp>`)
+
 เปิดที่:
 - `http://localhost:3000/auth/login`
 - Login ตัวอย่าง:

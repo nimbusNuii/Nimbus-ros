@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "deploy:prod": "node scripts/deploy-prod.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} prisma migrate dev",
     "prisma:seed": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} tsx prisma/seed.ts",
