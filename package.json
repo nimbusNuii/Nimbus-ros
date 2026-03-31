@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "node scripts/dev-auto-restart.mjs",
     "dev:next": "next dev --port 3210",
+    "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "migrate:prod": "node scripts/migrate-prod.mjs",
+    "seed:prod": "node scripts/seed-prod.mjs",
     "deploy:prod": "node scripts/deploy-prod.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
