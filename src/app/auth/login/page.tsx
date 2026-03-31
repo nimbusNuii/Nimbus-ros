@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { getServerSession, roleRedirectPath } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage({
   searchParams
 }: {

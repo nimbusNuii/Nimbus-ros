@@ -355,7 +355,7 @@ export function CustomerManager({
           </button>
         </form>
 
-        <div className="space-y-2 md:hidden">
+        <div className="space-y-2 lg:hidden">
           {customers.map((customer) => {
             const draft = drafts[customer.id];
             return (
@@ -420,7 +420,7 @@ export function CustomerManager({
           {customers.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีลูกค้า</p> : null}
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="table min-w-[760px]">
             <thead>
               <tr>
@@ -554,7 +554,7 @@ export function CustomerManager({
               </div>
             </div>
 
-            <div className="space-y-2 md:hidden">
+            <div className="space-y-2 lg:hidden">
               {history.rows.map((row) => (
                 <article key={row.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
                   <p className="m-0 text-xs text-[var(--muted)]">{formatDateTime(row.createdAt)}</p>
@@ -574,7 +574,7 @@ export function CustomerManager({
               ) : null}
             </div>
 
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="table min-w-[720px]">
                 <thead>
                   <tr>

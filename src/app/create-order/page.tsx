@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function CreateOrderPage() {
   await requirePageRole(["CASHIER", "MANAGER", "ADMIN"]);
 
-  const [products, categories, customers, setting] = await Promise.all([
+  const [products, categories, customers, paymentChannels, setting] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true },
       include: {
@@ -31,6 +31,10 @@ export default async function CreateOrderPage() {
         type: "REGULAR"
       },
       orderBy: [{ name: "asc" }]
+    }),
+    prisma.paymentChannel.findMany({
+      where: { isActive: true },
+      orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { name: "asc" }]
     }),
     prisma.storeSetting.findUnique({
       where: { id: 1 }
@@ -57,6 +61,11 @@ export default async function CreateOrderPage() {
           id: customer.id,
           name: customer.name,
           type: customer.type
+        }))}
+        paymentChannels={paymentChannels.map((channel) => ({
+          id: channel.id,
+          name: channel.name,
+          type: channel.type
         }))}
         vatEnabled={setting?.vatEnabled ?? true}
         taxRate={toNumber(setting?.taxRate ?? 7)}

@@ -58,7 +58,7 @@ export async function calculateSummary(from?: string | null, to?: string | null)
     }
   };
 
-  const [orders, expenseGroups, soldItemRows] = await Promise.all([
+  const [orders, expenseGroups, soldItemRows, paymentGroups] = await Promise.all([
     prisma.order.aggregate({
       where: orderWhere,
       _count: {
@@ -88,6 +88,12 @@ export async function calculateSummary(from?: string | null, to?: string | null)
         lineTotal: true,
         unitCost: true
       }
+    }),
+    prisma.order.groupBy({
+      by: ["paymentMethod"],
+      where: orderWhere,
+      _sum: { total: true },
+      _count: { _all: true }
     })
   ]);
 
@@ -172,6 +178,12 @@ export async function calculateSummary(from?: string | null, to?: string | null)
   const averageProfitPerBill = paidOrderCount > 0 ? netProfit / paidOrderCount : 0;
   const netMarginPercent = sales > 0 ? (netProfit / sales) * 100 : 0;
 
+  const paymentBreakdown: Array<{ method: string; total: number; count: number }> = paymentGroups.map((g) => ({
+    method: g.paymentMethod,
+    total: toNumber(g._sum.total),
+    count: g._count._all,
+  })).sort((a, b) => b.total - a.total);
+
   return {
     range: { from: fromDate, to: toDate },
     sales,
@@ -200,6 +212,7 @@ export async function calculateSummary(from?: string | null, to?: string | null)
       ...soldItemTotals,
       averageProfit: soldItemAverageProfit
     },
+    paymentBreakdown,
     netProfit
   };
 }

@@ -50,20 +50,22 @@ export default async function ManageCustomersPage({
     : undefined;
   const orderBy = orderByFromSort(sort);
   const requestedPage = parsePage(params.page);
-  const totalItems = await prisma.customer.count({ where });
+
+  // Parallelize count + storeSetting (neither depends on the other)
+  const [totalItems, settings] = await Promise.all([
+    prisma.customer.count({ where }),
+    prisma.storeSetting.findUnique({ where: { id: 1 } })
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
   const skip = (page - 1) * PAGE_SIZE;
 
-  const [customers, settings] = await Promise.all([
-    prisma.customer.findMany({
-      where,
-      orderBy,
-      skip,
-      take: PAGE_SIZE
-    }),
-    prisma.storeSetting.findUnique({ where: { id: 1 } })
-  ]);
+  const customers = await prisma.customer.findMany({
+    where,
+    orderBy,
+    skip,
+    take: PAGE_SIZE
+  });
 
   return (
     <div>

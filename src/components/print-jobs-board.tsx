@@ -251,7 +251,7 @@ export function PrintJobsBoard() {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {!loading && jobs.length === 0 ? <p className="text-sm text-[var(--muted)]">ไม่มีคิวพิมพ์ค้าง</p> : null}
 
-      <div className="space-y-2 md:hidden">
+      <div className="space-y-2 lg:hidden">
         {jobs.map((job) => (
           <article key={job.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
             <div className="flex items-start justify-between gap-2">
@@ -281,7 +281,7 @@ export function PrintJobsBoard() {
         ))}
       </div>
 
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="table min-w-[920px]">
           <thead>
             <tr>

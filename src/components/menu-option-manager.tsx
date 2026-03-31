@@ -312,7 +312,7 @@ export function MenuOptionManager({
         <section key={type} className="card">
           <h3 className="mt-0 text-lg font-semibold">{typeLabel[type]}</h3>
 
-          <div className="space-y-2 md:hidden">
+          <div className="space-y-2 lg:hidden">
             {grouped[type].map((item) => {
               const draft = drafts[item.id];
               return (
@@ -369,7 +369,7 @@ export function MenuOptionManager({
             {grouped[type].length === 0 ? <p className="text-center text-sm text-[var(--muted)]">ยังไม่มีรายการ</p> : null}
           </div>
 
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="table min-w-[760px]">
               <thead>
                 <tr>

@@ -15,6 +15,7 @@ type OrderInput = {
   items: Array<{ productId: string; qty: number; note?: string }>;
   discount?: number;
   paymentMethod?: "CASH" | "CARD" | "TRANSFER" | "QR";
+  paymentChannelId?: string;
   billAt?: string;
   customerId?: string;
   customerType?: CustomerType;
@@ -191,6 +192,17 @@ export async function POST(request: Request) {
     const storeName = setting?.businessName ?? "POS Shop";
     const receiptFooter = defaultTemplate?.footerText ?? "ขอบคุณที่อุดหนุน";
 
+    let paymentChannel = null;
+    let paymentChannelSnapshot = null;
+    if (body.paymentChannelId) {
+      paymentChannel = await prisma.paymentChannel.findUnique({
+        where: { id: body.paymentChannelId }
+      });
+      if (paymentChannel) {
+        paymentChannelSnapshot = paymentChannel.name;
+      }
+    }
+
     let order = null;
     let outOfStockRace = false;
     for (let attempts = 0; attempts < 6; attempts += 1) {
@@ -216,6 +228,8 @@ export async function POST(request: Request) {
               orderDateKey,
               orderSequence,
               paymentMethod: body.paymentMethod ?? "CASH",
+              paymentChannelId: body.paymentChannelId || null,
+              paymentChannelSnapshot,
               status: orderStatus,
               scheduledFor,
               customerId,

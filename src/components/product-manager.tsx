@@ -420,185 +420,205 @@ export function ProductManager({
   }
 
   return (
-    <div className="space-y-4">
-      <section className="card">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="m-0 text-xl font-semibold">รายการสินค้า</h2>
-          <button type="button" onClick={openAddModal}>
-            เพิ่มสินค้า
-          </button>
-        </div>
-        <form
-          className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyFilters();
-          }}
-        >
-          <input
-            value={queryInput}
-            onChange={(event) => setQueryInput(event.target.value)}
-            placeholder="ค้นหาชื่อสินค้า / SKU / หมวดหมู่"
-          />
-          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as ProductSort)}>
-            <option value="category_name">หมวดหมู่ + ชื่อ (ค่าเริ่มต้น)</option>
-            <option value="name_asc">ชื่อ A-Z</option>
-            <option value="name_desc">ชื่อ Z-A</option>
-            <option value="stock_asc">สต็อกน้อยไปมาก</option>
-            <option value="stock_desc">สต็อกมากไปน้อย</option>
-            <option value="price_asc">ราคาต่ำไปสูง</option>
-            <option value="price_desc">ราคาสูงไปต่ำ</option>
-          </select>
-          <button type="submit">ค้นหา</button>
-          <button type="button" className="secondary" onClick={resetFilters}>
-            ล้างตัวกรอง
-          </button>
-        </form>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-        <div className="space-y-2 md:hidden">
-          {products.map((product) => (
-            <article key={product.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-              <div className="flex items-start gap-3">
-                {product.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="h-14 w-14 shrink-0 rounded-md border border-[var(--line)] object-cover"
-                  />
-                ) : (
-                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md border border-dashed border-[var(--line)] text-[10px] text-[var(--muted)]">
-                    No Img
-                  </div>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--text)", lineHeight: 1.2 }}>รายการสินค้า</h1>
+          <p style={{ margin: "2px 0 0", fontSize: "0.72rem", color: "var(--muted)" }}>{totalItems} รายการทั้งหมด</p>
+        </div>
+        <button type="button" onClick={openAddModal} style={{ whiteSpace: "nowrap" }}>
+          + เพิ่มสินค้า
+        </button>
+      </div>
+
+      {/* ── Filter bar ── */}
+      <form
+        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+        onSubmit={(event) => { event.preventDefault(); applyFilters(); }}
+      >
+        <input
+          value={queryInput}
+          onChange={(event) => setQueryInput(event.target.value)}
+          placeholder="ค้นหาชื่อ / SKU / หมวดหมู่"
+          style={{ flex: 1, minWidth: 160 }}
+        />
+        <select value={sortInput} onChange={(event) => setSortInput(event.target.value as ProductSort)} style={{ width: 200 }}>
+          <option value="category_name">หมวดหมู่ + ชื่อ</option>
+          <option value="name_asc">ชื่อ A–Z</option>
+          <option value="name_desc">ชื่อ Z–A</option>
+          <option value="stock_asc">สต็อกน้อย → มาก</option>
+          <option value="stock_desc">สต็อกมาก → น้อย</option>
+          <option value="price_asc">ราคาต่ำ → สูง</option>
+          <option value="price_desc">ราคาสูง → ต่ำ</option>
+        </select>
+        <button type="submit">ค้นหา</button>
+        <button type="button" className="secondary" onClick={resetFilters}>ล้าง</button>
+      </form>
+
+      {/* ── Error ── */}
+      {error ? <p style={{ margin: 0, fontSize: "0.8rem", color: "#ef4444" }}>{error}</p> : null}
+
+      {/* ── Mobile: list ── */}
+      <div className="flex flex-col lg:hidden" style={{ gap: 8 }}>
+        {products.length === 0 ? (
+          <div style={{ padding: "32px 0", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>ไม่พบสินค้า</div>
+        ) : products.map((product) => (
+          <div key={product.id} style={{ border: "1px solid var(--line)", borderRadius: 10, background: "#fff", overflow: "hidden", opacity: product.isActive ? 1 : 0.6 }}>
+            {/* Top: image + info + edit button */}
+            <div style={{ display: "flex", gap: 10, padding: "10px 12px", alignItems: "flex-start" }}>
+              {product.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={product.imageUrl} alt={product.name} style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid var(--line)" }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: 8, border: "1.5px dashed var(--line)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.55rem", color: "var(--muted)", flexShrink: 0 }}>–</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 6 }}>
+                  <p style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{product.name}</p>
+                  <button type="button" className="secondary" onClick={() => openEdit(product)} style={{ fontSize: "0.7rem", padding: "3px 10px", flexShrink: 0 }}>
+                    แก้ไข
+                  </button>
+                </div>
+                {(product.category || product.sku) && (
+                  <p style={{ margin: "2px 0 0", fontSize: "0.68rem", color: "var(--muted)" }}>
+                    {[product.category, product.sku ? `SKU: ${product.sku}` : null].filter(Boolean).join(" · ")}
+                  </p>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-sm font-semibold">{product.name}</p>
-                  <p className="m-0 mt-0.5 text-xs text-[var(--muted)]">หมวดหมู่: {product.category || "-"}</p>
-                  <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
-                    <p className="m-0 text-[var(--muted)]">
-                      ราคา: <span className="font-medium text-[var(--text)]">{formatCurrency(product.price, currency)}</span>
-                    </p>
-                    <p className="m-0 text-[var(--muted)]">
-                      ต้นทุน: <span className="font-medium text-[var(--text)]">{formatCurrency(product.cost, currency)}</span>
-                    </p>
-                    <p className="m-0 text-[var(--muted)]">
-                      สต็อก: <span className="font-semibold text-[var(--text)]">{product.stockQty}</span>
-                    </p>
-                    {!product.isActive ? <p className="m-0 text-xs text-[var(--muted)]">สถานะ: ปิดใช้งาน</p> : null}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4, fontSize: "0.75rem" }}>
+                  <span style={{ color: "var(--muted)" }}>ราคา <span style={{ color: "var(--text)", fontWeight: 600 }}>{formatCurrency(product.price, currency)}</span></span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: "var(--muted)" }}>สต็อก</span>
+                    <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: product.stockQty <= 5 ? "#ef4444" : product.stockQty <= 10 ? "#d97706" : "var(--text)" }}>{product.stockQty}</span>
+                  </span>
+                  {!product.isActive && <span style={{ fontSize: "0.62rem", background: "#f1f5f9", color: "#475569", borderRadius: 20, padding: "1px 7px", fontWeight: 600 }}>ปิด</span>}
                 </div>
               </div>
+            </div>
 
-              <div className="mt-2 flex flex-wrap items-end gap-2">
-                <input
-                  type="number"
-                  step={1}
-                  value={stockAdjust[product.id] || 0}
-                  onChange={(event) =>
-                    setStockAdjust((prev) => ({
-                      ...prev,
-                      [product.id]: Math.trunc(Number(event.target.value))
-                    }))
-                  }
-                  className="w-24"
-                />
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={adjustingId === product.id}
-                  onClick={() => adjustStock(product.id)}
-                >
-                  {adjustingId === product.id ? "..." : "บันทึกสต็อก"}
-                </button>
-                <button type="button" className="secondary" onClick={() => openEdit(product)}>
-                  แก้ไข
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+            {/* Bottom: stock stepper */}
+            <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "8px 12px", background: "var(--bg)", borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: "0.7rem", color: "var(--muted)", marginRight: 8, flexShrink: 0 }}>ปรับสต็อก</span>
+              <button
+                type="button"
+                onClick={() => setStockAdjust((prev) => ({ ...prev, [product.id]: Math.max(-product.stockQty, (prev[product.id] || 0) - 1) }))}
+                style={{ width: 36, height: 36, padding: 0, borderRadius: "8px 0 0 8px", border: "1px solid var(--line)", background: "#fff", color: "var(--text)", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "none" }}
+                aria-label="ลด"
+              >
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="#1a1614" strokeWidth="2.5" strokeLinecap="round"/></svg>
+              </button>
+              <input
+                type="number"
+                step={1}
+                min={-product.stockQty}
+                value={stockAdjust[product.id] ?? 0}
+                onChange={(event) => {
+                  const val = Math.trunc(Number(event.target.value));
+                  setStockAdjust((prev) => ({ ...prev, [product.id]: Math.max(-product.stockQty, val) }));
+                }}
+                style={{ width: 60, height: 36, border: "1px solid var(--line)", borderLeft: "none", borderRight: "none", textAlign: "center", fontSize: "0.9rem", fontWeight: 700, borderRadius: 0, padding: "0 4px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setStockAdjust((prev) => ({ ...prev, [product.id]: (prev[product.id] || 0) + 1 }))}
+                style={{ width: 36, height: 36, padding: 0, borderRadius: "0 8px 8px 0", border: "1px solid var(--line)", background: "#fff", color: "var(--text)", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "none" }}
+                aria-label="เพิ่ม"
+              >
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#1a1614" strokeWidth="2.5" strokeLinecap="round"/></svg>
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={adjustingId === product.id || !stockAdjust[product.id]}
+                onClick={() => adjustStock(product.id)}
+                style={{ marginLeft: 8, fontSize: "0.75rem", padding: "5px 14px", height: 32, flexShrink: 0 }}
+              >
+                {adjustingId === product.id ? "..." : "บันทึก"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="table min-w-[980px]">
-            <thead>
-              <tr>
-                <th>รูป</th>
-                <th>ชื่อ</th>
-                <th>หมวดหมู่</th>
-                <th>ราคา</th>
-                <th>ต้นทุน</th>
-                <th>สต็อก</th>
-                <th>ปรับสต็อก</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    {product.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="h-12 w-12 rounded-md border border-[var(--line)] object-cover"
-                      />
-                    ) : (
-                      <div className="grid h-12 w-12 place-items-center rounded-md border border-dashed border-[var(--line)] text-[10px] text-[var(--muted)]">
-                        No Img
-                      </div>
-                    )}
-                  </td>
-                  <td>{product.name}</td>
-                  <td>{product.category || "-"}</td>
-                  <td>{formatCurrency(product.price, currency)}</td>
-                  <td>{formatCurrency(product.cost, currency)}</td>
-                  <td>
-                    {product.stockQty}
-                    {!product.isActive ? <div className="text-xs text-[var(--muted)]">ปิดใช้งาน</div> : null}
-                  </td>
-                  <td>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        step={1}
-                        value={stockAdjust[product.id] || 0}
-                        onChange={(event) =>
-                          setStockAdjust((prev) => ({
-                            ...prev,
-                            [product.id]: Math.trunc(Number(event.target.value))
-                          }))
-                        }
-                        className="w-20"
-                      />
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled={adjustingId === product.id}
-                        onClick={() => adjustStock(product.id)}
-                      >
-                        {adjustingId === product.id ? "..." : "บันทึก"}
-                      </button>
-                    </div>
-                  </td>
-                  <td>
-                    <button type="button" className="secondary" onClick={() => openEdit(product)}>
-                      แก้ไข
-                    </button>
-                  </td>
+      {/* ── Desktop: table ── */}
+      <div style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }} className="hidden lg:block">
+        {products.length === 0 ? (
+          <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>ไม่พบสินค้า</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="table" style={{ minWidth: 960, margin: 0, borderRadius: 0, border: "none" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 52 }}>รูป</th>
+                  <th>ชื่อสินค้า</th>
+                  <th>หมวดหมู่</th>
+                  <th style={{ textAlign: "right" }}>ราคา</th>
+                  <th style={{ textAlign: "right" }}>ต้นทุน</th>
+                  <th style={{ textAlign: "right" }}>สต็อก</th>
+                  <th style={{ width: 168 }}>ปรับสต็อก</th>
+                  <th style={{ width: 76 }}></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <PaginationControls
-          page={currentPage}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          onPageChange={goPage}
-        />
-        {error ? <p className="mt-2 text-red-600">{error}</p> : null}
-      </section>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} style={{ opacity: product.isActive ? 1 : 0.55 }}>
+                    <td>
+                      {product.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.imageUrl} alt={product.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", border: "1px solid var(--line)" }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, borderRadius: 6, border: "1.5px dashed var(--line)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "var(--muted)" }}>–</div>
+                      )}
+                    </td>
+                    <td style={{ maxWidth: 220 }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: "0.875rem", color: "var(--text)" }}>{product.name}</p>
+                      {product.sku && <p style={{ margin: "1px 0 0", fontSize: "0.67rem", color: "var(--muted)" }}>SKU: {product.sku}</p>}
+                      {!product.isActive && <span style={{ display: "inline-block", fontSize: "0.62rem", background: "#f1f5f9", color: "#475569", borderRadius: 20, padding: "0 6px", marginTop: 2, fontWeight: 600 }}>ปิดใช้งาน</span>}
+                    </td>
+                    <td>
+                      {product.category ? (
+                        <span style={{ fontSize: "0.72rem", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 20, padding: "2px 8px", color: "var(--muted)", whiteSpace: "nowrap" }}>{product.category}</span>
+                      ) : (
+                        <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>–</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: "0.875rem" }}>{formatCurrency(product.price, currency)}</td>
+                    <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: "0.875rem", color: "var(--muted)" }}>{formatCurrency(product.cost, currency)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.9rem", fontVariantNumeric: "tabular-nums", color: product.stockQty <= 5 ? "#ef4444" : product.stockQty <= 10 ? "#d97706" : "var(--text)" }}>
+                        {product.stockQty}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        <input
+                          type="number"
+                          step={1}
+                          value={stockAdjust[product.id] || 0}
+                          onChange={(event) => setStockAdjust((prev) => ({ ...prev, [product.id]: Math.trunc(Number(event.target.value)) }))}
+                          style={{ width: 68 }}
+                        />
+                        <button type="button" className="secondary" disabled={adjustingId === product.id} onClick={() => adjustStock(product.id)} style={{ fontSize: "0.72rem", padding: "3px 8px", whiteSpace: "nowrap" }}>
+                          {adjustingId === product.id ? "..." : "บันทึก"}
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <button type="button" className="secondary" onClick={() => openEdit(product)} style={{ fontSize: "0.72rem", padding: "3px 10px" }}>
+                        แก้ไข
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Pagination ── */}
+      <PaginationControls page={currentPage} pageSize={pageSize} totalItems={totalItems} onPageChange={goPage} />
 
       {addModalOpen ? (
         <div

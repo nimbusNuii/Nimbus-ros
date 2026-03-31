@@ -176,7 +176,7 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
   };
 
   const getStatusClass = (status: ReceiptSummary["status"]) => {
-    if (status === "PAID") return "bg-emerald-50 text-emerald-700";
+    if (status === "PAID") return "bg-[var(--ok-bg)] text-[var(--ok)]";
     if (status === "OPEN") return "bg-amber-50 text-amber-700";
     return "bg-rose-50 text-rose-700";
   };
@@ -222,7 +222,7 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
 
         {!loading ? (
           <>
-            <div className="space-y-2 md:hidden">
+            <div className="space-y-2 lg:hidden">
               {rows.map((row) => (
                 <article key={row.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                   <div className="mb-2 flex items-start justify-between gap-2">
@@ -276,7 +276,7 @@ export function ReceiptHistoryBoard({ currency }: ReceiptHistoryBoardProps) {
               {rows.length === 0 ? <p className="py-6 text-center text-sm text-[var(--muted)]">ไม่พบใบเสร็จ</p> : null}
             </div>
 
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="table min-w-[760px]">
                 <thead>
                   <tr>

@@ -59,7 +59,7 @@ function shouldRestart(pathname) {
 function startDevServer() {
   if (isShuttingDown) return;
 
-  child = spawn("next", ["dev"], {
+  child = spawn("next", ["dev", "--port", "3210"], {
     shell: true,
     stdio: "inherit",
     env: process.env

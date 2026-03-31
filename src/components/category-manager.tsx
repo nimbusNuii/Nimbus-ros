@@ -243,222 +243,505 @@ export function CategoryManager({
   }
 
   return (
-    <div className="space-y-4">
-      <section className="card">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="m-0 text-xl font-semibold">รายการหมวดหมู่</h2>
-            <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs text-[var(--muted)]">
-              ใช้งานอยู่ {activeCount}/{categories.length}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setCreateModalOpen(true);
-            }}
-          >
-            เพิ่มหมวดหมู่
-          </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h1 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text)", lineHeight: 1.2 }}>
+            หมวดหมู่
+          </h1>
+          <span style={{
+            display: "inline-flex", alignItems: "center",
+            height: 22, padding: "0 9px", borderRadius: 99,
+            border: "1px solid var(--line)", background: "var(--bg)",
+            fontSize: "0.72rem", fontWeight: 600, color: "var(--muted)",
+          }}>
+            {totalItems} หมวด · ใช้งาน {activeCount}
+          </span>
         </div>
-        <form
-          className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_auto_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyFilters();
+        <button
+          type="button"
+          onClick={() => { setError(""); setCreateModalOpen(true); }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            height: 38, padding: "0 16px", borderRadius: 10,
+            background: "var(--brand)", border: "none",
+            fontSize: "0.82rem", fontWeight: 600, color: "#fff",
+            cursor: "pointer", flexShrink: 0,
           }}
         >
-          <input value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="ค้นหาชื่อหมวดหมู่" />
-          <select value={sortInput} onChange={(event) => setSortInput(event.target.value as CategorySort)}>
-            <option value="order_name">ลำดับ + ชื่อ (ค่าเริ่มต้น)</option>
-            <option value="name_asc">ชื่อ A-Z</option>
-            <option value="name_desc">ชื่อ Z-A</option>
-            <option value="order_asc">ลำดับน้อยไปมาก</option>
-            <option value="order_desc">ลำดับมากไปน้อย</option>
-            <option value="created_desc">สร้างล่าสุดก่อน</option>
-            <option value="created_asc">สร้างเก่าสุดก่อน</option>
-          </select>
-          <button type="submit">ค้นหา</button>
-          <button type="button" className="secondary" onClick={resetFilters}>
-            ล้างตัวกรอง
-          </button>
-        </form>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          เพิ่มหมวดหมู่
+        </button>
+      </div>
 
-        <div className="space-y-2 md:hidden">
-          {categories.map((item) => {
-            const draft = drafts[item.id];
-            return (
-              <article key={item.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="m-0 text-sm font-semibold">หมวดหมู่</p>
-                  <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-xs text-[var(--muted)]">
-                    สินค้า {item.productCount}
-                  </span>
+      {/* ── Filter bar ── */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); applyFilters(); }}
+        style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
+      >
+        <input
+          value={queryInput}
+          onChange={(e) => setQueryInput(e.target.value)}
+          placeholder="ค้นหาชื่อหมวดหมู่..."
+          style={{
+            flex: "1 1 180px", minWidth: 0, height: 38,
+            padding: "0 12px", borderRadius: 9,
+            border: "1px solid var(--line)", background: "#fff",
+            fontSize: "0.82rem", color: "var(--text)", outline: "none",
+          }}
+        />
+        <select
+          value={sortInput}
+          onChange={(e) => setSortInput(e.target.value as CategorySort)}
+          style={{
+            flex: "0 0 auto", height: 38, padding: "0 10px",
+            borderRadius: 9, border: "1px solid var(--line)",
+            background: "#fff", fontSize: "0.82rem",
+            color: "var(--text)", cursor: "pointer",
+          }}
+        >
+          <option value="order_name">ลำดับ + ชื่อ</option>
+          <option value="name_asc">ชื่อ A–Z</option>
+          <option value="name_desc">ชื่อ Z–A</option>
+          <option value="order_asc">ลำดับ น้อย → มาก</option>
+          <option value="order_desc">ลำดับ มาก → น้อย</option>
+          <option value="created_desc">สร้างล่าสุดก่อน</option>
+          <option value="created_asc">สร้างเก่าสุดก่อน</option>
+        </select>
+        <button
+          type="submit"
+          style={{
+            height: 38, padding: "0 16px", borderRadius: 9,
+            background: "var(--brand)", border: "none",
+            fontSize: "0.82rem", fontWeight: 600, color: "#fff", cursor: "pointer",
+          }}
+        >
+          ค้นหา
+        </button>
+        <button
+          type="button"
+          onClick={resetFilters}
+          style={{
+            height: 38, padding: "0 14px", borderRadius: 9,
+            border: "1px solid var(--line)", background: "#fff",
+            fontSize: "0.82rem", fontWeight: 500, color: "var(--muted)", cursor: "pointer",
+          }}
+        >
+          ล้าง
+        </button>
+      </form>
+
+      {/* ── Error ── */}
+      {error && (
+        <p style={{ margin: 0, padding: "10px 14px", borderRadius: 9, background: "#fff5f5", border: "1px solid #fca5a5", color: "#dc2626", fontSize: "0.82rem" }}>
+          {error}
+        </p>
+      )}
+
+      {/* ── Mobile list ── */}
+      <div className="flex flex-col lg:hidden" style={{ gap: 8 }}>
+        {categories.length === 0 ? (
+          <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>
+            ยังไม่มีหมวดหมู่
+          </div>
+        ) : categories.map((item) => {
+          const draft = drafts[item.id];
+          const isSaving = savingId === item.id;
+          return (
+            <div
+              key={item.id}
+              style={{
+                borderRadius: 12, border: "1px solid var(--line)",
+                background: "#fff", overflow: "hidden",
+              }}
+            >
+              {/* Top zone */}
+              <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Name row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 8,
+                    background: "color-mix(in srgb, var(--brand) 10%, transparent)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <input
+                    value={draft?.name || ""}
+                    onChange={(e) => setDraftValue(item.id, "name", e.target.value)}
+                    placeholder="ชื่อหมวดหมู่"
+                    style={{
+                      flex: 1, minWidth: 0, height: 36,
+                      padding: "0 10px", borderRadius: 8,
+                      border: "1px solid var(--line)", background: "var(--bg)",
+                      fontSize: "0.85rem", fontWeight: 600, color: "var(--text)",
+                    }}
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="field mb-0">
-                    <label>ชื่อหมวดหมู่</label>
-                    <input value={draft?.name || ""} onChange={(event) => setDraftValue(item.id, "name", event.target.value)} />
-                  </div>
-                  <div className="field mb-0">
-                    <label>ลำดับ</label>
+                {/* Meta row: sort order + badges */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--muted)", whiteSpace: "nowrap" }}>ลำดับ</span>
                     <input
                       type="number"
                       step={1}
                       value={draft?.sortOrder ?? 0}
-                      onChange={(event) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(event.target.value) || 0))}
+                      onChange={(e) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(e.target.value) || 0))}
+                      style={{
+                        width: 60, height: 30, padding: "0 8px",
+                        borderRadius: 7, border: "1px solid var(--line)",
+                        background: "var(--bg)", fontSize: "0.82rem",
+                        color: "var(--text)", textAlign: "center",
+                      }}
                     />
                   </div>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2">
+                  <span style={{
+                    display: "inline-flex", alignItems: "center",
+                    height: 24, padding: "0 8px", borderRadius: 99,
+                    border: "1px solid var(--line)",
+                    fontSize: "0.7rem", fontWeight: 500, color: "var(--muted)",
+                  }}>
+                    {item.productCount} สินค้า
+                  </span>
                   <button
                     type="button"
-                    className="secondary"
                     onClick={() => setDraftValue(item.id, "isActive", !draft?.isActive)}
+                    style={{
+                      display: "inline-flex", alignItems: "center",
+                      height: 24, padding: "0 9px", borderRadius: 99,
+                      border: `1px solid ${draft?.isActive ? "#86efac" : "var(--line)"}`,
+                      background: draft?.isActive ? "#f0fdf4" : "var(--bg)",
+                      fontSize: "0.7rem", fontWeight: 600,
+                      color: draft?.isActive ? "#16a34a" : "var(--muted)",
+                      cursor: "pointer", boxShadow: "none",
+                    }}
                   >
                     {draft?.isActive ? "ใช้งาน" : "ปิด"}
                   </button>
-                  <button type="button" onClick={() => void saveCategory(item.id)} disabled={savingId === item.id}>
-                    {savingId === item.id ? "..." : "บันทึก"}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={savingId === item.id || item.productCount > 0}
-                    onClick={() => void removeCategory(item.id)}
-                  >
-                    ลบ
-                  </button>
                 </div>
-              </article>
-            );
-          })}
-          {categories.length === 0 ? <p className="py-6 text-center text-[var(--muted)]">ยังไม่มีหมวดหมู่</p> : null}
-        </div>
+              </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="table min-w-[680px]">
-            <thead>
+              {/* Bottom action strip */}
+              <div style={{
+                padding: "9px 14px", background: "var(--bg)",
+                borderTop: "1px solid var(--line)",
+                display: "flex", gap: 8, alignItems: "center",
+              }}>
+                <button
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => void saveCategory(item.id)}
+                  style={{
+                    flex: 1, height: 34, padding: "0 12px", borderRadius: 8,
+                    background: "var(--brand)", border: "none",
+                    fontSize: "0.8rem", fontWeight: 600, color: "#fff",
+                    cursor: isSaving ? "not-allowed" : "pointer", opacity: isSaving ? 0.6 : 1,
+                  }}
+                >
+                  {isSaving ? "กำลังบันทึก..." : "บันทึก"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSaving || item.productCount > 0}
+                  onClick={() => void removeCategory(item.id)}
+                  style={{
+                    height: 34, padding: "0 12px", borderRadius: 8,
+                    border: "1px solid #fca5a5", background: "#fff5f5",
+                    fontSize: "0.8rem", fontWeight: 500, color: "#dc2626",
+                    cursor: (isSaving || item.productCount > 0) ? "not-allowed" : "pointer",
+                    opacity: (isSaving || item.productCount > 0) ? 0.45 : 1,
+                  }}
+                >
+                  ลบ
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div
+        className="hidden lg:block"
+        style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}
+      >
+        <table style={{ width: "100%", borderCollapse: "collapse", margin: 0, borderRadius: 0, border: "none" }}>
+          <thead>
+            <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+              {["ชื่อหมวดหมู่", "ลำดับ", "สินค้า", "สถานะ", "จัดการ"].map((h, i) => (
+                <th
+                  key={h}
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: i >= 3 ? "center" : "left",
+                    fontSize: "0.72rem", fontWeight: 700,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                    color: "var(--muted)", whiteSpace: "nowrap",
+                    border: "none",
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {categories.length === 0 ? (
               <tr>
-                <th>ชื่อหมวดหมู่</th>
-                <th>ลำดับ</th>
-                <th>จำนวนสินค้า</th>
-                <th>สถานะ</th>
-                <th>จัดการ</th>
+                <td colSpan={5} style={{ padding: "40px 14px", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem", border: "none" }}>
+                  ยังไม่มีหมวดหมู่
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {categories.map((item) => {
-                const draft = drafts[item.id];
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <input
-                        value={draft?.name || ""}
-                        onChange={(event) => setDraftValue(item.id, "name", event.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        step={1}
-                        value={draft?.sortOrder ?? 0}
-                        onChange={(event) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(event.target.value) || 0))}
-                        className="w-24"
-                      />
-                    </td>
-                    <td>{item.productCount}</td>
-                    <td>
+            ) : categories.map((item, idx) => {
+              const draft = drafts[item.id];
+              const isSaving = savingId === item.id;
+              return (
+                <tr
+                  key={item.id}
+                  style={{
+                    borderTop: idx === 0 ? "none" : "1px solid var(--line)",
+                    background: "#fff",
+                  }}
+                >
+                  {/* Name */}
+                  <td style={{ padding: "10px 14px", border: "none" }}>
+                    <input
+                      value={draft?.name || ""}
+                      onChange={(e) => setDraftValue(item.id, "name", e.target.value)}
+                      style={{
+                        width: "100%", minWidth: 160, height: 34,
+                        padding: "0 10px", borderRadius: 7,
+                        border: "1px solid var(--line)", background: "var(--bg)",
+                        fontSize: "0.82rem", color: "var(--text)",
+                      }}
+                    />
+                  </td>
+
+                  {/* Sort order */}
+                  <td style={{ padding: "10px 14px", border: "none" }}>
+                    <input
+                      type="number"
+                      step={1}
+                      value={draft?.sortOrder ?? 0}
+                      onChange={(e) => setDraftValue(item.id, "sortOrder", Math.trunc(Number(e.target.value) || 0))}
+                      style={{
+                        width: 70, height: 34, padding: "0 8px",
+                        borderRadius: 7, border: "1px solid var(--line)",
+                        background: "var(--bg)", fontSize: "0.82rem",
+                        color: "var(--text)", textAlign: "center",
+                      }}
+                    />
+                  </td>
+
+                  {/* Product count */}
+                  <td style={{ padding: "10px 14px", textAlign: "center", border: "none" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center",
+                      height: 22, padding: "0 8px", borderRadius: 99,
+                      border: "1px solid var(--line)", background: "var(--bg)",
+                      fontSize: "0.72rem", fontWeight: 500, color: "var(--muted)",
+                    }}>
+                      {item.productCount}
+                    </span>
+                  </td>
+
+                  {/* Status toggle */}
+                  <td style={{ padding: "10px 14px", textAlign: "center", border: "none" }}>
+                    <button
+                      type="button"
+                      onClick={() => setDraftValue(item.id, "isActive", !draft?.isActive)}
+                      style={{
+                        display: "inline-flex", alignItems: "center",
+                        height: 26, padding: "0 10px", borderRadius: 99,
+                        border: `1px solid ${draft?.isActive ? "#86efac" : "var(--line)"}`,
+                        background: draft?.isActive ? "#f0fdf4" : "var(--bg)",
+                        fontSize: "0.72rem", fontWeight: 600,
+                        color: draft?.isActive ? "#16a34a" : "var(--muted)",
+                        cursor: "pointer", boxShadow: "none", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {draft?.isActive ? "ใช้งาน" : "ปิด"}
+                    </button>
+                  </td>
+
+                  {/* Actions */}
+                  <td style={{ padding: "10px 14px", border: "none" }}>
+                    <div style={{ display: "flex", gap: 7, justifyContent: "center" }}>
                       <button
                         type="button"
-                        className="secondary"
-                        onClick={() => setDraftValue(item.id, "isActive", !draft?.isActive)}
+                        disabled={isSaving}
+                        onClick={() => void saveCategory(item.id)}
+                        style={{
+                          height: 32, padding: "0 14px", borderRadius: 8,
+                          background: "var(--brand)", border: "none",
+                          fontSize: "0.78rem", fontWeight: 600, color: "#fff",
+                          cursor: isSaving ? "not-allowed" : "pointer",
+                          opacity: isSaving ? 0.6 : 1, whiteSpace: "nowrap",
+                        }}
                       >
-                        {draft?.isActive ? "ใช้งาน" : "ปิด"}
+                        {isSaving ? "..." : "บันทึก"}
                       </button>
-                    </td>
-                    <td>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => void saveCategory(item.id)} disabled={savingId === item.id}>
-                          {savingId === item.id ? "..." : "บันทึก"}
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={savingId === item.id || item.productCount > 0}
-                          onClick={() => void removeCategory(item.id)}
-                        >
-                          ลบ
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {categories.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center text-[var(--muted)]">
-                    ยังไม่มีหมวดหมู่
+                      <button
+                        type="button"
+                        disabled={isSaving || item.productCount > 0}
+                        onClick={() => void removeCategory(item.id)}
+                        style={{
+                          height: 32, padding: "0 12px", borderRadius: 8,
+                          border: "1px solid #fca5a5", background: "#fff5f5",
+                          fontSize: "0.78rem", fontWeight: 500, color: "#dc2626",
+                          cursor: (isSaving || item.productCount > 0) ? "not-allowed" : "pointer",
+                          opacity: (isSaving || item.productCount > 0) ? 0.45 : 1,
+                        }}
+                      >
+                        ลบ
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-        <PaginationControls
-          page={currentPage}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          onPageChange={goPage}
-        />
-        {error ? <p className="mb-0 mt-2 text-sm text-red-600">{error}</p> : null}
-      </section>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      {createModalOpen ? (
+      {/* ── Pagination ── */}
+      <PaginationControls
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={goPage}
+      />
+
+      {/* ── Create modal ── */}
+      {createModalOpen && (
         <div
-          className="modal-overlay"
           role="dialog"
           aria-modal="true"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setCreateModalOpen(false);
+          onClick={(e) => { if (e.target === e.currentTarget) setCreateModalOpen(false); }}
+          style={{
+            position: "fixed", inset: 0, zIndex: 50,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "16px",
           }}
         >
-          <div className="modal-panel" style={{ width: "min(460px, 100%)" }}>
-            <div className="modal-header">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(440px, 100%)",
+              background: "#fff", borderRadius: 16,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal header */}
+            <div style={{
+              display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+              padding: "18px 20px 14px",
+              borderBottom: "1px solid var(--line)",
+              background: "var(--bg)",
+            }}>
               <div>
-                <h3 className="m-0 text-lg font-semibold">เพิ่มหมวดหมู่</h3>
-                <p className="m-0 mt-1 text-sm text-[var(--muted)]">สร้างหมวดใหม่สำหรับหน้าเพิ่มสินค้าและ POS</p>
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>เพิ่มหมวดหมู่</h3>
+                <p style={{ margin: "3px 0 0", fontSize: "0.78rem", color: "var(--muted)" }}>
+                  สร้างหมวดใหม่สำหรับหน้าเพิ่มสินค้าและ POS
+                </p>
               </div>
-              <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
-                ปิด
+              <button
+                type="button"
+                onClick={() => setCreateModalOpen(false)}
+                aria-label="ปิด"
+                style={{
+                  width: 30, height: 30, padding: 0, flexShrink: 0,
+                  borderRadius: 8, border: "1px solid var(--line)",
+                  background: "#fff", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "none",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" stroke="#1a1614" strokeWidth="2.2" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
 
-            <form onSubmit={createCategory} className="space-y-3">
-              <div className="field mb-0">
-                <label htmlFor="categoryName">ชื่อหมวดหมู่ *</label>
-                <input id="categoryName" name="name" required />
-              </div>
-              <div className="field mb-0">
-                <label htmlFor="categoryOrder">ลำดับแสดงผล</label>
-                <input id="categoryOrder" name="sortOrder" type="number" step={1} defaultValue={0} />
+            <form onSubmit={createCategory} style={{ padding: "18px 20px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Name */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text)" }}>
+                  ชื่อหมวดหมู่ <span style={{ color: "var(--brand)" }}>*</span>
+                </label>
+                <input
+                  id="categoryName"
+                  name="name"
+                  required
+                  autoFocus
+                  placeholder="เช่น อาหารจานหลัก, เครื่องดื่ม"
+                  style={{
+                    height: 40, padding: "0 12px", borderRadius: 9,
+                    border: "1px solid var(--line)", background: "var(--bg)",
+                    fontSize: "0.85rem", color: "var(--text)", outline: "none",
+                  }}
+                />
               </div>
 
-              <div className="flex justify-end gap-2">
-                <button type="button" className="secondary" onClick={() => setCreateModalOpen(false)}>
+              {/* Sort order */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text)" }}>
+                  ลำดับแสดงผล
+                </label>
+                <input
+                  id="categoryOrder"
+                  name="sortOrder"
+                  type="number"
+                  step={1}
+                  defaultValue={0}
+                  style={{
+                    height: 40, padding: "0 12px", borderRadius: 9,
+                    border: "1px solid var(--line)", background: "var(--bg)",
+                    fontSize: "0.85rem", color: "var(--text)", outline: "none",
+                    width: 120,
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  style={{
+                    height: 38, padding: "0 16px", borderRadius: 9,
+                    border: "1px solid var(--line)", background: "#fff",
+                    fontSize: "0.82rem", fontWeight: 500, color: "var(--text)", cursor: "pointer",
+                  }}
+                >
                   ยกเลิก
                 </button>
-                <button type="submit" disabled={creating}>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  style={{
+                    height: 38, padding: "0 20px", borderRadius: 9,
+                    background: "var(--brand)", border: "none",
+                    fontSize: "0.82rem", fontWeight: 600, color: "#fff",
+                    cursor: creating ? "not-allowed" : "pointer",
+                    opacity: creating ? 0.7 : 1,
+                  }}
+                >
                   {creating ? "กำลังบันทึก..." : "เพิ่มหมวดหมู่"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

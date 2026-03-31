@@ -61,34 +61,34 @@ export default async function ManageProductsPage({
     : undefined;
   const orderBy = orderByFromSort(sort);
   const requestedPage = parsePage(params.page);
-  const totalItems = await prisma.product.count({ where });
+
+  // Parallelize count + storeSetting + categories (none depend on each other)
+  const [totalItems, settings, categories] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.storeSetting.findUnique({ where: { id: 1 } }),
+    prisma.productCategory.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    })
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
   const skip = (page - 1) * PAGE_SIZE;
 
-  const [products, settings, categories] = await Promise.all([
-    prisma.product.findMany({
-      include: {
-        categoryRef: {
-          select: {
-            id: true,
-            name: true
-          }
+  const products = await prisma.product.findMany({
+    include: {
+      categoryRef: {
+        select: {
+          id: true,
+          name: true
         }
-      },
-      where,
-      orderBy,
-      skip,
-      take: PAGE_SIZE
-    }),
-    prisma.storeSetting.findUnique({ where: { id: 1 } }),
-    prisma.productCategory.findMany({
-      where: {
-        isActive: true
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
-    })
-  ]);
+      }
+    },
+    where,
+    orderBy,
+    skip,
+    take: PAGE_SIZE
+  });
 
   return (
     <div>

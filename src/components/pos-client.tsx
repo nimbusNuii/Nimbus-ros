@@ -889,7 +889,7 @@ export function PosClient({
         <div
           className={`toast-slide-in fixed right-4 top-20 z-50 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 ${
             toast.tone === "success"
-              ? "border-green-200 bg-green-50 text-green-700"
+              ? "border-[var(--ok-border)] bg-[var(--ok-bg)] text-[var(--ok)]"
               : "border-amber-200 bg-amber-50 text-amber-700"
           }`}
         >
@@ -939,7 +939,7 @@ export function PosClient({
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-medium ${
                             row.status === "PAID"
-                              ? "bg-emerald-50 text-emerald-700"
+                              ? "bg-[var(--ok-bg)] text-[var(--ok)]"
                               : row.status === "OPEN"
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-rose-50 text-rose-700"

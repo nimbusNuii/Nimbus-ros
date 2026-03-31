@@ -124,32 +124,36 @@ model Product {
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique
-  orderDateKey  String        @default("19700101")
-  orderSequence Int           @default(0)
-  status        OrderStatus   @default(PAID)
-  paymentMethod PaymentMethod
-  customerId    String?
-  customerType  CustomerType  @default(WALK_IN)
-  customerName  String?
-  note          String?
-  subtotal      Decimal       @db.Decimal(10, 2)
-  discount      Decimal       @db.Decimal(10, 2)
-  tax           Decimal       @db.Decimal(10, 2)
-  total         Decimal       @db.Decimal(10, 2)
-  scheduledFor  DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  items         OrderItem[]
-  inventoryLogs InventoryLog[]
-  printJobs     PrintJob[]
-  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  id                   String         @id @default(cuid())
+  orderNumber          String         @unique
+  orderDateKey         String         @default("19700101")
+  orderSequence        Int            @default(0)
+  status               OrderStatus    @default(PAID)
+  paymentMethod        PaymentMethod
+  paymentChannelId     String?
+  paymentChannelSnapshot String?
+  customerId           String?
+  customerType         CustomerType   @default(WALK_IN)
+  customerName         String?
+  note                 String?
+  subtotal             Decimal        @db.Decimal(10, 2)
+  discount             Decimal        @db.Decimal(10, 2)
+  tax                  Decimal        @db.Decimal(10, 2)
+  total                Decimal        @db.Decimal(10, 2)
+  scheduledFor         DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  items                OrderItem[]
+  inventoryLogs        InventoryLog[]
+  printJobs            PrintJob[]
+  customer             Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  paymentChannel       PaymentChannel? @relation(fields: [paymentChannelId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([customerId])
   @@index([scheduledFor])
   @@index([orderDateKey, orderSequence])
+  @@index([paymentChannelId])
   @@unique([orderDateKey, orderSequence])
 }
 
@@ -307,4 +311,21 @@ model MenuOption {
 
   @@unique([type, label])
   @@index([type, isActive, sortOrder, label])
+}
+
+model PaymentChannel {
+  id            String        @id @default(cuid())
+  name          String
+  type          PaymentMethod
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+  qrCodeUrl     String?
+  sortOrder     Int           @default(0)
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  orders        Order[]
+
+  @@index([isActive, sortOrder, name])
 }

@@ -4,14 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-auto-restart.mjs",
-    "dev:next": "next dev",
+    "dev:next": "next dev --port 3210",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "deploy:prod": "node scripts/deploy-prod.mjs",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} prisma migrate dev",
-    "prisma:seed": "DATABASE_URL=${LOCAL_DATABASE_URL:-$DATABASE_URL} DIRECT_URL=${LOCAL_DATABASE_URL:-$DIRECT_URL} tsx prisma/seed.ts",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
     "print:agent": "tsx scripts/printer-agent.ts"
   },
   "dependencies": {

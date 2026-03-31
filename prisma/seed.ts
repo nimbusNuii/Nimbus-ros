@@ -241,6 +241,50 @@ async function main() {
     });
   }
 
+  const paymentChannels = [
+    { name: "เงินสด", type: "CASH", sortOrder: 1 },
+    { name: "บัตรเครดิต/เดบิต", type: "CARD", sortOrder: 2 },
+    { name: "โอนเงิน - ธนาคารกสิกรไทย", type: "TRANSFER", bankName: "ธนาคารกสิกรไทย", accountNumber: "123-4-56789-0", accountName: "ร้านหมูปิ้งหน้าโรงเรียน", sortOrder: 3 },
+    { name: "โอนเงิน - ธนาคารไทยพาณิชย์", type: "TRANSFER", bankName: "ธนาคารไทยพาณิชย์", accountNumber: "234-5-67890-1", accountName: "ร้านหมูปิ้งหน้าโรงเรียน", sortOrder: 4 },
+    { name: "โอนเงิน - ธนาคารกรุงเทพ", type: "TRANSFER", bankName: "ธนาคารกรุงเทพ", accountNumber: "345-6-78901-2", accountName: "ร้านหมูปิ้งหน้าโรงเรียน", sortOrder: 5 },
+    { name: "PromptPay QR", type: "QR", accountNumber: "0812345678", sortOrder: 6 }
+  ] as const;
+
+  for (const channel of paymentChannels) {
+    const existing = await prisma.paymentChannel.findFirst({
+      where: {
+        name: channel.name,
+        type: channel.type
+      }
+    });
+
+    if (existing) {
+      await prisma.paymentChannel.update({
+        where: { id: existing.id },
+        data: {
+          bankName: "bankName" in channel ? channel.bankName : null,
+          accountNumber: "accountNumber" in channel ? channel.accountNumber : null,
+          accountName: "accountName" in channel ? channel.accountName : null,
+          sortOrder: channel.sortOrder,
+          isActive: true
+        }
+      });
+      continue;
+    }
+
+    await prisma.paymentChannel.create({
+      data: {
+        name: channel.name,
+        type: channel.type,
+        bankName: "bankName" in channel ? channel.bankName : null,
+        accountNumber: "accountNumber" in channel ? channel.accountNumber : null,
+        accountName: "accountName" in channel ? channel.accountName : null,
+        sortOrder: channel.sortOrder,
+        isActive: true
+      }
+    });
+  }
+
   const customers = [
     { name: "ลูกค้า", type: "WALK_IN", phone: null, note: "ลูกค้าทั่วไป" },
     { name: "คุณสมชาย", type: "REGULAR", phone: "0811111111", note: "ลูกค้าประจำช่วงเช้า" },

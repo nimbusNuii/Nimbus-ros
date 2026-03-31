@@ -1,18 +1,35 @@
 import type { Metadata } from "next";
+import { Sarabun, Inter } from "next/font/google";
 import "./globals.css";
-import { MainNav } from "@/components/main-nav";
+import { NavWrapper } from "@/components/nav-wrapper";
+
+const sarabun = Sarabun({
+  subsets: ["thai", "latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-sarabun",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "POS System",
-  description: "Next.js + PostgreSQL POS with receipt templates"
+  title: {
+    template: "%s | POS System",
+    default: "POS System"
+  },
+  description: "ระบบ POS สำหรับร้านอาหาร — จัดการออเดอร์ สต็อก และรายงานยอดขาย"
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th" data-theme="sandstone">
+    <html lang="th" className={`${sarabun.variable} ${inter.variable}`}>
       <body>
-        <MainNav />
-        <main>{children}</main>
+        <NavWrapper>{children}</NavWrapper>
       </body>
     </html>
   );

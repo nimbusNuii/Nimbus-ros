@@ -76,20 +76,21 @@ export default async function ManageExpensesPage({
   };
   const orderBy = orderByFromSort(sort);
 
-  const totalItems = await prisma.expense.count({ where });
+  // Parallelize count + storeSetting (neither depends on the other)
+  const [totalItems, settings] = await Promise.all([
+    prisma.expense.count({ where }),
+    prisma.storeSetting.findUnique({ where: { id: 1 } })
+  ]);
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
   const skip = (page - 1) * PAGE_SIZE;
 
-  const [expenses, settings] = await Promise.all([
-    prisma.expense.findMany({
-      where,
-      orderBy,
-      skip,
-      take: PAGE_SIZE
-    }),
-    prisma.storeSetting.findUnique({ where: { id: 1 } })
-  ]);
+  const expenses = await prisma.expense.findMany({
+    where,
+    orderBy,
+    skip,
+    take: PAGE_SIZE
+  });
 
   return (
     <div>

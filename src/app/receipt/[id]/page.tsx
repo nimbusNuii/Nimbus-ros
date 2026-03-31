@@ -16,21 +16,15 @@ export default async function ReceiptPage({
 
   const { id } = await params;
 
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: {
-      items: true
-    }
-  });
+  const [order, template, store] = await Promise.all([
+    prisma.order.findUnique({ where: { id }, include: { items: true } }),
+    prisma.receiptTemplate.findFirst({ where: { isDefault: true } }),
+    prisma.storeSetting.findUnique({ where: { id: 1 } }),
+  ]);
 
   if (!order) {
     notFound();
   }
-
-  const [template, store] = await Promise.all([
-    prisma.receiptTemplate.findFirst({ where: { isDefault: true } }),
-    prisma.storeSetting.findUnique({ where: { id: 1 } })
-  ]);
 
   const finalTemplate =
     template ||
